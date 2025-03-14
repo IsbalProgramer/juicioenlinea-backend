@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Database\QueryException;
 
 class InicioController extends Controller
 {
@@ -36,27 +37,35 @@ class InicioController extends Controller
                 'status' => 422,
                 'errors' => $validator->messages()
             ],422);
-        }else{
+        }
 
+        try {
+            // Intentamos guardar el registro en la base de datos
             $inicio = Inicio::create([
                 'folio_preregistro' => $request->folio_preregistro,
                 'materia' => $request->materia,
                 'via' => $request->via,
                 'archivo' => $request->archivo,
-
             ]);
-
-            if($inicio){
-                return response()->json([
-                    'status' => 200,
-                    'message' => 'Inicio creado exitosamente'
-                ],200);
-            }else{
-                return response()->json([
-                    'status' => 500,
-                    'message' => 'Algo sucedió!'
-                ],500);
-            }
+    
+            return response()->json([
+                'status' => 200,
+                'message' => 'Inicio creado exitosamente' 
+            ], 200);
+    
+        } catch (QueryException $e) {
+            // Capturamos el error de la base de datos y lo mostramos en JSON
+            return response()->json([
+                'status' => 500,
+                'message' => 'Error al insertar en la base de datos '
+            ], 500);
+        }
+        catch (\Exception $e) {
+            // Captura cualquier otro tipo de error
+            return response()->json([
+                'status' => 500,
+                'message' => 'Error inesperado ' 
+            ], 500);
         }
     }
 
