@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('inicios', function (Blueprint $table) {
             $table->id();
             $table->string('folio_preregistro')->unique();
-            $table->string('materia');
+            $table->string('materia',2);
             $table->string('via');
             $table->binary('archivo')->nullable(); // Almacena datos binarios
             $table->timestamps();
