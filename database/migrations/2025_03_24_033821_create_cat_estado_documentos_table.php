@@ -11,8 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('historial_estados_requerimientos', function (Blueprint $table) {
-            $table->id();
+        Schema::create('cat_estado_documento', function (Blueprint $table) {
+            $table->id('idCatalogoEstadoDocumento');
+            $table->string('nombre');
             $table->timestamps();
         });
     }
@@ -22,6 +23,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('historial_estados_requerimientos');
+        Schema::dropIfExists('cat_estado_documentos');
     }
 };

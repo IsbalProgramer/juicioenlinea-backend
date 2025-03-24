@@ -11,8 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('cat_estados_requerimientos', function (Blueprint $table) {
-            $table->id();
+        Schema::create('cat_estado_requerimientos', function (Blueprint $table) {
+            $table->id('idCatEstadoRequerimientos');
+            $table->string('nombre');
+            $table->boolean('activo')->default(true);
             $table->timestamps();
         });
     }
@@ -22,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('cat_estados_requerimientos');
+        Schema::dropIfExists('cat_estado_requerimientos');
     }
 };

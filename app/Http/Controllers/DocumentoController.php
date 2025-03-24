@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\HistorialEstadosRequerimiento;
+use App\Models\Documento;
 use Illuminate\Http\Request;
 
-class HistorialEstadosRequerimientoController extends Controller
+class DocumentoController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -34,7 +34,7 @@ class HistorialEstadosRequerimientoController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(HistorialEstadosRequerimiento $historialEstadosRequerimiento)
+    public function show(Documento $documento)
     {
         //
     }
@@ -42,7 +42,7 @@ class HistorialEstadosRequerimientoController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(HistorialEstadosRequerimiento $historialEstadosRequerimiento)
+    public function edit(Documento $documento)
     {
         //
     }
@@ -50,7 +50,7 @@ class HistorialEstadosRequerimientoController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, HistorialEstadosRequerimiento $historialEstadosRequerimiento)
+    public function update(Request $request, Documento $documento)
     {
         //
     }
@@ -58,7 +58,7 @@ class HistorialEstadosRequerimientoController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(HistorialEstadosRequerimiento $historialEstadosRequerimiento)
+    public function destroy(Documento $documento)
     {
         //
     }

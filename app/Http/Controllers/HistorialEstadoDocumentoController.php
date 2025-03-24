@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\CatEstadosRequerimiento;
+use App\Models\HistorialEstadoDocumento;
 use Illuminate\Http\Request;
 
-class CatEstadosRequerimientoController extends Controller
+class HistorialEstadoDocumentoController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -34,7 +34,7 @@ class CatEstadosRequerimientoController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(CatEstadosRequerimiento $catEstadosRequerimiento)
+    public function show(HistorialEstadoDocumento $historialEstadoDocumento)
     {
         //
     }
@@ -42,7 +42,7 @@ class CatEstadosRequerimientoController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(CatEstadosRequerimiento $catEstadosRequerimiento)
+    public function edit(HistorialEstadoDocumento $historialEstadoDocumento)
     {
         //
     }
@@ -50,7 +50,7 @@ class CatEstadosRequerimientoController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, CatEstadosRequerimiento $catEstadosRequerimiento)
+    public function update(Request $request, HistorialEstadoDocumento $historialEstadoDocumento)
     {
         //
     }
@@ -58,7 +58,7 @@ class CatEstadosRequerimientoController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(CatEstadosRequerimiento $catEstadosRequerimiento)
+    public function destroy(HistorialEstadoDocumento $historialEstadoDocumento)
     {
         //
     }
