@@ -14,7 +14,7 @@ return new class extends Migration
             Schema::create('documentos', function (Blueprint $table) {
                 $table->id('idDocumento');
                 $table->unsignedBigInteger('idExpediente');
-                $table->string('folioPreregistro');
+                $table->string('folio');
                 $table->string('nombre');
                 $table->binary('documento');
                 $table->timestamps();

@@ -8,10 +8,10 @@ class Documento extends Model
 {
     //Clase documento
     protected $table = 'documentos';
-    
+    protected $primaryKey = 'idDocumento';
     protected $fillable = [
         'idExpediente',
-        'folioPreregistro',
+        'folio',
         'nombre',
         'documento'
     ];

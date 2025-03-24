@@ -28,7 +28,33 @@ class RequerimientoController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        // Validar los datos del requerimiento
+        $validatedData = $request->validate([
+            'idExpediente' => 'required|integer|exists:expedientes,id',
+            'idCatTipoRequerimiento' => 'required|integer|exists:cat_tipo_requerimientos,id',
+            'idCatEstadoRequerimiento' => 'required|integer|exists:cat_estado_requerimientos,id',
+            'fechaRequerimiento' => 'required|date',
+        ]);
+
+        // Crear un nuevo requerimiento
+        $requerimiento = new Requerimiento();
+        $requerimiento->idExpediente = $validatedData['idExpediente'];
+        $requerimiento->idCatTipoRequerimiento = $validatedData['idCatTipoRequerimiento'];
+        $requerimiento->idCatEstadoRequerimiento = $validatedData['idCatEstadoRequerimiento'];
+        $requerimiento->fechaRequerimiento = $validatedData['fechaRequerimiento'];
+
+        // Guardar el requerimiento en la base de datos
+        if ($requerimiento->save()) {
+            return response()->json([
+            'message' => 'Requerimiento creado exitosamente',
+            'requerimiento' => $requerimiento
+            ], 201);
+        } else {
+            return response()->json([
+            'message' => 'Error al crear el requerimiento'
+            ], 500);
+        }
+        
     }
 
     /**

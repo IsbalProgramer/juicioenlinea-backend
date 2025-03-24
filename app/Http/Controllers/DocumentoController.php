@@ -28,7 +28,34 @@ class DocumentoController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        // Validar los datos de entrada
+        $validatedData = $request->validate([
+            'idExpediente' => 'required|integer|exists:expedientes,id',
+            'folio' => 'required|string|max:255',
+            'nombre' => 'required|string|max:255',
+            'documento' => 'required|file|mimes:pdf,doc,docx|max:2048',
+        ]);
+
+        // Manejar la carga del archivo
+        if ($request->hasFile('documento')) {
+            $file = $request->file('documento');
+            $filePath = $file->store('documentos', 'public');
+        } else {
+            return response()->json(['error' => 'No se pudo cargar el archivo'], 400);
+        }
+
+        // Crear un nuevo documento
+        $documento = new Documento();
+        $documento->idExpediente = $validatedData['idExpediente'];
+        $documento->folio = $validatedData['folio'];
+        $documento->nombre = $validatedData['nombre'];
+        $documento->documento = $filePath;
+        $documento->save();
+
+        return response()->json([
+            'message' => 'Documento creado exitosamente',
+            'documento' => $documento,
+        ], 201);
     }
 
     /**

@@ -28,7 +28,13 @@ class CatEstadoRequerimientoController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        //Insertar un nuevo estado de requerimiento
+        $catEstadoRequerimiento = new CatEstadoRequerimiento();
+        $catEstadoRequerimiento->nombre = $request->nombre;
+        $catEstadoRequerimiento->activo = $request->activo;
+        $catEstadoRequerimiento->save();
+        return response()->json($catEstadoRequerimiento);
+    
     }
 
     /**

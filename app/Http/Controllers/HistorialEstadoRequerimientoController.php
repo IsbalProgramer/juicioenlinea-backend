@@ -28,7 +28,27 @@ class HistorialEstadoRequerimientoController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        // Validar los datos de entrada
+        $validatedData = $request->validate([
+            'idRequerimiento' => 'required|integer|exists:requerimientos,id',
+            'fechaEstado' => 'required|date',
+            'idCatEstadoRequerimiento' => 'required|integer|exists:cat_estado_requerimientos,id',
+            'idGeneral' => 'nullable|integer|exists:generales,id',
+        ]);
+
+        // Crear un nuevo historial de estado de requerimiento
+        $historialEstadoRequerimiento = new HistorialEstadoRequerimiento();
+        $historialEstadoRequerimiento->idRequerimiento = $validatedData['idRequerimiento'];
+        $historialEstadoRequerimiento->fechaEstado = $validatedData['fechaEstado'];
+        $historialEstadoRequerimiento->idCatEstadoRequerimiento = $validatedData['idCatEstadoRequerimiento'];
+        $historialEstadoRequerimiento->idGeneral = $validatedData['idGeneral'] ?? null;
+        $historialEstadoRequerimiento->save();
+
+        // Retornar la respuesta con el recurso creado
+        return response()->json([
+            'message' => 'Historial de estado de requerimiento creado exitosamente.',
+            'data' => $historialEstadoRequerimiento
+        ], 201);
     }
 
     /**
@@ -36,7 +56,7 @@ class HistorialEstadoRequerimientoController extends Controller
      */
     public function show(HistorialEstadoRequerimiento $historialEstadoRequerimiento)
     {
-        //
+        //  
     }
 
     /**

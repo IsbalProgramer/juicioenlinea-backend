@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CatEstadoDocumento;
 use Illuminate\Http\Request;
+use \Illuminate\Validation\ValidationException;
 
 class CatEstadoDocumentoController extends Controller
 {
@@ -28,7 +29,43 @@ class CatEstadoDocumentoController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        // Insertar un nuevo estado de documento con manejo de errores
+      
+            // Validar los datos de entrada
+            $validatedData = $request->validate([
+            'nombre' => 'required|string|max:255',
+            ]);
+
+            // Crear un nuevo estado de documento
+            $catEstadoDocumento = new CatEstadoDocumento();
+            $catEstadoDocumento->nombre = $validatedData['nombre'];
+          
+            
+            try {
+                $catEstadoDocumento->save();  
+
+            // Retornar respuesta exitosa
+            return response()->json([
+            'success' => true,
+            'message' => 'Estado de documento creado exitosamente.',
+            'data' => $catEstadoDocumento,
+            ], 201);
+        } catch (ValidationException $e) {
+            // Manejar errores de validación
+            return response()->json([
+            'success' => false,
+            'message' => 'Error de validación.',
+            'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            // Manejar otros errores
+            return response()->json([
+            'success' => false,
+            'message' => 'Ocurrió un error al crear el estado de documento.',
+            'error' => $e->getMessage(),
+            ], 500);
+        }
+
     }
 
     /**
