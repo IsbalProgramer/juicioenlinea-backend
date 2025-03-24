@@ -28,35 +28,35 @@ class DocumentoController extends Controller
      */
     public function store(Request $request)
     {
-        // Validar los datos de entrada
         $validatedData = $request->validate([
-            'idExpediente' => 'required|integer|exists:expedientes,id',
+            'idExpediente' => 'required|integer|',
+            // exists:expedientes,id',
             'folio' => 'required|string|max:255',
             'nombre' => 'required|string|max:255',
             'documento' => 'required|file|mimes:pdf,doc,docx|max:2048',
         ]);
 
-        // Manejar la carga del archivo
-        if ($request->hasFile('documento')) {
-            $file = $request->file('documento');
-            $filePath = $file->store('documentos', 'public');
-        } else {
-            return response()->json(['error' => 'No se pudo cargar el archivo'], 400);
+        try {
+            // Obtener el contenido binario del archivo
+            $fileContent = file_get_contents($request->file('documento')->getRealPath());
+
+            // Crear el documento en la base de datos
+            $documento = Documento::create([
+                'idExpediente' => $validatedData['idExpediente'],
+                'folio' => $validatedData['folio'],
+                'nombre' => $validatedData['nombre'],
+                'documento' => $fileContent, // Se guarda el archivo en formato binario
+            ]);
+
+            return response()->json([
+                'message' => 'Documento guardado exitosamente',
+                'documento_id' => $documento->idDocumento, // Enviar el ID para su recuperación
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Error al guardar el documento: ' . $e->getMessage()], 500);
         }
-
-        // Crear un nuevo documento
-        $documento = new Documento();
-        $documento->idExpediente = $validatedData['idExpediente'];
-        $documento->folio = $validatedData['folio'];
-        $documento->nombre = $validatedData['nombre'];
-        $documento->documento = $filePath;
-        $documento->save();
-
-        return response()->json([
-            'message' => 'Documento creado exitosamente',
-            'documento' => $documento,
-        ], 201);
     }
+
 
     /**
      * Display the specified resource.
@@ -89,4 +89,23 @@ class DocumentoController extends Controller
     {
         //
     }
+
+    /**
+     * Download the specified resource.
+     */
+    public function download($id)
+    {
+        // Buscar el documento por ID
+        $documento = Documento::find($id);
+    
+        if (!$documento) {
+            return response()->json(['error' => 'Documento no encontrado'], 404);
+        }
+    
+        // Devolver el documento como descarga
+        return response($documento->documento)
+            ->header('Content-Type', 'application/octet-stream')
+            ->header('Content-Disposition', 'attachment; filename="' . $documento->nombre . '"');
+    }
+    
 }
