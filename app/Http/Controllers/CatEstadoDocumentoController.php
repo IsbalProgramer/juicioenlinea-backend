@@ -29,8 +29,6 @@ class CatEstadoDocumentoController extends Controller
      */
     public function store(Request $request)
     {
-        // Insertar un nuevo estado de documento con manejo de errores
-      
             // Validar los datos de entrada
             $validatedData = $request->validate([
             'nombre' => 'required|string|max:255',

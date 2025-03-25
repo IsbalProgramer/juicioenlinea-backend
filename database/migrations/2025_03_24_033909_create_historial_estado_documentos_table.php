@@ -13,14 +13,17 @@ return new class extends Migration
     {
         Schema::create('historial_estado_documento', function (Blueprint $table) {
             $table->id('idHistorialEstadoDocumento');
-            $table->unsignedBigInteger('idDocumento');
+            $table->unsignedBigInteger('idDocumento')->nullable();
             $table->dateTime('fechaEstado');
             $table->unsignedBigInteger('idCatEstadoDocumento');
-            $table->unsignedBigInteger('idGeneral')->nullable();
+            $table->unsignedBigInteger('idUsuario')->nullable();
+
             $table->timestamps();
 
             // Claves foráneas
             $table->foreign('idCatEstadoDocumento')->references('idCatalogoEstadoDocumento')->on('cat_estado_documento');
+            $table->foreign('idUsuario')->references('id')->on('users')->onDelete('SET NULL');
+            $table->foreign('idDocumento')->references('idDocumento')->on('documentos')->onDelete('set null');
         });
     }
 

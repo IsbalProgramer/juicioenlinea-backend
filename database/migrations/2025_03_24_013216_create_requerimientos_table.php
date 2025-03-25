@@ -23,9 +23,12 @@ return new class extends Migration
 
             // Claves foráneas
             // $table->foreign('idExpediente')->references('idExpediente')->on('expedientes')->onDelete('cascade');
+            // $table->foreign('idDocumento')->references('idDocumento')->on('documentos')->onDelete('cascade');
+            // $table->foreign('idDocumentoNuevo')->references('idDocumento')->on('documentos')->onDelete('cascade');
             $table->foreign('idDocumento')->references('idDocumento')->on('documentos')->onDelete('set null');
-            $table->foreign('idDocumentoNuevo')->references('idDocumento')->on('documentos')->onDelete('set null');
-            $table->foreign('idSecretario')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('idDocumentoNuevo')->references('idDocumento')->on('documentos')->onDelete('no action');
+
+            $table->foreign('idSecretario')->references('id')->on('users')->onDelete('no action');
         });
     }
 

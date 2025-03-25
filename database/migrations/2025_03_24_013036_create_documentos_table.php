@@ -22,6 +22,11 @@ return new class extends Migration
                 // Clave foránea
                 //$table->foreign('idExpediente')->references('idExpediente')->on('expedientes')->onDelete('cascade');
             });
+
+           
+            
+           
+
         }
 
     /**
