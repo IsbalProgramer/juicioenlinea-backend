@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('inicios', function (Blueprint $table) {
             $table->id('idInicio');
             $table->string('folio_preregistro')->unique();
-            $table->integer('idCatMateria');
+            $table->unsignedBigInteger('idCatMateria');
             $table->integer('idCatVia');
             $table->dateTime('fechaCreada');
             //$table->binary('archivo');
