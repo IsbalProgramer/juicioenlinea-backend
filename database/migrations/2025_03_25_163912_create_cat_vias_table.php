@@ -11,12 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('inicios', function (Blueprint $table) {
-            $table->id();
-            $table->string('folio_preregistro')->unique();
-            $table->string('materia');
-            $table->string('via');
-            $table->binary('archivo')->nullable(); // Almacena datos binarios
+        Schema::create('cat_vias', function (Blueprint $table) {
+            $table->id('idCatVia');
+            $table->string('nombre');
+            $table->boolean('activo');
             $table->timestamps();
         });
     }
@@ -26,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('inicios');
+        Schema::dropIfExists('cat_vias');
     }
 };
