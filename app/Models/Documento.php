@@ -15,8 +15,8 @@ class Documento extends Model
         protected $fillable = ['idExpediente', 'folio', 'nombre', 'documento'];
     
         protected $casts = [
-           // 'documento' => 'binary',
-           'documento' => 'string',
+           'documento' => 'binary',
+           //'documento' => 'string',
         ];
     
     
