@@ -13,11 +13,15 @@ class Documento extends Model
     protected $primaryKey = 'idDocumento';
 
     protected $fillable = ['idExpediente', 'folio', 'nombre', 'documento'];
+    // Convierte automáticamente Base64 a string
+    protected $casts = [
+        'documento' => 'string',
+    ];
 
-   // Convierte automáticamente Base64 a string
-   protected $casts = [
-    'documento' => 'string',
-];
+    public function inicio()
+    {
+        return $this->belongsTo(Inicio::class, 'idInicio');
+    }
 
     public function Requerimiento()
     {

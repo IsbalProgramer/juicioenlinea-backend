@@ -2,6 +2,8 @@
 
 namespace App\Models;
 use App\Models\Parte;
+use App\Models\Documento;
+
 use Illuminate\Database\Eloquent\Model;
 
 class Inicio extends Model
@@ -22,5 +24,8 @@ class Inicio extends Model
     {
         return $this->hasMany(Parte::class, 'idInicio');
     }
-
+    public function documentos()
+    {
+        return $this->hasMany(Documento::class, 'folio');
+    }
 }
