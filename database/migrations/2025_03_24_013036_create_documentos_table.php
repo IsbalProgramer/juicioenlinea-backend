@@ -16,7 +16,7 @@ return new class extends Migration
                 $table->unsignedBigInteger('idExpediente');
                 $table->string('folio');
                 $table->string('nombre');
-                $table->binary('documento');
+                $table->longText('documento');
                 $table->timestamps();
     
                 // Clave foránea
