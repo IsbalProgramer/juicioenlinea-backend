@@ -14,6 +14,7 @@ class Inicio extends Model
         'idCatMateria',
         'idCatVia',
         'idAbogado',
+        'fechaCreada',
         'archivo'
     ];
 

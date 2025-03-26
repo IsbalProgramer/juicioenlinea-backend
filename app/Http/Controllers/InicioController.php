@@ -27,7 +27,7 @@ class InicioController extends Controller
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
-{
+    {
     $validator = Validator::make($request->all(), [
         'folio_preregistro' => 'required|string|max:191',
         'idCatMateria' => 'required|integer',
@@ -59,20 +59,11 @@ class InicioController extends Controller
             'idCatMateria' => $request->idCatMateria,
             'idCatVia' => $request->idCatVia,
             'idAbogado' => $request->idAbogado,
+            'fechaCreada' => $request->fechaCreada,
         ]);
 
         // Insertar las partes asociadas
-        foreach ($request->partes as $parte) {
-            Parte::create([
-                'nombre' => $parte['nombre'],
-                'apellidoPaterno' => $parte['apellidoPaterno'],
-                'apellidoMaterno' => $parte['apellidoMaterno'],
-                'idCatGenero' => $parte['idCatGenero'],
-                'idCatParte' => $parte['idCatParte'],
-                'direccion' => $parte['direccion'],
-                'idInicio' => $inicio->idInicio, // Relación con "inicios"
-            ]);
-        }
+        $inicio->partes()->createMany($request->partes);
 
         DB::commit(); // Confirmar transacción
 
@@ -91,7 +82,7 @@ class InicioController extends Controller
             'error' => $e->getMessage(),
         ], 500);
     }
-}
+    }
 
     /**
      * Display the specified resource.
