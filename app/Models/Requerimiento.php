@@ -11,12 +11,16 @@ class Requerimiento extends Model
     protected $primaryKey = 'idRequerimiento';
     protected $fillable = [
         'idExpediente',
-        'idCatTipoRequerimiento',
         'idCatEstadoRequerimientos',
-        'fechaRequerimiento',
-        'fechaLimite',
         'descripcion',
         'documento',
-        'idGeneral'
+        'documentoNuevo',
+        'idSecretario',
+        'folioTramite',
     ];
+
+    public function Documentos()
+    {
+        return $this->hasMany(Documento::class, 'idDocumento');
+    }
 }
