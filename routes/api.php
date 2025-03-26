@@ -21,5 +21,8 @@ Route::get('documento',[DocumentoController::class,'index']); // obtiene documen
 //Requerimiento -- catalogo
 Route::post('catReq',[RequerimientoController::class,'store']);  // inserta catalogo de requerimiento
 
+//Requerimiento -- requerimiento 
+Route::post('requerimiento',[RequerimientoController::class,'store']); // inserta requerimiento
+
 
 
