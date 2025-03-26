@@ -6,19 +6,15 @@ use Illuminate\Database\Eloquent\Model;
 
 class Documento extends Model
 {
-    //Clase documento
-   
-        protected $table = 'documentos';
-        
-        protected $primaryKey = 'idDocumento';
-    
-        protected $fillable = ['idExpediente', 'folio', 'nombre', 'documento'];
-    
-        protected $casts = [
-           'documento' => 'binary',
-           //'documento' => 'string',
-        ];
-    
-    
-    
+    protected $table = 'documentos';
+
+    protected $primaryKey = 'idDocumento';
+
+    protected $fillable = ['idExpediente', 'folio', 'nombre', 'documento'];
+
+
+    public function inicio()
+    {
+        return $this->belongsTo(Inicio::class, 'idInicio');
+    }
 }
