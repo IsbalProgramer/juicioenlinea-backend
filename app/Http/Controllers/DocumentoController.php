@@ -34,49 +34,7 @@ class DocumentoController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    
-    //  public function store(Request $request)
-    //  {
-    //      $validatedData = $request->validate([
-    //          'idExpediente' => 'required|integer', // Eliminamos exists:expedientes,id
-    //          'folio' => 'required|string|max:255',
-    //          'nombre' => 'required|string|max:255',
-    //         //  'documento' => 'nullable|string',
-    //         'documento' => 'required|file|mimes:pdf,doc,docx|max:2048',
-    //      ]);
-     
-    //      try {
-    //          // Verifica si el archivo fue enviado correctamente
-    //          if (!$request->hasFile('documento') || !$request->file('documento')->isValid()) {
-    //              return response()->json(['error' => 'No se ha subido ningún archivo válido'], 400);
-    //          }
-     
-    //          // Obtener el contenido binario del archivo
-    //          $file = $request->file('documento');
-    //          $fileContent = file_get_contents($file->getRealPath());
-     
-    //          // Guardar el documento en la base de datos
-    //          $documento = new Documento();
-    //          $documento->idExpediente = $validatedData['idExpediente'];
-    //          $documento->folio = $validatedData['folio'];
-    //          $documento->nombre = $validatedData['nombre'];
-    //         //  $documento->documento = $validatedData['documento'] ?? null; // Si no se envía, se guarda como NULL
         
-    //         $documento->documento = base64_encode($fileContent); // Se guarda como Base64
-    //         $documento->save();
-            
-    //          $documento->save();
-     
-    //          return response()->json([
-    //              'message' => 'Documento guardado exitosamente',
-    //              'documento_id' => $documento->idDocumento,
-    //          ], 201);
-    //      } catch (\Exception $e) {
-    //          return response()->json(['error' => 'Error al guardar el documento '. $e->getMessage() ], 500);
-    //      }
-    //  }
-     
-
     public function store(Request $request)
 {
     $validatedData = $request->validate([
