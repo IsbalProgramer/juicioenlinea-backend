@@ -6,21 +6,21 @@ use Illuminate\Database\Eloquent\Model;
 
 class Documento extends Model
 {
-    //Clase documento
+    protected $table = 'documentos'; // Nombre real de la tabla en la BD
+    protected $primaryKey = 'idDocumento'; // Nombre real de la clave primaria
 
-    protected $table = 'documentos';
+    public $incrementing = true; // Asegurar que Laravel sepa que la clave es auto-incremental
+    protected $keyType = 'int'; // Definir el tipo de dato de la clave primaria
 
     protected $primaryKey = 'idDocumento';
 
     protected $fillable = ['idExpediente', 'folio', 'nombre', 'documento'];
 
-    public function inicio()
-    {
-        return $this->belongsTo(Inicio::class, 'idInicio');
-    }
 
-    public function Requerimiento()
-    {
-        return $this->belongsTo(Requerimiento::class);
+    public function documento(){
+        return $this->belongsTo(Documento::class, 'idDocumento');
     }
 }
+
+
+

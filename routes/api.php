@@ -31,15 +31,16 @@ Route::prefix('Catalogo')->group(function(){
     Route::get('EstadosInicio', [CatEstadoInicioController::class,'index']);
 });
 
+
 // documentos 
 Route::post('documento',[DocumentoController::class,'store']); //insetar docuemento
 Route::get('documento',[DocumentoController::class,'index']); // obtiene documentos
 
-//Requerimiento -- catalogo
-Route::post('catReq',[RequerimientoController::class,'store']);  // inserta catalogo de requerimiento
 
 //Requerimiento -- requerimiento 
 Route::post('requerimiento',[RequerimientoController::class,'store']); // inserta requerimiento
+Route::get('/requerimiento/{id}/descargar-documento', [RequerimientoController::class, 'descargarDocumentoPorRequerimiento']); // obtiene requerimientos
+Route::get('/requerimiento/{id}', [RequerimientoController::class, 'show']); // obtiene requerimientos
 
 
 

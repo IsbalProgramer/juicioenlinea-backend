@@ -85,19 +85,22 @@ class DatabaseSeeder extends Seeder
         // ]);
 
     
-        $faker = Faker::create();  // Crear una instancia de Faker
+        // $faker = Faker::create();  // Crear una instancia de Faker
 
-        // Insertar 10 usuarios aleatorios
-        for ($i = 0; $i < 10; $i++) {
-            DB::table('users')->insert([
-                'name' => $faker->name, // Generar nombre aleatorio
-                'email' => $faker->unique()->safeEmail, // Generar correo electrónico único
-                'password' => Hash::make('contraseñaSegura' . $i), // Contraseña aleatoria
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
+        // // Insertar 10 usuarios aleatorios
+        // for ($i = 0; $i < 10; $i++) {
+        //     DB::table('users')->insert([
+        //         'name' => $faker->name, // Generar nombre aleatorio
+        //         'email' => $faker->unique()->safeEmail, // Generar correo electrónico único
+        //         'password' => Hash::make('contraseñaSegura' . $i), // Contraseña aleatoria
+        //         'created_at' => now(),
+        //         'updated_at' => now(),
+        //     ]);
+        // }
+        
+        
 
 
     }
 }
+

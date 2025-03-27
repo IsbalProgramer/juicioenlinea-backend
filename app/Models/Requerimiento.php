@@ -13,8 +13,7 @@ class Requerimiento extends Model
         'idExpediente',
         'idCatEstadoRequerimientos',
         'descripcion',
-        'documento',
-        'documentoNuevo',
+        'idDocumento',
         'idSecretario',
         'folioTramite',
     ];
