@@ -20,7 +20,25 @@ class InicioController extends Controller
      */
     public function index()
     {
-        //
+        try {
+            //$inicios = Inicio::all();
+            $inicios = Inicio::with([
+                'partes',
+                'documentos:idExpediente,folio,nombre'
+            ])->get();
+            return response()->json([
+                'status' => 200,
+                'message' => "Listado de incios",
+                'data' => $inicios
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'message' => 'Error al obtener la lista de inicios',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
@@ -109,7 +127,11 @@ class InicioController extends Controller
      */
     public function show(Inicio $inicio)
     {
-        //
+        return response()->json([
+            'status' => 200,
+            'message' => "Detalle del incio",
+            'data' => $inicio
+        ], 200);
     }
 
     /**
