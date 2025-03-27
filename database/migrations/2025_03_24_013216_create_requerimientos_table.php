@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id('idRequerimiento');
             $table->string('descripcion');
             $table->unsignedBigInteger('idExpediente');
-            $table->string('folioTramite');
+            $table->string('folioTramite')->unique();
             $table->unsignedBigInteger('idDocumento');
             $table->unsignedBigInteger('idDocumentoNuevo')->nullable();
             $table->unsignedBigInteger('idSecretario');

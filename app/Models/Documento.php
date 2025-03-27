@@ -15,6 +15,10 @@ class Documento extends Model
     protected $fillable = [
         'nombre', 'folio', 'idExpediente', 'documento'
     ];
+
+    public function documento(){
+        return $this->belongsTo(Documento::class, 'idDocumento');
+    }
 }
 
 
