@@ -84,16 +84,16 @@ class RequerimientoController extends Controller
                 'idDocumento' => $documentoID
             ]);
 
-            // Si hay un segundo documento, guardarlo también
-            if ($request->hasFile('documentoNuevo')) {
-                $documentoNuevo = new Documento();
-                $documentoNuevo->nombre = $request->file('documentoNuevo')->getClientOriginalName();
-                $documentoNuevo->mime = $request->file('documentoNuevo')->getClientMimeType();
-                $documentoNuevo->documento = base64_encode(file_get_contents($request->file('documentoNuevo')));
-                $documentoNuevo->save();
+            // // Si hay un segundo documento, guardarlo también
+            // if ($request->hasFile('documentoNuevo')) {
+            //     $documentoNuevo = new Documento();
+            //     $documentoNuevo->nombre = $request->file('documentoNuevo')->getClientOriginalName();
+            //     $documentoNuevo->mime = $request->file('documentoNuevo')->getClientMimeType();
+            //     $documentoNuevo->documento = base64_encode(file_get_contents($request->file('documentoNuevo')));
+            //     $documentoNuevo->save();
 
-                Log::info("Segundo documento guardado con ID: " . $documentoNuevo->idDocumento, $documentoNuevo->toArray());
-            }
+            //     Log::info("Segundo documento guardado con ID: " . $documentoNuevo->idDocumento, $documentoNuevo->toArray());
+            // }
 
             DB::commit();
 
@@ -143,12 +143,13 @@ class RequerimientoController extends Controller
     public function show($id)
     {
         try {
-            
+
             $requerimiento = Requerimiento::findOrFail($id);
 
             return response()->json([
                 'status' => 200,
                 'message' => 'Requerimiento encontrado',
+
                 'data' => $requerimiento,
             ], 200);
         } catch (\Exception $e) {
@@ -176,7 +177,6 @@ class RequerimientoController extends Controller
         //Subir el requerimiento 
         $requerimiento->update($request->all());
         return response()->json($requerimiento, 200);
-
     }
 
     /**
