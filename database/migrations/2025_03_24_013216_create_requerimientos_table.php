@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('descripcion');
             $table->unsignedBigInteger('idExpediente');
             $table->string('folioTramite');
-            $table->unsignedBigInteger('idDocumento')->nullable();
+            $table->unsignedBigInteger('idDocumento');
             $table->unsignedBigInteger('idDocumentoNuevo')->nullable();
             $table->unsignedBigInteger('idSecretario');
             $table->timestamps();
@@ -25,7 +25,7 @@ return new class extends Migration
             // $table->foreign('idExpediente')->references('idExpediente')->on('expedientes')->onDelete('cascade');
             // $table->foreign('idDocumento')->references('idDocumento')->on('documentos')->onDelete('cascade');
             // $table->foreign('idDocumentoNuevo')->references('idDocumento')->on('documentos')->onDelete('cascade');
-            $table->foreign('idDocumento')->references('idDocumento')->on('documentos')->onDelete('set null');
+            $table->foreign('idDocumento')->references('idDocumento')->on('documentos');
             $table->foreign('idDocumentoNuevo')->references('idDocumento')->on('documentos')->onDelete('no action');
 
             $table->foreign('idSecretario')->references('id')->on('users')->onDelete('no action');

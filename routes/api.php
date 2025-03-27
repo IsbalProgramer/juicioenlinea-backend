@@ -23,6 +23,7 @@ Route::post('catReq',[RequerimientoController::class,'store']);  // inserta cata
 
 //Requerimiento -- requerimiento 
 Route::post('requerimiento',[RequerimientoController::class,'store']); // inserta requerimiento
+Route::get('/requerimiento/{id}/descargar-documento', [RequerimientoController::class, 'descargarDocumentoPorRequerimiento']); // obtiene requerimientos
 
 
 
