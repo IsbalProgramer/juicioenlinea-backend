@@ -8,7 +8,9 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use App\Models\Documento;
 use Illuminate\Support\Facades\Log;
-use Symfony\Polyfill\Intl\Idn\Info;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use \Illuminate\Database\QueryException;
+use Exception;
 
 
 class RequerimientoController extends Controller
@@ -16,10 +18,32 @@ class RequerimientoController extends Controller
     /**
      * Display a listing of the resource.
      */
+    // public function index()
+    // {
+    //     $requerimientos = Requerimiento::with(['documentos'])->get();	
+    //     return response()->json($requerimientos, 200);
+    // }
+
     public function index()
     {
-        //
+        $query = Requerimiento::query();
+
+        $fechaInicio = request()->query('fechaInicio');
+        $fechaFin = request()->query('fechaFin');
+
+        if ($fechaInicio && $fechaFin) {
+            $query->whereBetween('created_at', [$fechaInicio, $fechaFin]);
+        } elseif ($fechaInicio) {
+            $query->where('created_at', '>=', $fechaInicio);
+        } elseif ($fechaFin) {
+            $query->where('created_at', '<=', $fechaFin);
+        }
+
+        $requerimientos = $query->get();
+
+        return response()->json($requerimientos, 200);
     }
+
 
     /**
      * Show the form for creating a new resource.
@@ -39,7 +63,9 @@ class RequerimientoController extends Controller
             'idExpediente' => 'required|integer',
             'descripcion' => 'required|string',
             'idCatEstadoRequerimiento' => 'required|integer',
-            'folioTramite'  => 'required|string',
+            'folioTramite'  => 'required|string|unique:requerimientos',
+            //validaciones del documento
+            'folioDocumento' => 'required|string',
             'documento' => 'required|file|mimes:pdf,doc,docx,jpg,png|max:2048',
             'documentoNuevo' => 'nullable|file|mimes:pdf,doc,docx,jpg,png|max:2048',
             'idSecretario' => 'required|integer',
@@ -53,13 +79,44 @@ class RequerimientoController extends Controller
             ], 422);
         }
 
+        // Validar que el folioDocumento y el folioTramite no sean iguales
+        if (strcasecmp($request->folioDocumento, $request->folioTramite) === 0) {
+            return response()->json([
+                'status' => 400,
+                'message' => 'El folio de documento y el folio de trámite no pueden ser iguales.',
+            ], 400);
+        }
+
+
+        // Verificar si el folioTramite ya existe en la base de datos
+        $existingFolio = Documento::where('folio', $request->folioTramite)->first();
+
+        if ($existingFolio) {
+            return response()->json([
+                'status' => 400,
+                'message' => 'El folio de trámite ya existe',
+            ], 400);
+        }
+
+        // Verificar si el folioDocumento ya existe en la base de datos, excluyendo el documento actual (si es una actualización)
+        $existingFolioDocumento = Documento::where('folio', $request->folioDocumento)->first();
+
+        if ($existingFolioDocumento) {
+            return response()->json([
+                'status' => 400,
+                'message' => 'El folio de documento ya existe',
+            ], 400);
+        }
+
+
+
         try {
             DB::beginTransaction();
 
             // Guardar el documento en la base de datos
             $documento = new Documento();
             $documento->nombre = $request->file('documento')->getClientOriginalName();
-            $documento->folio = $request->folioTramite;
+            $documento->folio = $request->folioDocumento;
             $documento->idExpediente = $request->idExpediente;
             $documento->documento = base64_encode(file_get_contents($request->file('documento'))); // Convertir el archivo a base64
             $documento->save();
@@ -84,17 +141,6 @@ class RequerimientoController extends Controller
                 'idDocumento' => $documentoID
             ]);
 
-            // // Si hay un segundo documento, guardarlo también
-            // if ($request->hasFile('documentoNuevo')) {
-            //     $documentoNuevo = new Documento();
-            //     $documentoNuevo->nombre = $request->file('documentoNuevo')->getClientOriginalName();
-            //     $documentoNuevo->mime = $request->file('documentoNuevo')->getClientMimeType();
-            //     $documentoNuevo->documento = base64_encode(file_get_contents($request->file('documentoNuevo')));
-            //     $documentoNuevo->save();
-
-            //     Log::info("Segundo documento guardado con ID: " . $documentoNuevo->idDocumento, $documentoNuevo->toArray());
-            // }
-
             DB::commit();
 
             return response()->json([
@@ -105,16 +151,16 @@ class RequerimientoController extends Controller
                     'documento_id' => $documentoID
                 ]
             ], 200);
-        } catch (\Illuminate\Database\QueryException $e) {
+        } catch (QueryException $e) {
             DB::rollBack();
 
-            if ($e->getCode() == 23000) { // Error de clave duplicada
-                return response()->json([
-                    'status' => 400,
-                    'message' => 'El folio ya existe en la base de datos. Intenta con otro folio.',
-                    //'error' => $e->getMessage(),
-                ], 400);
-            }
+            // if ($e->getCode() == 23000) { // Error de clave duplicada
+            //     return response()->json([
+            //         'status' => 400,
+            //         'message' => 'El folio ya existe en la base de datos. Intenta con otro folio.',
+            //         //'error' => $e->getMessage(),
+            //     ], 400);
+            // }
 
             Log::error("Error en la base de datos al crear el requerimiento: " . $e->getMessage());
 
@@ -123,7 +169,7 @@ class RequerimientoController extends Controller
                 'message' => 'Error en la base de datos al crear el requerimiento',
                 //'error' => $e->getMessage(),
             ], 500);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             DB::rollBack();
 
             Log::error("Error general al crear el requerimiento: " . $e->getMessage());
@@ -136,28 +182,37 @@ class RequerimientoController extends Controller
         }
     }
 
-
     /**
      * Display the specified resource.
      */
     public function show($id)
     {
         try {
+            $requerimiento = Requerimiento::with('documentos')->findOrFail($id);
 
-            $requerimiento = Requerimiento::findOrFail($id);
+            // Obtener el documento asociado al requerimiento
+            $documento = Documento::find($requerimiento->idDocumento);
 
             return response()->json([
                 'status' => 200,
                 'message' => 'Requerimiento encontrado',
-
-                'data' => $requerimiento,
+                'data' => [
+                    'requerimiento' => $requerimiento,
+                    'documento' => $documento,
+                ],
             ], 200);
-        } catch (\Exception $e) {
+        } catch (ModelNotFoundException $e) {
+            Log::error("Requerimiento no encontrado: " . $e->getMessage());
             return response()->json([
                 'status' => 404,
                 'message' => 'Requerimiento no encontrado',
-                //'error' => $e->getMessage(),
             ], 404);
+        } catch (Exception $e) {
+            Log::error("Error al cargar el requerimiento: " . $e->getMessage());
+            return response()->json([
+                'status' => 500,
+                'message' => 'Error al cargar el requerimiento',
+            ], 500);
         }
     }
 
@@ -174,10 +229,97 @@ class RequerimientoController extends Controller
      */
     public function update(Request $request, Requerimiento $requerimiento)
     {
-        //Subir el requerimiento 
-        $requerimiento->update($request->all());
-        return response()->json($requerimiento, 200);
+        $validator = Validator::make($request->all(), [
+            'descripcion' => 'required|string',
+            'folioDocumento' => 'required|string',
+            'documentoNuevo' => 'nullable|file|mimes:pdf,doc,docx,jpg,png|max:2048',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 422,
+                'errors' => $validator->messages(),
+            ], 422);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Verificar si ya existe un documento con el mismo folio
+            $existingDocumento = Documento::where('folio', $request->folioDocumento)
+                ->where('idDocumento', '!=', $requerimiento->idDocumento)
+                ->first();
+
+            if ($existingDocumento) {
+                return response()->json([
+                    'status' => 400,
+                    'message' => 'El folio del documento ya existe.',
+                ], 400);
+            }
+
+            // 🚨 Verificar si ya tiene un idDocumentoNuevo y evitar la modificación
+            if (!is_null($requerimiento->idDocumentoNuevo)) {
+                return response()->json([
+                    'status' => 400,
+                    'message' => 'El requerimiento se encuentra completado.',
+                ], 400);
+            }
+
+            // Si hay un nuevo documento, lo guardamos
+            if ($request->hasFile('documentoNuevo')) {
+                $archivo = $request->file('documentoNuevo');
+                $nombreArchivo = $archivo->getClientOriginalName();
+                $contenidoBase64 = base64_encode(file_get_contents($archivo));
+
+                $documentoNuevo = new Documento();
+                $documentoNuevo->nombre = $nombreArchivo;
+                $documentoNuevo->folio = $request->folioDocumento;
+                $documentoNuevo->idExpediente = $requerimiento->idExpediente;
+                $documentoNuevo->documento = $contenidoBase64;
+                $documentoNuevo->save();
+
+                // Actualizar `idDocumentoNuevo` en el requerimiento
+                $requerimiento->idDocumentoNuevo = $documentoNuevo->idDocumento;
+            }
+
+            // Actualizar los demás datos del requerimiento
+            $requerimiento->descripcion = $request->descripcion;
+            $requerimiento->save();
+
+            DB::commit();
+
+            return response()->json([
+                'status' => 200,
+                'message' => 'Requerimiento subido correctamente',
+                'data' => $requerimiento,
+            ], 200);
+        } catch (QueryException $e) {
+            DB::rollBack();
+            if ($e->getCode() == 23000) { // Error de clave duplicada
+                return response()->json([
+                    'status' => 400,
+                    'message' => 'El folio del documento ya existe.',
+                ], 400);
+            }
+
+            return response()->json([
+                'status' => 400,
+                'message' => 'Error en la base de datos',
+                'error' => $e->getMessage(),
+            ], 400);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Error al subir el requerimiento: " . $e->getMessage());
+
+            return response()->json([
+                'status' => 500,
+                'message' => 'Error al subir el requerimiento',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
+
+
 
     /**
      * Remove the specified resource from storage.

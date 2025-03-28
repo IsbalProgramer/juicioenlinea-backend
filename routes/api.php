@@ -38,9 +38,15 @@ Route::get('documento',[DocumentoController::class,'index']); // obtiene documen
 
 
 //Requerimiento -- requerimiento 
-Route::post('requerimiento',[RequerimientoController::class,'store']); // inserta requerimiento
-Route::get('/requerimiento/{id}/descargar-documento', [RequerimientoController::class, 'descargarDocumentoPorRequerimiento']); // obtiene requerimientos
-Route::get('/requerimiento/{id}', [RequerimientoController::class, 'show']); // obtiene requerimientos
+// Route::post('requerimiento',[RequerimientoController::class,'store']); // inserta requerimiento
+// Route::get('/requerimiento/{id}/descargar-documento', [RequerimientoController::class, 'descargarDocumentoPorRequerimiento']); // obtiene requerimientos
+ //Route::get('requerimiento/{requerimiento}', [RequerimientoController::class, 'show']); // obtiene requerimientos
 
 
-
+Route::prefix('Requerimiento')->group(function(){
+    Route::post('CrearRequerimiento',[RequerimientoController::class,'store']);
+    Route::get('ListadoRequerimientos',[RequerimientoController::class,'index']);
+    Route::get('DetalleRequerimiento/{requerimiento}',[RequerimientoController::class,'show']);    
+    Route::get('DescargarDocumento/{id}',[RequerimientoController::class,'descargarDocumentoPorRequerimiento']);
+    Route::post('SubirRequerimiento/{requerimiento}',[RequerimientoController::class,'update']);
+});

@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Models;
-
+use App\Models\Documento;
 use Illuminate\Database\Eloquent\Model;
 
 class Requerimiento extends Model
@@ -11,14 +11,14 @@ class Requerimiento extends Model
     protected $primaryKey = 'idRequerimiento';
     protected $fillable = [
         'idExpediente',
-        'idCatEstadoRequerimientos',
         'descripcion',
         'idDocumento',
+        'idDocumentoNuevo',
         'idSecretario',
         'folioTramite',
     ];
 
-    public function Documentos()
+    public function documentos()
     {
         return $this->hasMany(Documento::class, 'idDocumento');
     }

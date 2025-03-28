@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-
+use App\Models\Requerimiento;
 class Documento extends Model
 {
     protected $table = 'documentos'; // Nombre real de la tabla en la BD
@@ -15,8 +15,8 @@ class Documento extends Model
     protected $fillable = ['idExpediente', 'folio', 'nombre', 'documento'];
 
 
-    public function documento(){
-        return $this->belongsTo(Documento::class, 'idDocumento');
+    public function requerimiento(){
+        return $this->belongsTo(Requerimiento::class, 'idDocumento');
     }
 }
 
