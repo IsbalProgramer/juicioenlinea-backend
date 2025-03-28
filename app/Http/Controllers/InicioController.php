@@ -31,7 +31,6 @@ class InicioController extends Controller
                 'message' => "Listado de incios",
                 'data' => $inicios
             ], 200);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 500,
@@ -62,6 +61,7 @@ class InicioController extends Controller
             'documentos' => 'required|array|min:1',
             'documentos.*.nombre' => 'required|string',
             'documentos.*.documento' => 'required|file|max:2048',
+
 
         ]);
 
@@ -94,7 +94,7 @@ class InicioController extends Controller
 
                 $documentos[] = [
                     'nombre' => $documentoData['nombre'],
-                    'documento' => DB::raw("CONVERT(VARBINARY(MAX), '$base64Content')"), // Conversión explícita
+                    'documento' => $base64Content, // Conversión explícita
                     'folio' => $request->folio_preregistro, // Asegúrate de incluir este campo si es necesario
                 ];
             }
@@ -125,13 +125,23 @@ class InicioController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Inicio $inicio)
+    public function show($idInicio)
     {
-        return response()->json([
-            'status' => 200,
-            'message' => "Detalle del incio",
-            'data' => $inicio
-        ], 200);
+        try {
+
+            $inicio = Inicio::with('documentos')->findOrFail($idInicio);
+            return response()->json([
+                'status' => 200,
+                'message' => "Detalle del incio",
+                'data' => $inicio
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'message' => "No se encontro el registro",
+                'data' => $e
+            ], 500);
+        }
     }
 
     /**
