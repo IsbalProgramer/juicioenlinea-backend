@@ -26,7 +26,7 @@ return new class extends Migration
             // $table->foreign('idDocumento')->references('idDocumento')->on('documentos')->onDelete('cascade');
             // $table->foreign('idDocumentoNuevo')->references('idDocumento')->on('documentos')->onDelete('cascade');
             $table->foreign('idDocumento')->references('idDocumento')->on('documentos');
-            $table->foreign('idDocumentoNuevo')->references('idDocumento')->on('documentos')->onDelete('no action');
+            $table->foreign('idDocumentoNuevo')->references('idDocumento')->on('documentos')->onDelete('set null');
 
             $table->foreign('idSecretario')->references('id')->on('users')->onDelete('no action');
         });

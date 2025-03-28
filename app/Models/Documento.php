@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-
+use App\Models\Requerimiento;
 class Documento extends Model
 {
     protected $table = 'documentos'; // Nombre real de la tabla en la BD
@@ -12,12 +12,11 @@ class Documento extends Model
     public $incrementing = true; // Asegurar que Laravel sepa que la clave es auto-incremental
     protected $keyType = 'int'; // Definir el tipo de dato de la clave primaria
 
-
     protected $fillable = ['idExpediente', 'folio', 'nombre', 'documento'];
 
 
-    public function documento(){
-        return $this->belongsTo(Documento::class, 'idDocumento');
+    public function requerimiento(){
+        return $this->belongsTo(Requerimiento::class, 'idDocumento');
     }
 }
 
