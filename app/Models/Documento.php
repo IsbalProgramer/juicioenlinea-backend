@@ -18,6 +18,11 @@ class Documento extends Model
     public function requerimiento(){
         return $this->belongsTo(Requerimiento::class, 'idDocumento');
     }
+
+    public function inicio(){
+        return $this->belongsTo(Inicio::class, 'idInicio');
+    }
+
 }
 
 
