@@ -43,7 +43,7 @@ Route::get('documento',[DocumentoController::class,'index']); // obtiene documen
  //Route::get('requerimiento/{requerimiento}', [RequerimientoController::class, 'show']); // obtiene requerimientos
 
 
-Route::prefix('Requerimiento')->group(function(){
+ Route::prefix('Requerimiento')->group(function(){
     Route::post('CrearRequerimiento',[RequerimientoController::class,'store']);
     Route::get('ListadoRequerimientos',[RequerimientoController::class,'index']);
     Route::get('DetalleRequerimiento/{requerimiento}',[RequerimientoController::class,'show']);    

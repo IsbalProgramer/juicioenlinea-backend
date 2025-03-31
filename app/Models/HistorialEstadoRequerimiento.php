@@ -8,11 +8,29 @@ class HistorialEstadoRequerimiento extends Model
 {
     //Clase Historial Estado Requerimiento
     protected $table = 'historial_estado_requerimientos';
-    protected $primaryKey = 'idHistorialEstadoRequerimiento';
+    protected $primaryKey = 'idHistorialEstadoRequerimientos';
     protected $fillable = [
         'idRequerimiento',
         'fechaEstado',
         'idCatEstadoRequerimientos',
-        'idGeneral'
+        'idUsuario'
     ];
+
+    public function requerimiento()
+    {
+        return $this->belongsTo(Requerimiento::class, 'idRequerimiento');
+    }
+
+    public function catEstadoRequerimiento()
+    {
+        return $this->belongsTo(CatEstadoRequerimiento::class, 'idCatEstadoRequerimientos');
+    }
+
+    public function general()
+    {
+        return $this->belongsTo(User::class, 'idGeneral');
+    }
+
+    
+
 }

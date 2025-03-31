@@ -1,7 +1,10 @@
 <?php
 
 namespace App\Models;
+
 use App\Models\Documento;
+use App\Models\User;
+use App\Models\HistorialEstadoRequerimiento;
 use Illuminate\Database\Eloquent\Model;
 
 class Requerimiento extends Model
@@ -18,8 +21,16 @@ class Requerimiento extends Model
         'folioTramite',
     ];
 
-    public function documentos()
+    public function documento()
     {
         return $this->hasMany(Documento::class, 'idDocumento');
+    }
+    public function secretario()
+    {
+        return $this->hasMany(User::class, 'idSecretario');
+    }
+    public function historial()
+    {
+        return $this->hasMany(HistorialEstadoRequerimiento::class);
     }
 }
