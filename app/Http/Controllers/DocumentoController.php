@@ -147,7 +147,7 @@ class DocumentoController extends Controller
      */
     public function edit(Documento $documento)
     {
-        //
+        //Editar 
     }
 
     /**
@@ -155,7 +155,7 @@ class DocumentoController extends Controller
      */
     public function update(Request $request, Documento $documento)
     {
-        //
+        //Actualizar 
     }
 
     /**
@@ -164,6 +164,7 @@ class DocumentoController extends Controller
     public function destroy(Documento $documento)
     {
         //
+        
     }
 
 }

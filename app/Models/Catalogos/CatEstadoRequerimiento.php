@@ -11,6 +11,7 @@ class CatEstadoRequerimiento extends Model
     protected $primaryKey = 'idCatEstadoRequerimientos';
     protected $fillable = [
         'nombre',
-        'activo'
+        'activo',
+        
     ];
 }

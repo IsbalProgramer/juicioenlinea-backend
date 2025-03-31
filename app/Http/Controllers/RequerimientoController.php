@@ -7,22 +7,17 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use App\Models\Documento;
+use App\Models\HistorialEstadoRequerimiento;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use \Illuminate\Database\QueryException;
 use Exception;
-
 
 class RequerimientoController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    // public function index()
-    // {
-    //     $requerimientos = Requerimiento::with(['documentos'])->get();	
-    //     return response()->json($requerimientos, 200);
-    // }
 
     public function index()
     {
@@ -40,8 +35,8 @@ class RequerimientoController extends Controller
         }
 
         $requerimientos = $query->get();
-
-        return response()->json($requerimientos, 200);
+        
+        return response()->json($requerimientos, 200);        
     }
 
 
@@ -58,24 +53,28 @@ class RequerimientoController extends Controller
      */
     public function store(Request $request)
     {
-        // Validar los datos de la petición
+         // Validar los datos de la petición
         $validator = Validator::make($request->all(), [
+            
+            //Validaciones del requerimiento
             'idExpediente' => 'required|integer',
             'descripcion' => 'required|string',
-            'idCatEstadoRequerimiento' => 'required|integer',
             'folioTramite'  => 'required|string|unique:requerimientos',
+            'idSecretario' => 'required|integer',
+            
             //validaciones del documento
             'folioDocumento' => 'required|string',
-            'documento' => 'required|file|mimes:pdf,doc,docx,jpg,png|max:2048',
-            'documentoNuevo' => 'nullable|file|mimes:pdf,doc,docx,jpg,png|max:2048',
-            'idSecretario' => 'required|integer',
+            'documento' => 'required|file|mimes:pdf,doc,docx|max:2048',
+
         ]);
 
         // Si la validación falla, devolver un error 422
         if ($validator->fails()) {
+            $errors = $validator->messages()->all();
+            $errorMessage = implode(', ', $errors);
             return response()->json([
                 'status' => 422,
-                'errors' => $validator->messages(),
+                'message' => 'Faltan los siguientes campos ' . $errorMessage,
             ], 422);
         }
 
@@ -86,7 +85,6 @@ class RequerimientoController extends Controller
                 'message' => 'El folio de documento y el folio de trámite no pueden ser iguales.',
             ], 400);
         }
-
 
         // Verificar si el folioTramite ya existe en la base de datos
         $existingFolio = Documento::where('folio', $request->folioTramite)->first();
@@ -108,8 +106,6 @@ class RequerimientoController extends Controller
             ], 400);
         }
 
-
-
         try {
             DB::beginTransaction();
 
@@ -129,16 +125,27 @@ class RequerimientoController extends Controller
                 throw new \Exception("Error: No se generó un ID para el documento.");
             }
 
-            Log::info("Documento guardado con ID: " . $documentoID, $documento->toArray());
-
             // Crear el requerimiento con la referencia al documento
             $requerimiento = Requerimiento::create([
                 'idExpediente' => $request->idExpediente,
                 'descripcion' => $request->descripcion,
-                'idCatEstadoRequerimiento' => $request->idCatEstadoRequerimiento,
                 'folioTramite' => $request->folioTramite,
                 'idSecretario' => $request->idSecretario,
                 'idDocumento' => $documentoID
+            ]);
+
+            // Obtener el ID del requerimiento recién creado
+            $requerimientoID = $requerimiento->idRequerimiento ?? Requerimiento::latest('idRequerimiento')->first()->idRequerimiento;
+
+            // Si el ID del documento no se generó, lanzar una excepción
+            if (!$requerimientoID) {
+                throw new \Exception("Error: No se generó un ID para el documento.");
+            }
+            
+            $historial = HistorialEstadoRequerimiento::create([
+                'idRequerimiento' => $requerimientoID,
+                'idExpediente' => $request->idExpediente,
+                'idUsuario' => $request->idSecretario,
             ]);
 
             DB::commit();
@@ -148,31 +155,21 @@ class RequerimientoController extends Controller
                 'message' => 'Documento guardado y requerimiento creado con referencia al documento',
                 'data' => [
                     'requerimiento' => $requerimiento,
-                    'documento_id' => $documentoID
+                    'documento_id' => $documentoID,
+                    'historial'=>$historial
                 ]
             ], 200);
+
         } catch (QueryException $e) {
             DB::rollBack();
-
-            // if ($e->getCode() == 23000) { // Error de clave duplicada
-            //     return response()->json([
-            //         'status' => 400,
-            //         'message' => 'El folio ya existe en la base de datos. Intenta con otro folio.',
-            //         //'error' => $e->getMessage(),
-            //     ], 400);
-            // }
-
-            Log::error("Error en la base de datos al crear el requerimiento: " . $e->getMessage());
 
             return response()->json([
                 'status' => 500,
                 'message' => 'Error en la base de datos al crear el requerimiento',
-                //'error' => $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         } catch (Exception $e) {
             DB::rollBack();
-
-            Log::error("Error general al crear el requerimiento: " . $e->getMessage());
 
             return response()->json([
                 'status' => 500,
@@ -188,7 +185,7 @@ class RequerimientoController extends Controller
     public function show($id)
     {
         try {
-            $requerimiento = Requerimiento::with('documentos')->findOrFail($id);
+            $requerimiento = Requerimiento::with('documento')->findOrFail($id);
 
             // Obtener el documento asociado al requerimiento
             $documento = Documento::find($requerimiento->idDocumento);
@@ -201,14 +198,15 @@ class RequerimientoController extends Controller
                     'documento' => $documento,
                 ],
             ], 200);
+
         } catch (ModelNotFoundException $e) {
-            Log::error("Requerimiento no encontrado: " . $e->getMessage());
+           
             return response()->json([
                 'status' => 404,
                 'message' => 'Requerimiento no encontrado',
             ], 404);
         } catch (Exception $e) {
-            Log::error("Error al cargar el requerimiento: " . $e->getMessage());
+            
             return response()->json([
                 'status' => 500,
                 'message' => 'Error al cargar el requerimiento',
@@ -230,9 +228,9 @@ class RequerimientoController extends Controller
     public function update(Request $request, Requerimiento $requerimiento)
     {
         $validator = Validator::make($request->all(), [
-            'descripcion' => 'required|string',
             'folioDocumento' => 'required|string',
-            'documentoNuevo' => 'nullable|file|mimes:pdf,doc,docx,jpg,png|max:2048',
+            'documentoNuevo' => 'required|file|mimes:pdf,doc,docx,jpg,png|max:2048',
+            'idAbogado'=> 'required|integer'
         ]);
 
         if ($validator->fails()) {
@@ -244,20 +242,7 @@ class RequerimientoController extends Controller
 
         try {
             DB::beginTransaction();
-
-            // Verificar si ya existe un documento con el mismo folio
-            $existingDocumento = Documento::where('folio', $request->folioDocumento)
-                ->where('idDocumento', '!=', $requerimiento->idDocumento)
-                ->first();
-
-            if ($existingDocumento) {
-                return response()->json([
-                    'status' => 400,
-                    'message' => 'El folio del documento ya existe.',
-                ], 400);
-            }
-
-            // 🚨 Verificar si ya tiene un idDocumentoNuevo y evitar la modificación
+            //Verificar si ya tiene un idDocumentoNuevo y evitar la modificación
             if (!is_null($requerimiento->idDocumentoNuevo)) {
                 return response()->json([
                     'status' => 400,
@@ -265,7 +250,7 @@ class RequerimientoController extends Controller
                 ], 400);
             }
 
-            // Si hay un nuevo documento, lo guardamos
+            // 
             if ($request->hasFile('documentoNuevo')) {
                 $archivo = $request->file('documentoNuevo');
                 $nombreArchivo = $archivo->getClientOriginalName();
@@ -280,10 +265,20 @@ class RequerimientoController extends Controller
 
                 // Actualizar `idDocumentoNuevo` en el requerimiento
                 $requerimiento->idDocumentoNuevo = $documentoNuevo->idDocumento;
+
+                $historial = HistorialEstadoRequerimiento::create([
+                    'idRequerimiento' => $requerimiento->idRequerimiento,
+                    'idExpediente' => $request->idExpediente,
+                    'idUsuario' => $request->idAbogado,
+                    'idCatEstadoRequerimientp'=>2,
+                    
+                ]);
+
+
             }
 
             // Actualizar los demás datos del requerimiento
-            $requerimiento->descripcion = $request->descripcion;
+          
             $requerimiento->save();
 
             DB::commit();
@@ -291,7 +286,10 @@ class RequerimientoController extends Controller
             return response()->json([
                 'status' => 200,
                 'message' => 'Requerimiento subido correctamente',
-                'data' => $requerimiento,
+                'data' => [
+                    $requerimiento,
+                    $historial,
+                ]
             ], 200);
         } catch (QueryException $e) {
             DB::rollBack();
@@ -299,6 +297,7 @@ class RequerimientoController extends Controller
                 return response()->json([
                     'status' => 400,
                     'message' => 'El folio del documento ya existe.',
+                    'error' => $e->getMessage(),
                 ], 400);
             }
 
