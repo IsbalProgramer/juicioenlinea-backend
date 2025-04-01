@@ -35,8 +35,8 @@ class RequerimientoController extends Controller
         }
 
         $requerimientos = $query->get();
-        
-        return response()->json($requerimientos, 200);        
+
+        return response()->json($requerimientos, 200);
     }
 
 
@@ -53,30 +53,30 @@ class RequerimientoController extends Controller
      */
     public function store(Request $request)
     {
-         // Validar los datos de la petición
+        // Validar los datos de la petición
         $validator = Validator::make($request->all(), [
-            
+
             //Validaciones del requerimiento
             'idExpediente' => 'required|integer',
             'descripcion' => 'required|string',
             'folioTramite'  => 'required|string|unique:requerimientos',
             'idSecretario' => 'required|integer',
-            
+
             //validaciones del documento
             'folioDocumento' => 'required|string',
             'documento' => 'required|file|mimes:pdf,doc,docx|max:2048',
 
         ]);
 
-        // Si la validación falla, devolver un error 422
-        if ($validator->fails()) {
-            $errors = $validator->messages()->all();
-            $errorMessage = implode(', ', $errors);
-            return response()->json([
-                'status' => 422,
-                'message' => 'Faltan los siguientes campos ' . $errorMessage,
-            ], 422);
-        }
+        // // Si la validación falla, devolver un error 422
+        // if ($validator->fails()) {
+        //     $errors = $validator->messages()->all();
+        //     $errorMessage = implode(', ', $errors);
+        //     return response()->json([
+        //         'status' => 422,
+        //         'message' => '' . $errorMessage,
+        //     ], 422);
+        // }
 
         // Validar que el folioDocumento y el folioTramite no sean iguales
         if (strcasecmp($request->folioDocumento, $request->folioTramite) === 0) {
@@ -86,20 +86,23 @@ class RequerimientoController extends Controller
             ], 400);
         }
 
-        // Verificar si el folioTramite ya existe en la base de datos
-        $existingFolio = Documento::where('folio', $request->folioTramite)->first();
+        // Verificar si el folioTramite ya existe en la tabla Requerimiento
+        $existingFolioTramite = Requerimiento::where('folioTramite', $request->folioTramite)->exists();
 
-        if ($existingFolio) {
+        // Verificar si el folioDocumento ya existe en la tabla Documento
+        $existingFolioDocumento = Documento::where('folio', $request->folioDocumento)->exists();
+
+        if ($existingFolioTramite && $existingFolioDocumento) {
+            return response()->json([
+                'status' => 400,
+                'message' => 'El folio de trámite y el folio de documento ya existen',
+            ], 400);
+        } elseif ($existingFolioTramite) {
             return response()->json([
                 'status' => 400,
                 'message' => 'El folio de trámite ya existe',
             ], 400);
-        }
-
-        // Verificar si el folioDocumento ya existe en la base de datos, excluyendo el documento actual (si es una actualización)
-        $existingFolioDocumento = Documento::where('folio', $request->folioDocumento)->first();
-
-        if ($existingFolioDocumento) {
+        } elseif ($existingFolioDocumento) {
             return response()->json([
                 'status' => 400,
                 'message' => 'El folio de documento ya existe',
@@ -141,7 +144,7 @@ class RequerimientoController extends Controller
             if (!$requerimientoID) {
                 throw new \Exception("Error: No se generó un ID para el documento.");
             }
-            
+
             $historial = HistorialEstadoRequerimiento::create([
                 'idRequerimiento' => $requerimientoID,
                 'idExpediente' => $request->idExpediente,
@@ -156,10 +159,9 @@ class RequerimientoController extends Controller
                 'data' => [
                     'requerimiento' => $requerimiento,
                     'documento_id' => $documentoID,
-                    'historial'=>$historial
+                    'historial' => $historial
                 ]
             ], 200);
-
         } catch (QueryException $e) {
             DB::rollBack();
 
@@ -174,7 +176,7 @@ class RequerimientoController extends Controller
             return response()->json([
                 'status' => 500,
                 'message' => 'Error al crear el requerimiento',
-                //'error' => $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -198,15 +200,14 @@ class RequerimientoController extends Controller
                     'documento' => $documento,
                 ],
             ], 200);
-
         } catch (ModelNotFoundException $e) {
-           
+
             return response()->json([
                 'status' => 404,
                 'message' => 'Requerimiento no encontrado',
             ], 404);
         } catch (Exception $e) {
-            
+
             return response()->json([
                 'status' => 500,
                 'message' => 'Error al cargar el requerimiento',
@@ -230,7 +231,7 @@ class RequerimientoController extends Controller
         $validator = Validator::make($request->all(), [
             'folioDocumento' => 'required|string',
             'documentoNuevo' => 'required|file|mimes:pdf,doc,docx,jpg,png|max:2048',
-            'idAbogado'=> 'required|integer'
+            'idAbogado' => 'required|integer'
         ]);
 
         if ($validator->fails()) {
@@ -270,15 +271,13 @@ class RequerimientoController extends Controller
                     'idRequerimiento' => $requerimiento->idRequerimiento,
                     'idExpediente' => $request->idExpediente,
                     'idUsuario' => $request->idAbogado,
-                    'idCatEstadoRequerimientp'=>2,
-                    
+                    'idCatEstadoRequerimientp' => 2,
+
                 ]);
-
-
             }
 
             // Actualizar los demás datos del requerimiento
-          
+
             $requerimiento->save();
 
             DB::commit();
