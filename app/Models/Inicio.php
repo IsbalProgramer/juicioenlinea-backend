@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Inicio extends Model
 {
-    // Indicar el nombre de la tabla si es necesario
+    
     protected $table = 'inicios';
     protected $primaryKey = 'idInicio';
     protected $fillable = [
@@ -27,5 +27,15 @@ class Inicio extends Model
     public function documentos()
     {
         return $this->hasMany(Documento::class, 'folio');
+    }
+
+    /**
+     * Get the expediente associated with the Inicio
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne
+     */
+    public function expediente(): HasOne
+    {
+        return $this->hasOne(Expediente::class);
     }
 }
