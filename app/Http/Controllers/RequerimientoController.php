@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use App\Models\Documento;
 use App\Models\HistorialEstadoRequerimiento;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use \Illuminate\Database\QueryException;
@@ -21,22 +22,23 @@ class RequerimientoController extends Controller
 
     public function index()
     {
-        $query = Requerimiento::query();
-
-        $fechaInicio = request()->query('fechaInicio');
-        $fechaFin = request()->query('fechaFin');
-
-        if ($fechaInicio && $fechaFin) {
-            $query->whereBetween('created_at', [$fechaInicio, $fechaFin]);
-        } elseif ($fechaInicio) {
-            $query->where('created_at', '>=', $fechaInicio);
-        } elseif ($fechaFin) {
-            $query->where('created_at', '<=', $fechaFin);
+        try {
+            $requerimiento = Requerimiento::with([
+               'documento',
+               'historial',
+            ])->get();
+            return response()->json([
+                'status' => 200,
+                'message' => "Listado de requerimientos",
+                'data' => $requerimiento
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'message' => 'Error al obtener la lista de requeirimientos',
+                'error' => $e->getMessage(),
+            ], 500);
         }
-
-        $requerimientos = $query->get();
-
-        return response()->json($requerimientos, 200);
     }
 
 
@@ -61,22 +63,22 @@ class RequerimientoController extends Controller
             'descripcion' => 'required|string',
             'folioTramite'  => 'required|string|unique:requerimientos',
             'idSecretario' => 'required|integer',
+            'idAbogado' => 'required|integer',
+            'fechaLimite' => [
+                'required',
+                'date',
+                function ($attribute, $value, $fail) {
+                    if (Carbon::parse($value)->lte(now())) {
+                        $fail('La fecha límite debe ser posterior a la fecha actual.');
+                    }
+                }
+            ],
 
             //validaciones del documento
             'folioDocumento' => 'required|string',
             'documento' => 'required|file|mimes:pdf,doc,docx|max:2048',
-
         ]);
 
-        // // Si la validación falla, devolver un error 422
-        // if ($validator->fails()) {
-        //     $errors = $validator->messages()->all();
-        //     $errorMessage = implode(', ', $errors);
-        //     return response()->json([
-        //         'status' => 422,
-        //         'message' => '' . $errorMessage,
-        //     ], 422);
-        // }
 
         // Validar que el folioDocumento y el folioTramite no sean iguales
         if (strcasecmp($request->folioDocumento, $request->folioTramite) === 0) {
@@ -109,6 +111,16 @@ class RequerimientoController extends Controller
             ], 400);
         }
 
+           // Si la validación falla, devolver un error 422
+           if ($validator->fails()) {
+            $errors = $validator->messages()->all();
+            $errorMessage = implode(', ', $errors);
+            return response()->json([
+                'status' => 422,
+                'message' => '' . $errorMessage,
+            ], 422);
+        }
+
         try {
             DB::beginTransaction();
 
@@ -134,7 +146,9 @@ class RequerimientoController extends Controller
                 'descripcion' => $request->descripcion,
                 'folioTramite' => $request->folioTramite,
                 'idSecretario' => $request->idSecretario,
-                'idDocumento' => $documentoID
+                'idDocumento' => $documentoID,
+                'idAbogado'=>$request->idAbogado,
+                'fechaLimite'=>$request->fechaLimite
             ]);
 
             // Obtener el ID del requerimiento recién creado
@@ -149,6 +163,7 @@ class RequerimientoController extends Controller
                 'idRequerimiento' => $requerimientoID,
                 'idExpediente' => $request->idExpediente,
                 'idUsuario' => $request->idSecretario,
+                // 'idCatEstadoRequerimientos' => 1,
             ]);
 
             DB::commit();
@@ -228,10 +243,22 @@ class RequerimientoController extends Controller
      */
     public function update(Request $request, Requerimiento $requerimiento)
     {
+    
+        // Obtener la fecha limite del requerimiento
+        $fechaLimite = $requerimiento->fechaLimite;
+        $abogado = $requerimiento->idAbogado;
+        // Validar que la fecha limite no haya pasado
+        if (Carbon::parse($fechaLimite)->lt(now())) {
+            return response()->json([
+                'status' => 400,
+                'message' => 'No se puede modificar el requerimiento porque la fecha límite ya ha pasado.',
+            ], 400);
+        }
+      
+
         $validator = Validator::make($request->all(), [
             'folioDocumento' => 'required|string',
-            'documentoNuevo' => 'required|file|mimes:pdf,doc,docx,jpg,png|max:2048',
-            'idAbogado' => 'required|integer'
+            'documentoNuevo' => 'required|file|mimes:pdf,doc,docx|max:2048',
         ]);
 
         if ($validator->fails()) {
@@ -270,8 +297,8 @@ class RequerimientoController extends Controller
                 $historial = HistorialEstadoRequerimiento::create([
                     'idRequerimiento' => $requerimiento->idRequerimiento,
                     'idExpediente' => $request->idExpediente,
-                    'idUsuario' => $request->idAbogado,
-                    'idCatEstadoRequerimientp' => 2,
+                    'idUsuario' =>  $abogado,
+                    'idCatEstadoRequerimientos' => 2,
 
                 ]);
             }
@@ -363,8 +390,6 @@ class RequerimientoController extends Controller
                 'pdf' => 'application/pdf',
                 'doc' => 'application/msword',
                 'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                'jpg' => 'image/jpeg',
-                'png' => 'image/png',
             ];
             $mimeType = $mimeTypes[$extension] ?? 'application/octet-stream';
 

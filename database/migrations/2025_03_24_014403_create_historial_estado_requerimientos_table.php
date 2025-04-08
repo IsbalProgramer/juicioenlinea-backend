@@ -14,13 +14,13 @@ return new class extends Migration
         Schema::create('historial_estado_requerimientos', function (Blueprint $table) {
             $table->id('idHistorialEstadoRequerimientos');
             $table->unsignedBigInteger('idRequerimiento');
-            $table->unsignedBigInteger('idCatEstadoRequerimiento')->default(1);
+            $table->unsignedBigInteger('idCatEstadoRequerimientos')->default(1);
             $table->unsignedBigInteger('idUsuario');
             $table->timestamps();
 
             // Claves foráneas
             $table->foreign('idRequerimiento')->references('idRequerimiento')->on('requerimientos');
-            $table->foreign('idCatEstadoRequerimiento')->references('idCatEstadoRequerimientos')->on('cat_estado_requerimientos');
+            $table->foreign('idCatEstadoRequerimientos')->references('idCatEstadoRequerimientos')->on('cat_estado_requerimientos');
             $table->foreign('idUsuario')->references('id')->on('users');
         });
     }
