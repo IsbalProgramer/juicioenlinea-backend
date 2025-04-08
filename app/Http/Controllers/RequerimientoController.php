@@ -24,8 +24,8 @@ class RequerimientoController extends Controller
     {
         try {
             $requerimiento = Requerimiento::with([
-               'documento',
-               'historial',
+                'documento',
+                'historial',
             ])->get();
             return response()->json([
                 'status' => 200,
@@ -111,8 +111,8 @@ class RequerimientoController extends Controller
             ], 400);
         }
 
-           // Si la validación falla, devolver un error 422
-           if ($validator->fails()) {
+        // Si la validación falla, devolver un error 422
+        if ($validator->fails()) {
             $errors = $validator->messages()->all();
             $errorMessage = implode(', ', $errors);
             return response()->json([
@@ -147,8 +147,8 @@ class RequerimientoController extends Controller
                 'folioTramite' => $request->folioTramite,
                 'idSecretario' => $request->idSecretario,
                 'idDocumento' => $documentoID,
-                'idAbogado'=>$request->idAbogado,
-                'fechaLimite'=>$request->fechaLimite
+                'idAbogado' => $request->idAbogado,
+                'fechaLimite' => $request->fechaLimite
             ]);
 
             // Obtener el ID del requerimiento recién creado
@@ -243,7 +243,7 @@ class RequerimientoController extends Controller
      */
     public function update(Request $request, Requerimiento $requerimiento)
     {
-    
+
         // Obtener la fecha limite del requerimiento
         $fechaLimite = $requerimiento->fechaLimite;
         $abogado = $requerimiento->idAbogado;
@@ -254,7 +254,7 @@ class RequerimientoController extends Controller
                 'message' => 'No se puede modificar el requerimiento porque la fecha límite ya ha pasado.',
             ], 400);
         }
-      
+
 
         $validator = Validator::make($request->all(), [
             'folioDocumento' => 'required|string',
