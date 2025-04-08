@@ -8,10 +8,10 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use App\Models\Documento;
 use App\Models\HistorialEstadoRequerimiento;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use \Illuminate\Database\QueryException;
-use Illuminate\Support\Carbon;
 use Exception;
 
 class RequerimientoController extends Controller
@@ -390,8 +390,6 @@ class RequerimientoController extends Controller
                 'pdf' => 'application/pdf',
                 'doc' => 'application/msword',
                 'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                'jpg' => 'image/jpeg',
-                'png' => 'image/png',
             ];
             $mimeType = $mimeTypes[$extension] ?? 'application/octet-stream';
 
