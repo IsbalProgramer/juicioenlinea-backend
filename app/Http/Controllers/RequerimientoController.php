@@ -43,7 +43,7 @@ class RequerimientoController extends Controller
 
             $requerimiento = Requerimiento::with([
                'documento',
-               'historial'
+               'historial',
             ])->get();
             return response()->json([
                 'status' => 200,
