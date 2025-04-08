@@ -22,23 +22,6 @@ class RequerimientoController extends Controller
 
     public function index()
     {
-        // $query = Requerimiento::query();
-
-        // $fechaInicio = request()->query('fechaInicio');
-        // $fechaFin = request()->query('fechaFin');
-
-        // if ($fechaInicio && $fechaFin) {
-        //     $query->whereBetween('created_at', [$fechaInicio, $fechaFin]);
-        // } elseif ($fechaInicio) {
-        //     $query->where('created_at', '>=', $fechaInicio);
-        // } elseif ($fechaFin) {
-        //     $query->where('created_at', '<=', $fechaFin);
-        // }
-
-        // $requerimientos = $query->get();
-
-        // return response()->json($requerimientos, 200);
-
         try {
 
             $requerimiento = Requerimiento::with([
