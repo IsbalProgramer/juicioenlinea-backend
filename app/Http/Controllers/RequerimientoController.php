@@ -23,7 +23,6 @@ class RequerimientoController extends Controller
     public function index()
     {
         try {
-
             $requerimiento = Requerimiento::with([
                'documento',
                'historial'
