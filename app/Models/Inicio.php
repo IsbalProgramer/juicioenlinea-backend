@@ -5,6 +5,7 @@ use App\Models\Parte;
 use App\Models\Documento;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Inicio extends Model
 {

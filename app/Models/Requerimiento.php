@@ -12,13 +12,17 @@ class Requerimiento extends Model
     //Clase Requerimiento
     protected $table = 'requerimientos';
     protected $primaryKey = 'idRequerimiento';
+    
+
     protected $fillable = [
         'idExpediente',
         'descripcion',
         'idDocumento',
         'idDocumentoNuevo',
         'idSecretario',
+        'idAbogado',
         'folioTramite',
+        'fechaLimite'
     ];
 
     public function documento()
@@ -31,6 +35,6 @@ class Requerimiento extends Model
     }
     public function historial()
     {
-        return $this->hasMany(HistorialEstadoRequerimiento::class);
+        return $this->hasMany(HistorialEstadoRequerimiento::class, 'idRequerimiento');
     }
 }
