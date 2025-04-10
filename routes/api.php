@@ -21,6 +21,8 @@ Route::prefix('Inicio')->group(function(){
     Route::post('CrearInicio',[InicioController::class,'store']);
     Route::get('ListadoInicios',[InicioController::class,'index']);
     Route::get('DetalleInicio/{idInicio}',[InicioController::class,'show']);    
+    Route::get('Documento/{idDocumento}',[DocumentoController::class,'show']); // obtiene documentos
+
 });
 
 Route::prefix('Catalogo')->group(function(){
@@ -29,6 +31,7 @@ Route::prefix('Catalogo')->group(function(){
     Route::get('Materias', [CatMateriasController::class,'index']);
     Route::get('Generos', [CatGenerosController::class,'index']);
     Route::get('EstadosInicio', [CatEstadoInicioController::class,'index']);
+
 });
 
 // documentos 

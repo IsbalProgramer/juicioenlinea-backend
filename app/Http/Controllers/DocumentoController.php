@@ -137,9 +137,23 @@ class DocumentoController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Documento $documento)
+    public function show($idDocumento)
     {
-        //
+        try {
+            $documento = Documento::select('nombre','documento')->findOrFail($idDocumento);
+            return response()->json([
+                'status' => 200,
+                'message' => 'Detalle del documento',
+                'data' => $documento
+            ], 200);
+    
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'message' => 'No se encontró el registro',
+                'data' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
