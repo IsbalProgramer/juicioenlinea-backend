@@ -27,7 +27,7 @@ class Inicio extends Model
     }
     public function documentos()
     {
-        return $this->hasMany(Documento::class, 'folio');
+        return $this->hasMany(Documento::class, 'idInicio');
     }
 
     /**

@@ -24,7 +24,7 @@ class InicioController extends Controller
             //$inicios = Inicio::all();
             $inicios = Inicio::with([
                 'partes',
-                'documentos:idExpediente,folio,nombre'
+                'documentos:idExpediente,nombre'
             ])->get();
             return response()->json([
                 'status' => 200,
