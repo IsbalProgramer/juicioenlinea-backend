@@ -48,4 +48,5 @@ Route::get('documento',[DocumentoController::class,'index']); // obtiene documen
     Route::get('DetalleRequerimiento/{requerimiento}',[RequerimientoController::class,'show']);    
     Route::get('DescargarDocumento/{id}',[RequerimientoController::class,'descargarDocumentoPorRequerimiento']);
     Route::post('SubirRequerimiento/{requerimiento}',[RequerimientoController::class,'update']);
+    Route::get('ListarDocumentosPorRequerimientos/{requerimiento}',[RequerimientoController::class, 'listarDocumentosPorRequerimiento']);
 });
