@@ -14,11 +14,6 @@ class Documento extends Model
 
     protected $fillable = ['idExpediente', 'nombre', 'documento'];
 
-
-    public function requerimiento(){
-        return $this->belongsTo(Requerimiento::class, 'idDocumento');
-    }
-
     public function inicio(){
         return $this->belongsTo(Inicio::class, 'idInicio');
     }

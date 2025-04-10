@@ -16,12 +16,10 @@ return new class extends Migration
             $table->string('descripcion');
             $table->unsignedBigInteger('idExpediente');
             $table->string('folioTramite')->unique();
-            $table->unsignedBigInteger('idDocumento');
+            $table->unsignedBigInteger('idDocumentoAcuerdo');
             $table->unsignedBigInteger('idDocumentoNuevo')->nullable();
             $table->unsignedBigInteger('idSecretario');
             $table->unsignedBigInteger('idAbogado');
-            // $table->dateTime('fechaCreada')->useCurrent();
-            // $table->dateTime('fechaModificacion')->nullable()->useCurrentOnUpdate();
             $table->timestamps();
             $table->dateTime('fechaLimite');
 
@@ -30,7 +28,7 @@ return new class extends Migration
             // $table->foreign('idExpediente')->references('idExpediente')->on('expedientes')->onDelete('cascade');
             // $table->foreign('idDocumento')->references('idDocumento')->on('documentos')->onDelete('cascade');
             // $table->foreign('idDocumentoNuevo')->references('idDocumento')->on('documentos')->onDelete('cascade');
-            $table->foreign('idDocumento')->references('idDocumento')->on('documentos');
+            $table->foreign('idDocumentoAcuerdo')->references('idDocumento')->on('documentos');
             $table->foreign('idDocumentoNuevo')->references('idDocumento')->on('documentos')->onDelete('set null');
             $table->foreign('idSecretario')->references('id')->on('users')->onDelete('no action');
             $table->foreign('idAbogado')->references('id')->on('users')->onDelete('no action');

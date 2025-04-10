@@ -25,7 +25,8 @@ class RequerimientoController extends Controller
         try {
 
             $requerimiento = Requerimiento::with([
-               'documento',
+               'documentoAcuerdo',
+               'documentoNuevo',
                'historial'
             ])->get();
             return response()->json([
@@ -77,7 +78,7 @@ class RequerimientoController extends Controller
 
             //validaciones del documento
             'folioDocumento' => 'required|string',
-            'documento' => 'required|file|mimes:pdf,doc,docx|max:2048',
+            'documentoAcuerdo' => 'required|file|mimes:pdf,doc,docx|max:2048',
         ]);
 
 
@@ -127,14 +128,14 @@ class RequerimientoController extends Controller
 
             // Guardar el documento en la base de datos
             $documento = new Documento();
-            $documento->nombre = $request->file('documento')->getClientOriginalName();
+            $documento->nombre = $request->file('documentoAcuerdo')->getClientOriginalName();
             $documento->folio = $request->folioDocumento;
             $documento->idExpediente = $request->idExpediente;
-            $documento->documento = base64_encode(file_get_contents($request->file('documento'))); // Convertir el archivo a base64
+            $documento->documento = base64_encode(file_get_contents($request->file('documentoAcuerdo'))); // Convertir el archivo a base64
             $documento->save();
 
             // Obtener el ID del documento recién creado
-            $documentoID = $documento->idDocumento ?? Documento::latest('idDocumento')->first()->idDocumento;
+            $documentoID = $documento->idDocumento ?? Documento::latest('idDocumentoAcuerdo')->first()->idDocumento;
 
             // Si el ID del documento no se generó, lanzar una excepción
             if (!$documentoID) {
@@ -147,7 +148,7 @@ class RequerimientoController extends Controller
                 'descripcion' => $request->descripcion,
                 'folioTramite' => $request->folioTramite,
                 'idSecretario' => $request->idSecretario,
-                'idDocumento' => $documentoID,
+                'idDocumentoAcuerdo' => $documentoID,
                 'idAbogado'=>$request->idAbogado,
                 'fechaLimite'=>$request->fechaLimite
             ]);
@@ -175,7 +176,8 @@ class RequerimientoController extends Controller
                 'data' => [
                     'requerimiento' => $requerimiento,
                     'documento_id' => $documentoID,
-                    'historial' => $historial
+                    'historial' => $historial,
+                    'documento' => $documento
                 ]
             ], 200);
         } catch (QueryException $e) {
@@ -200,35 +202,29 @@ class RequerimientoController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show($id)
+    public function show($idRequerimiento)
     {
         try {
-            $requerimiento = Requerimiento::with('documento')->findOrFail($id);
 
-            // Obtener el documento asociado al requerimiento
-            $documento = Documento::find($requerimiento->idDocumento);
-
+            $requerimiento = Requerimiento::with('documentoAcuerdo',
+            'documentoNuevo',
+             'historial',
+            'secretario',
+            'abogado',
+            )->findOrFail($idRequerimiento);
             return response()->json([
                 'status' => 200,
-                'message' => 'Requerimiento encontrado',
-                'data' => [
-                    'requerimiento' => $requerimiento,
-                    'documento' => $documento,
-                ],
+                'message' => "Detalle del requerimiento",
+                'data' => $requerimiento
             ], 200);
-        } catch (ModelNotFoundException $e) {
-
-            return response()->json([
-                'status' => 404,
-                'message' => 'Requerimiento no encontrado',
-            ], 404);
-        } catch (Exception $e) {
-
+        } catch (\Exception $e) {
             return response()->json([
                 'status' => 500,
-                'message' => 'Error al cargar el requerimiento',
+                'message' => "No se encontro el registro",
+                'data' => $e
             ], 500);
         }
+
     }
 
     /**
@@ -405,6 +401,33 @@ class RequerimientoController extends Controller
             return response()->json([
                 'status' => 500,
                 'message' => 'Error al descargar el documento',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function listarDocumentosPorRequerimiento($idRequerimiento)
+    {
+        try {
+            $requerimiento = Requerimiento::with(['documentoAcuerdo', 'documentoNuevo'])->findOrFail($idRequerimiento);
+
+            $documentos = [];
+            if ($requerimiento->documentoAcuerdo) {
+                $documentos[] = $requerimiento->documentoAcuerdo;
+            }
+            if ($requerimiento->documentoNuevo) {
+                $documentos[] = $requerimiento->documentoNuevo;
+            }
+
+            return response()->json([
+                'status' => 200,
+                'message' => "Listado de documentos del requerimiento",
+                'data' => $documentos
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'message' => "No se encontró el registro",
                 'error' => $e->getMessage(),
             ], 500);
         }
