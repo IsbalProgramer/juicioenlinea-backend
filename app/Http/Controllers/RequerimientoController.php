@@ -432,4 +432,6 @@ class RequerimientoController extends Controller
             ], 500);
         }
     }
+
+    
 }
