@@ -20,6 +20,7 @@ class InicioController extends Controller
      */
     public function index()
     {
+        
         try {
             //$inicios = Inicio::all();
             $inicios = Inicio::with([
