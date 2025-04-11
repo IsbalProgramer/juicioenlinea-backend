@@ -11,11 +11,27 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DocumentoController;
 use App\Http\Controllers\RequerimientoController;
 use Illuminate\Routing\RouteGroup;
+use Illuminate\Support\Facades\Auth;
+use App\Models\User;
+use App\Http\Middleware\EnsureTokenIsValid;
+
 
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
+Route::post('/login', function (Request $request) {
+    $credentials = $request->only('email', 'password');
+
+    if (!Auth::attempt($credentials)) {
+        return response()->json(['message' => 'Credenciales inválidas'], 401);
+    }
+
+    $user = Auth::user();
+    $token = $user->createToken('token-personal')->plainTextToken;
+
+    return response()->json(['token' => $token]);
+});
 
 Route::prefix('Inicio')->group(function(){
     Route::post('CrearInicio',[InicioController::class,'store']);
