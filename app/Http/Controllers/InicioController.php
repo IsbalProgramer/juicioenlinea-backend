@@ -61,7 +61,7 @@ class InicioController extends Controller
             'partes.*.direccion' => 'required|string|max:255',
             'documentos' => 'required|array|min:1',
             'documentos.*.nombre' => 'required|string',
-            'documentos.*.documento' => 'required|file|max:2048',
+            'documentos.*.documento' => 'required|string',
 
 
         ]);
@@ -88,21 +88,9 @@ class InicioController extends Controller
             // Insertar las partes asociadas
             $inicio->partes()->createMany($request->partes);
 
-            $documentos = [];
-            foreach ($request->documentos as $documentoData) {
-                $documento = $documentoData['documento'];
-                $base64Content = base64_encode($documento->get());
-
-                $documentos[] = [
-                    'nombre' => $documentoData['nombre'],
-                    'documento' => $base64Content, // Conversión explícita
-                    'folio' => $request->folio_preregistro, // Asegúrate de incluir este campo si es necesario
-                ];
-            }
-
 
             // Insertar los documentos asociados a este inicio
-            $inicio->documentos()->createMany($documentos);
+            $inicio->documentos()->createMany($request->documentos);
 
 
             DB::commit(); // Confirmar transacción
@@ -130,7 +118,7 @@ class InicioController extends Controller
     {
         try {
 
-            $inicio = Inicio::with('documentos')->findOrFail($idInicio);
+            $inicio = Inicio::with('partes','documentos')->findOrFail($idInicio);
             return response()->json([
                 'status' => 200,
                 'message' => "Detalle del incio",

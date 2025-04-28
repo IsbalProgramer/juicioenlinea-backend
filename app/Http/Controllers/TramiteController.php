@@ -12,7 +12,7 @@ class TramiteController extends Controller
      */
     public function index()
     {
-        //
+     
     }
 
     /**
