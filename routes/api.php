@@ -53,6 +53,7 @@ Route::prefix('Catalogo')->group(function(){
 // documentos 
 Route::post('documento',[DocumentoController::class,'store']); //insetar docuemento
 Route::get('documento',[DocumentoController::class,'index']); // obtiene documentos
+ 
 
 
 //Requerimiento -- requerimiento 
