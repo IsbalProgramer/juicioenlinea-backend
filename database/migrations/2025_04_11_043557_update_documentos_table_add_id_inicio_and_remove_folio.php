@@ -12,12 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('documentos', function (Blueprint $table) {
-            // Eliminar la columna 'folio'
-            $table->dropUnique(['folio']); // quitar el índice único primero
-            $table->dropColumn('folio');
+            // // Eliminar la columna 'folio'
+            // $table->dropUnique(['folio']); // quitar el índice único primero
+            // $table->dropColumn('folio');
 
             // Agregar columna 'idInicio'
-            $table->unsignedBigInteger('idInicio');
+            $table->unsignedBigInteger('idInicio')->nullable();
 
             // Agregar la clave foránea
             $table->foreign('idInicio')->references('idInicio')->on('inicios')->onDelete('cascade');

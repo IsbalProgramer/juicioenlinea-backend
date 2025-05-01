@@ -19,19 +19,33 @@ class RequerimientosSeeder extends Seeder
     {
         //Catalogo de requerimientos
         CatEstadoRequerimiento::create([
-            'nombre' => 'Requerimiento creado',
+            'nombre' => 'Requerimiento Creado',
             'activo' => 1,
         ]);
         CatEstadoRequerimiento::create([
-            'nombre' => 'Requerimiento subido',
+            'nombre' => 'Requerimiento Expirado',
             'activo' => 1,
         ]);
         CatEstadoRequerimiento::create([
-            'nombre' => 'Requerimiento aceptado',
+            'nombre' => 'Requerimiento Entregado',
+            'activo' => 1,
+        ]);
+
+        CatEstadoRequerimiento::create([
+            'nombre' => 'Requerimiento Actualizado',
+            'activo' => 1,
+        ]);
+
+        CatEstadoRequerimiento::create([
+            'nombre' => 'Requerimiento Eliminado',
             'activo' => 1,
         ]);
         CatEstadoRequerimiento::create([
-            'nombre' => 'Requerimiento denegado',
+            'nombre' => 'Requerimiento Admitido',
+            'activo' => 1,
+        ]);
+        CatEstadoRequerimiento::create([
+            'nombre' => 'Requerimiento Descartado',
             'activo' => 1,
         ]);
 
