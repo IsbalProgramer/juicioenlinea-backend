@@ -14,7 +14,10 @@ use Illuminate\Routing\RouteGroup;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use App\Http\Middleware\EnsureTokenIsValid;
+use App\Http\Middleware\VerifyJwtToken;
+
 use Illuminate\Routing\Route as RoutingRoute;
+
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
@@ -22,6 +25,7 @@ use Illuminate\Routing\Route as RoutingRoute;
 
 // Route::post('/login', function (Request $request) {
 //     $credentials = $request->only('email', 'password');
+
 
 //     if (!Auth::attempt($credentials)) {
 //         return response()->json(['message' => 'Credenciales inválidas'], 401);
@@ -34,8 +38,8 @@ use Illuminate\Routing\Route as RoutingRoute;
 // });
 
 Route::prefix('Inicio')->group(function(){
-    Route::post('CrearInicio',[InicioController::class,'store']);
-    Route::get('ListadoInicios',[InicioController::class,'index']);
+    Route::post('CrearInicio',[InicioController::class,'store'])->middleware(VerifyJwtToken::class);
+    Route::get('ListadoInicios',[InicioController::class,'index'])->middleware(VerifyJwtToken::class);
     Route::get('DetalleInicio/{idInicio}',[InicioController::class,'show']);    
     Route::get('Documento/{idDocumento}',[DocumentoController::class,'show']); // obtiene documentos
 
