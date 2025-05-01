@@ -14,7 +14,7 @@ return new class extends Migration
             Schema::create('documentos', function (Blueprint $table) {
                 $table->id('idDocumento');
                 $table->unsignedBigInteger('idExpediente')->nullable();
-                $table->string('folio')->unique();
+                $table->string('folio')->nullable();
                 $table->string('nombre');
                 $table->longText('documento');
                 $table->timestamps();
