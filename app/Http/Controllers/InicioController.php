@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Foundation\Validation\ValidatesRequests;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Database\QueryException;
 
@@ -20,7 +21,7 @@ class InicioController extends Controller
      */
     public function index()
     {
-        
+
         try {
             //$inicios = Inicio::all();
             $inicios = Inicio::with([
@@ -44,13 +45,14 @@ class InicioController extends Controller
     /**
      * Store a newly created resource in storage.
      */
+
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'folio_preregistro' => 'required|string|max:191',
             'idCatMateria' => 'required|integer',
             'idCatVia' => 'required|integer',
-            'idAbogado' => 'required|integer',
+            //'idAbogado' => 'required|integer',
             // Validación del array de partes 
             'partes' => 'required|array|min:1',
             'partes.*.nombre' => 'required|string|max:191',
@@ -76,12 +78,27 @@ class InicioController extends Controller
         try {
             DB::beginTransaction(); // Iniciar transacción
 
+            // Obtener el payload del token desde los atributos de la solicitud
+            $jwtPayload = $request->attributes->get('jwt_payload');
+
+            // Agregar un registro temporal para inspeccionar el payload
+            $idGeneral = isset($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'])
+                ? json_decode($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'], true)['idGeneral']
+                : null;
+
+            if (!$idGeneral) {
+                return response()->json([
+                    'status' => 400,
+                    'message' => 'No se pudo obtener el idGeneral del token',
+                ], 400);
+            }
+
             // Crear el registro en la tabla "inicios"
             $inicio = Inicio::create([
                 'folio_preregistro' => $request->folio_preregistro,
                 'idCatMateria' => $request->idCatMateria,
                 'idCatVia' => $request->idCatVia,
-                'idAbogado' => $request->idAbogado,
+                'idAbogado' => $idGeneral, // Asignar idGeneral al campo idAbogado
                 'fechaCreada' => $request->fechaCreada,
             ]);
 
@@ -118,7 +135,7 @@ class InicioController extends Controller
     {
         try {
 
-            $inicio = Inicio::with('partes','documentos')->findOrFail($idInicio);
+            $inicio = Inicio::with('partes', 'documentos')->findOrFail($idInicio);
             return response()->json([
                 'status' => 200,
                 'message' => "Detalle del incio",
