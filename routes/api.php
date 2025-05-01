@@ -14,24 +14,24 @@ use Illuminate\Routing\RouteGroup;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use App\Http\Middleware\EnsureTokenIsValid;
+use Illuminate\Routing\Route as RoutingRoute;
 
+// Route::get('/user', function (Request $request) {
+//     return $request->user();
+// })->middleware('auth:sanctum');
 
-Route::get('/user', function (Request $request) {
-    return $request->user();
-})->middleware('auth:sanctum');
+// Route::post('/login', function (Request $request) {
+//     $credentials = $request->only('email', 'password');
 
-Route::post('/login', function (Request $request) {
-    $credentials = $request->only('email', 'password');
+//     if (!Auth::attempt($credentials)) {
+//         return response()->json(['message' => 'Credenciales inválidas'], 401);
+//     }
 
-    if (!Auth::attempt($credentials)) {
-        return response()->json(['message' => 'Credenciales inválidas'], 401);
-    }
+//     $user = Auth::user();
+//     $token = $user->createToken('token-personal')->plainTextToken;
 
-    $user = Auth::user();
-    $token = $user->createToken('token-personal')->plainTextToken;
-
-    return response()->json(['token' => $token]);
-});
+//     return response()->json(['token' => $token]);
+// });
 
 Route::prefix('Inicio')->group(function(){
     Route::post('CrearInicio',[InicioController::class,'store']);
@@ -50,11 +50,6 @@ Route::prefix('Catalogo')->group(function(){
 
 });
 
-// documentos 
-Route::post('documento',[DocumentoController::class,'store']); //insetar docuemento
-Route::get('documento',[DocumentoController::class,'index']); // obtiene documentos
- 
-
 
 //Requerimiento -- requerimiento 
 // Route::post('requerimiento',[RequerimientoController::class,'store']); // inserta requerimiento
@@ -66,7 +61,13 @@ Route::get('documento',[DocumentoController::class,'index']); // obtiene documen
     Route::post('CrearRequerimiento',[RequerimientoController::class,'store']);
     Route::get('ListadoRequerimientos',[RequerimientoController::class,'index']);
     Route::get('DetalleRequerimiento/{requerimiento}',[RequerimientoController::class,'show']);    
-    Route::get('DescargarDocumento/{id}',[RequerimientoController::class,'descargarDocumentoPorRequerimiento']);
+    Route::get('VerDocumento/{id}',[RequerimientoController::class,'verDocumento']); 
     Route::post('SubirRequerimiento/{requerimiento}',[RequerimientoController::class,'update']);
-    Route::get('ListarDocumentosPorRequerimientos/{requerimiento}',[RequerimientoController::class, 'listarDocumentosPorRequerimiento']);
+    Route::get('ListarAcuerdo/{requerimiento}',[RequerimientoController::class, 'listarAcuerdo']);
+    Route::get('ListarRequerimiento/{requerimiento}',[RequerimientoController::class, 'listarNuevoDocumento']);
+    Route::post('ActualizarRequerimiento/{requerimiento}',[RequerimientoController::class, 'actualizarDocumento']);
+    Route::post('EliminarRequerimiento/{requerimiento}',[RequerimientoController::class, 'eliminarDocumento']);
+    Route::post('ActualizarEstadoRequerimiento/{requerimiento}',[RequerimientoController::class, 'actualizarEstadoRequerimiento']);
+    Route::post('RequerimientoExpirado/{requerimiento}', [RequerimientoController::class, 'estadoRequerimientoExpiro']);
+    
 });

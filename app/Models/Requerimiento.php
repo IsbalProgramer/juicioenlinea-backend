@@ -20,8 +20,8 @@ class Requerimiento extends Model
         'idDocumentoAcuerdo',
         'idDocumentoNuevo',
         'idSecretario',
-        'idAbogado',
-        'folioTramite',
+        // 'idAbogado',
+        // 'folioTramite',
         'fechaLimite',
         'folioDocumento'
     ];
@@ -41,10 +41,10 @@ class Requerimiento extends Model
         return $this->belongsTo(User::class, 'idSecretario');
     }
 
-    public function abogado()
-    {
-        return $this->belongsTo(User::class, 'idAbogado');
-    }
+    // public function abogado()
+    // {
+    //     return $this->belongsTo(User::class, 'idAbogado');
+    // }
 
     public function historial()
     {

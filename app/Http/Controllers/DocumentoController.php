@@ -181,4 +181,23 @@ class DocumentoController extends Controller
         
     }
 
+    //crear un metodo para eliminar un documento 
+    public function eliminarDocumento($idDocumento)
+    {
+        try {
+            $documento = Documento::findOrFail($idDocumento);
+            $documento->delete();
+            return response()->json([
+                'status' => 200,
+                'message' => 'Documento eliminado exitosamente',
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'message' => 'Error al eliminar el documento',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
 }

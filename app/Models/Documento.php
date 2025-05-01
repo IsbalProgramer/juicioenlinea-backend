@@ -12,7 +12,7 @@ class Documento extends Model
     public $incrementing = true; // Asegurar que Laravel sepa que la clave es auto-incremental
     protected $keyType = 'int'; // Definir el tipo de dato de la clave primaria
 
-    protected $fillable = ['idExpediente', 'nombre', 'documento'];
+    protected $fillable = ['idExpediente', 'nombre', 'documento', 'folio'];
 
     public function inicio(){
         return $this->belongsTo(Inicio::class, 'idInicio');

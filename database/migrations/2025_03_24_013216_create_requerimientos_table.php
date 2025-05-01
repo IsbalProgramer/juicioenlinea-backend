@@ -15,23 +15,19 @@ return new class extends Migration
             $table->id('idRequerimiento');
             $table->string('descripcion');
             $table->unsignedBigInteger('idExpediente');
-            $table->string('folioTramite')->unique();
             $table->unsignedBigInteger('idDocumentoAcuerdo');
             $table->unsignedBigInteger('idDocumentoNuevo')->nullable();
             $table->unsignedBigInteger('idSecretario');
-            $table->unsignedBigInteger('idAbogado');
             $table->timestamps();
             $table->dateTime('fechaLimite');
 
 
             // Claves foráneas
-            // $table->foreign('idExpediente')->references('idExpediente')->on('expedientes')->onDelete('cascade');
-            // $table->foreign('idDocumento')->references('idDocumento')->on('documentos')->onDelete('cascade');
-            // $table->foreign('idDocumentoNuevo')->references('idDocumento')->on('documentos')->onDelete('cascade');
+            // $table->foreign('idExpediente')->references('idExpediente')->on('expedientes');
             $table->foreign('idDocumentoAcuerdo')->references('idDocumento')->on('documentos');
             $table->foreign('idDocumentoNuevo')->references('idDocumento')->on('documentos')->onDelete('set null');
             $table->foreign('idSecretario')->references('id')->on('users')->onDelete('no action');
-            $table->foreign('idAbogado')->references('id')->on('users')->onDelete('no action');
+          
         });
     }
 
