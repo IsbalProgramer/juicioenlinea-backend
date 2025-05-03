@@ -66,9 +66,9 @@ Route::prefix('Catalogo')->group(function(){
     Route::get('ListadoRequerimientos',[RequerimientoController::class,'index']);
     Route::get('DetalleRequerimiento/{requerimiento}',[RequerimientoController::class,'show']);    
     Route::get('VerDocumento/{id}',[RequerimientoController::class,'verDocumento']); 
-    Route::post('SubirRequerimiento/{requerimiento}',[RequerimientoController::class,'update']);
+    Route::post('SubirRequerimiento/{requerimiento}',[RequerimientoController::class,'subirRequerimiento']);
     Route::get('ListarAcuerdo/{requerimiento}',[RequerimientoController::class, 'listarAcuerdo']);
-    Route::get('ListarRequerimiento/{requerimiento}',[RequerimientoController::class, 'listarNuevoDocumento']);
+    Route::get('ListarDocumentosRequerimiento/{requerimiento}',[RequerimientoController::class, 'listarDocumentosRequerimiento']);
     Route::post('ActualizarRequerimiento/{requerimiento}',[RequerimientoController::class, 'actualizarDocumento']);
     Route::post('EliminarRequerimiento/{requerimiento}',[RequerimientoController::class, 'eliminarDocumento']);
     Route::post('ActualizarEstadoRequerimiento/{requerimiento}',[RequerimientoController::class, 'actualizarEstadoRequerimiento']);

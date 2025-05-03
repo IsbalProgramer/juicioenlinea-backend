@@ -16,17 +16,14 @@ return new class extends Migration
             $table->string('descripcion');
             $table->unsignedBigInteger('idExpediente');
             $table->unsignedBigInteger('idDocumentoAcuerdo');
-            $table->unsignedBigInteger('idDocumentoNuevo')->nullable();
             $table->unsignedBigInteger('idSecretario');
             $table->timestamps();
             $table->dateTime('fechaLimite');
 
-
             // Claves foráneas
             // $table->foreign('idExpediente')->references('idExpediente')->on('expedientes');
             $table->foreign('idDocumentoAcuerdo')->references('idDocumento')->on('documentos');
-            $table->foreign('idDocumentoNuevo')->references('idDocumento')->on('documentos')->onDelete('set null');
-            $table->foreign('idSecretario')->references('id')->on('users')->onDelete('no action');
+           $table->foreign('idSecretario')->references('id')->on('users')->onDelete('no action');
           
         });
     }
