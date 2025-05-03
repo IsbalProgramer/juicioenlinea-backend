@@ -25,9 +25,7 @@ class RequerimientoController extends Controller
         try {
 
             $requerimiento = Requerimiento::with([
-                'documentoAcuerdo',
-                'documentoNuevo',
-                'historial'
+                'historial:idHistorialEstadoRequerimientos,idCatEstadoRequerimientos,idRequerimiento'
             ])->get();
             return response()->json([
                 'status' => 200,
@@ -108,6 +106,7 @@ class RequerimientoController extends Controller
             $documento->nombre = $request->file('documentoAcuerdo')->getClientOriginalName();
             $documento->folio = $request->folioDocumento;
             $documento->idExpediente = $request->idExpediente;
+            $documento->tipo = 'Acuerdo';
             $documento->documento = base64_encode(file_get_contents($request->file('documentoAcuerdo'))); // Convertir el archivo a base64
             $documento->save();
 
@@ -182,11 +181,9 @@ class RequerimientoController extends Controller
         try {
 
             $requerimiento = Requerimiento::with(
-                'documentoAcuerdo',
-                'documentoNuevo',
-                'historial',
-                'secretario',
-
+                'documentoAcuerdo:idDocumento',
+                'historial:idHistorialEstadoRequerimientos,idCatEstadoRequerimientos,idRequerimiento',
+                'documentoRequerimiento:idDocumento'
             )->findOrFail($idRequerimiento);
             return response()->json([
                 'status' => 200,
@@ -213,12 +210,126 @@ class RequerimientoController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Requerimiento $requerimiento)
+    public function update(Request $request, Requerimiento $requerimiento) {}
+
+
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(Requerimiento $requerimiento)
     {
-        // Obtener la fecha limite del requerimiento
+        //
+    }
+
+    //Metodo para subir el requerimiento
+    // public function subirRequerimiento(Request $request, Requerimiento $requerimiento)
+    // {
+    //     // Obtener la fecha limite del requerimiento
+    //     $fechaLimite = $requerimiento->fechaLimite;
+
+    //     // Validar que la fecha limite no haya pasado
+    //     if (Carbon::parse($fechaLimite)->lt(now())) {
+    //         return response()->json([
+    //             'status' => 400,
+    //             'message' => 'No se puede modificar el requerimiento porque la fecha límite ya ha pasado.',
+    //         ], 400);
+    //     }
+
+
+    //     $validator = Validator::make($request->all(), [
+    //         'folioDocumento' => 'required|string',
+    //         'documentoNuevo' => 'required|file|mimes:pdf,doc,docx|max:2048',
+    //         'idAbogado' => 'required|integer',
+    //     ]);
+
+    //     if ($validator->fails()) {
+    //         return response()->json([
+    //             'status' => 422,
+    //             'errors' => $validator->messages(),
+    //         ], 422);
+    //     }
+
+    //     try {
+    //         DB::beginTransaction();
+    //         //Verificar si ya tiene un idDocumentoNuevo y evitar la modificación
+    //         // if (!is_null($requerimiento->idDocumentoNuevo)) {
+    //         //     return response()->json([
+    //         //         'status' => 400,
+    //         //         'message' => 'El requerimiento se encuentra completado.',
+    //         //     ], 400);
+    //         // }
+
+    //         // 
+    //         if ($request->hasFile('documentoNuevo')) {
+    //             $archivo = $request->file('documentoNuevo');
+    //             $nombreArchivo = $archivo->getClientOriginalName();
+    //             $contenidoBase64 = base64_encode(file_get_contents($archivo));
+
+    //             $documentoNuevo = new Documento();
+    //             $documentoNuevo->nombre = $nombreArchivo;
+    //             $documentoNuevo->folio = $request->folioDocumento;
+    //             $documentoNuevo->idExpediente = $requerimiento->idExpediente;
+    //             $documentoNuevo->documento = $contenidoBase64;
+    //             $documentoNuevo->save();
+
+    //             // Actualizar `idDocumentoNuevo` en el requerimiento
+    //             // $requerimiento->idDocumentoNuevo = $documentoNuevo->idDocumento;
+
+    //             $historial = HistorialEstadoRequerimiento::create([
+    //                 'idRequerimiento' => $requerimiento->idRequerimiento,
+    //                 'idExpediente' => $request->idExpediente,
+    //                 'idUsuario' =>  $request->idAbogado,
+    //                 'idCatEstadoRequerimientos' => 3,
+
+    //             ]);
+    //         }
+
+    //         // Actualizar los demás datos del requerimiento
+
+    //         $requerimiento->save();
+
+    //         DB::commit();
+
+    //         return response()->json([
+    //             'status' => 200,
+    //             'message' => 'Requerimiento subido correctamente',
+    //             'data' => [
+    //                 $requerimiento,
+    //                 $historial,
+    //             ]
+    //         ], 200);
+    //     } catch (QueryException $e) {
+    //         DB::rollBack();
+    //         if ($e->getCode() == 23000) { // Error de clave duplicada
+    //             return response()->json([
+    //                 'status' => 400,
+    //                 'message' => 'El folio del documento ya existe.',
+    //                 'error' => $e->getMessage(),
+    //             ], 400);
+    //         }
+
+    //         return response()->json([
+    //             'status' => 400,
+    //             'message' => 'Error en la base de datos',
+    //             'error' => $e->getMessage(),
+    //         ], 400);
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         Log::error("Error al subir el requerimiento: " . $e->getMessage());
+
+    //         return response()->json([
+    //             'status' => 500,
+    //             'message' => 'Error al subir el requerimiento',
+    //             'error' => $e->getMessage(),
+    //         ], 500);
+    //     }
+    // }
+
+    public function subirRequerimiento(Request $request, Requerimiento $requerimiento)
+    {
         $fechaLimite = $requerimiento->fechaLimite;
 
-        // Validar que la fecha limite no haya pasado
         if (Carbon::parse($fechaLimite)->lt(now())) {
             return response()->json([
                 'status' => 400,
@@ -226,10 +337,12 @@ class RequerimientoController extends Controller
             ], 400);
         }
 
-
         $validator = Validator::make($request->all(), [
-            'folioDocumento' => 'required|string',
-            'documentoNuevo' => 'required|file|mimes:pdf,doc,docx|max:2048',
+            'folioDocumento' => 'required|array',
+            'folioDocumento.*' => 'required|string',
+            'documentoRequerimiento' => 'required|array|min:1',
+            'documentoRequerimiento.*' => 'required|file|mimes:pdf,doc,docx|max:2048',
+
             'idAbogado' => 'required|integer',
         ]);
 
@@ -242,59 +355,61 @@ class RequerimientoController extends Controller
 
         try {
             DB::beginTransaction();
-            //Verificar si ya tiene un idDocumentoNuevo y evitar la modificación
-            // if (!is_null($requerimiento->idDocumentoNuevo)) {
-            //     return response()->json([
-            //         'status' => 400,
-            //         'message' => 'El requerimiento se encuentra completado.',
-            //     ], 400);
-            // }
 
-            // 
-            if ($request->hasFile('documentoNuevo')) {
-                $archivo = $request->file('documentoNuevo');
+            $documentos = [];
+            $archivos = $request->file('documentoRequerimiento');
+            $folios = $request->folioDocumento;
+
+            foreach ($archivos as $index => $archivo) {
                 $nombreArchivo = $archivo->getClientOriginalName();
                 $contenidoBase64 = base64_encode(file_get_contents($archivo));
 
-                $documentoNuevo = new Documento();
-                $documentoNuevo->nombre = $nombreArchivo;
-                $documentoNuevo->folio = $request->folioDocumento;
-                $documentoNuevo->idExpediente = $requerimiento->idExpediente;
-                $documentoNuevo->documento = $contenidoBase64;
-                $documentoNuevo->save();
+                $documento = new Documento();
+                $documento->nombre = $nombreArchivo;
+                $documento->folio = $folios[$index] ?? 'SIN_FOLIO';
+                $documento->idExpediente = $requerimiento->idExpediente;
+                $documento->tipo = 'requerimiento';
+                $documento->documento = $contenidoBase64;
+                $documento->save();
 
-                // Actualizar `idDocumentoNuevo` en el requerimiento
-                $requerimiento->idDocumentoNuevo = $documentoNuevo->idDocumento;
-
-                $historial = HistorialEstadoRequerimiento::create([
+                // Relacionar con requerimiento en tabla pivote
+                DB::table('documento_requerimiento')->insert([
                     'idRequerimiento' => $requerimiento->idRequerimiento,
-                    'idExpediente' => $request->idExpediente,
-                    'idUsuario' =>  $request->idAbogado,
-                    'idCatEstadoRequerimientos' => 3,
-
+                    'idDocumento' => $documento->idDocumento,
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
+
+                $documentos[] = $documento;
             }
 
-            // Actualizar los demás datos del requerimiento
+            // Historial general del requerimiento
+            $historial = HistorialEstadoRequerimiento::create([
+                'idRequerimiento' => $requerimiento->idRequerimiento,
+                'idExpediente' => $request->idExpediente,
+                'idUsuario' =>  $request->idAbogado,
+                'idCatEstadoRequerimientos' => 3,
+            ]);
 
             $requerimiento->save();
-
             DB::commit();
 
             return response()->json([
                 'status' => 200,
-                'message' => 'Requerimiento subido correctamente',
+                'message' => 'Documentos subidos correctamente',
                 'data' => [
-                    $requerimiento,
-                    $historial,
+                    'requerimiento' => $requerimiento,
+                    'documentos' => $documentos,
+                    'historial' => $historial,
                 ]
             ], 200);
         } catch (QueryException $e) {
             DB::rollBack();
-            if ($e->getCode() == 23000) { // Error de clave duplicada
+
+            if ($e->getCode() == 23000) {
                 return response()->json([
                     'status' => 400,
-                    'message' => 'El folio del documento ya existe.',
+                    'message' => 'Algún folio de documento ya existe.',
                     'error' => $e->getMessage(),
                 ], 400);
             }
@@ -316,15 +431,6 @@ class RequerimientoController extends Controller
         }
     }
 
-
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Requerimiento $requerimiento)
-    {
-        //
-    }
 
     /**
      * Descargar un documento almacenado en base64
@@ -372,20 +478,22 @@ class RequerimientoController extends Controller
         }
     }
 
-    public function listarNuevoDocumento($idRequerimiento)
+    public function listarDocumentosRequerimiento($idRequerimiento)
     {
         try {
-            $requerimiento = Requerimiento::with(['documentoNuevo'])->findOrFail($idRequerimiento);
+            $requerimiento = Requerimiento::with(['documentoRequerimiento'])->findOrFail($idRequerimiento);
 
             $documentos = [];
-            if ($requerimiento->documentoNuevo) {
-                $requerimiento->documentoNuevo->tipo = 'Requerimiento';
-                $documentos[] = $requerimiento->documentoNuevo;
+            if ($requerimiento->documentoRequerimiento) {
+                foreach ($requerimiento->documentoRequerimiento as $documento) {
+                    $documento->tipo = 'requerimiento';
+                    $documentos[] = $documento;
+                }
             }
 
             return response()->json([
                 'status' => 200,
-                'message' => "Listado de nuevos documentos del requerimiento",
+                'message' => "Listado de documentos de requerimiento",
                 'data' => $documentos
             ], 200);
         } catch (\Exception $e) {
@@ -437,69 +545,69 @@ class RequerimientoController extends Controller
         }
 
 
-    try {
-        DB::beginTransaction();
+        try {
+            DB::beginTransaction();
 
-        // Verificar que el requerimiento tenga un documento asociado
-        if (!$requerimiento->idDocumentoNuevo) {
+            // Verificar que el requerimiento tenga un documento asociado
+            if (!$requerimiento->idDocumentoNuevo) {
+                return response()->json([
+                    'status' => 404,
+                    'message' => 'No existe un documento asociado para actualizar.',
+                ], 404);
+            }
+
+            // Buscar el documento existente
+            $documentoExistente = Documento::find($requerimiento->idDocumentoNuevo);
+
+            if (!$documentoExistente) {
+                return response()->json([
+                    'status' => 404,
+                    'message' => 'Documento no encontrado.',
+                ], 404);
+            }
+
+            // Actualizar folio aunque no haya archivo
+            $documentoExistente->folio = $request->folioDocumento;
+
+            if ($request->hasFile('documentoNuevo')) {
+                $archivo = $request->file('documentoNuevo');
+                $nombreArchivo = $archivo->getClientOriginalName();
+                $contenidoBase64 = base64_encode(file_get_contents($archivo));
+
+                $documentoExistente->nombre = $nombreArchivo;
+                $documentoExistente->documento = $contenidoBase64;
+            }
+
+            $documentoExistente->save();
+
+            // Crear historial siempre
+            $historial = HistorialEstadoRequerimiento::create([
+                'idRequerimiento' => $requerimiento->idRequerimiento,
+                'idExpediente' => $requerimiento->idExpediente,
+                'idUsuario' => $abogado,
+                'idCatEstadoRequerimientos' => 4, // Actualizado
+            ]);
+
+            DB::commit();
+
             return response()->json([
-                'status' => 404,
-                'message' => 'No existe un documento asociado para actualizar.',
-            ], 404);
-        }
-
-        // Buscar el documento existente
-        $documentoExistente = Documento::find($requerimiento->idDocumentoNuevo);
-
-        if (!$documentoExistente) {
+                'status' => 200,
+                'message' => 'Documento actualizado correctamente',
+                'data' => [
+                    'requerimiento' => $requerimiento,
+                    'documento' => $documentoExistente,
+                    'historial' => $historial,
+                ]
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
             return response()->json([
-                'status' => 404,
-                'message' => 'Documento no encontrado.',
-            ], 404);
+                'status' => 500,
+                'message' => 'Error al actualizar el documento',
+                'error' => $e->getMessage(),
+            ], 500);
         }
-
-        // Actualizar folio aunque no haya archivo
-        $documentoExistente->folio = $request->folioDocumento;
-
-        if ($request->hasFile('documentoNuevo')) {
-            $archivo = $request->file('documentoNuevo');
-            $nombreArchivo = $archivo->getClientOriginalName();
-            $contenidoBase64 = base64_encode(file_get_contents($archivo));
-
-            $documentoExistente->nombre = $nombreArchivo;
-            $documentoExistente->documento = $contenidoBase64;
-        }
-
-        $documentoExistente->save();
-
-        // Crear historial siempre
-        $historial = HistorialEstadoRequerimiento::create([
-            'idRequerimiento' => $requerimiento->idRequerimiento,
-            'idExpediente' => $requerimiento->idExpediente,
-            'idUsuario' => $abogado,
-            'idCatEstadoRequerimientos' => 4, // Actualizado
-        ]);
-
-        DB::commit();
-
-        return response()->json([
-            'status' => 200,
-            'message' => 'Documento actualizado correctamente',
-            'data' => [
-                'requerimiento' => $requerimiento,
-                'documento' => $documentoExistente,
-                'historial' => $historial,
-            ]
-        ], 200);
-    } catch (\Exception $e) {
-        DB::rollBack();
-        return response()->json([
-            'status' => 500,
-            'message' => 'Error al actualizar el documento',
-            'error' => $e->getMessage(),
-        ], 500);
     }
-}
     //Eliminar documento del requerimiento
     public function eliminarDocumento(Request $request, Requerimiento $requerimiento)
     {

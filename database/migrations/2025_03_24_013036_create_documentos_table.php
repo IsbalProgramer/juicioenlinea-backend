@@ -16,6 +16,7 @@ return new class extends Migration
                 $table->unsignedBigInteger('idExpediente')->nullable();
                 $table->string('folio')->nullable();
                 $table->string('nombre');
+                $table->string('tipo')->nullable();
                 $table->longText('documento');
                 $table->timestamps();
     

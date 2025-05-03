@@ -31,9 +31,9 @@ class Requerimiento extends Model
         return $this->belongsTo(Documento::class, 'idDocumentoAcuerdo');
     }
 
-    public function documentoNuevo()
+    public function documentoRequerimiento()
     {
-        return $this->belongsTo(Documento::class, 'idDocumentoNuevo');
+        return $this->belongsToMany(Documento::class, 'documento_requerimiento', 'idRequerimiento', 'idDocumento');
     }
 
     public function secretario()

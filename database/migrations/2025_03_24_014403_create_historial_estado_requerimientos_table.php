@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('historial_estado_requerimientos', function (Blueprint $table) {
             $table->id('idHistorialEstadoRequerimientos');
             $table->unsignedBigInteger('idRequerimiento');
-            $table->unsignedBigInteger('idCatEstadoRequerimientos')->default(1);
+            $table->unsignedBigInteger('idCatEstadoRequerimientos')->default(1);  //Al crear uno inicia en 1 -- CREADO por default
             $table->unsignedBigInteger('idUsuario');
             $table->timestamps();
 
