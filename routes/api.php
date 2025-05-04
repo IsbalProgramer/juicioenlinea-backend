@@ -67,7 +67,9 @@ Route::prefix('Catalogo')->group(function(){
     Route::get('ListarDocumentosRequerimiento/{requerimiento}',[RequerimientoController::class, 'listarDocumentosRequerimiento']);
     Route::post('ActualizarRequerimiento/{requerimiento}',[RequerimientoController::class, 'actualizarDocumento']);
     Route::post('EliminarRequerimiento/{requerimiento}',[RequerimientoController::class, 'eliminarDocumento']);
-    Route::post('ActualizarEstadoRequerimiento/{requerimiento}',[RequerimientoController::class, 'actualizarEstadoRequerimiento']);
     Route::post('RequerimientoExpirado/{requerimiento}', [RequerimientoController::class, 'estadoRequerimientoExpiro']);
+    Route::post('AdmitirRequerimiento/{requerimiento}',[RequerimientoController::class, 'admitirRequerimiento']);
+    Route::post('DenegarRequerimiento/{requerimiento}',[RequerimientoController::class, 'denegarRequerimiento']);
+    
     
 });

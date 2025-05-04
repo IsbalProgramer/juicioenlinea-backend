@@ -325,7 +325,6 @@ class RequerimientoController extends Controller
     //         ], 500);
     //     }
     // }
-
     public function subirRequerimiento(Request $request, Requerimiento $requerimiento)
     {
         $fechaLimite = $requerimiento->fechaLimite;
@@ -334,6 +333,18 @@ class RequerimientoController extends Controller
             return response()->json([
                 'status' => 400,
                 'message' => 'No se puede modificar el requerimiento porque la fecha límite ya ha pasado.',
+            ], 400);
+        }
+
+        // Verificar si ya se subió un documento para este requerimiento
+        $documentosExistentes = DB::table('documento_requerimiento')
+            ->where('idRequerimiento', $requerimiento->idRequerimiento)
+            ->exists();
+
+        if ($documentosExistentes) {
+            return response()->json([
+                'status' => 400,
+                'message' => 'Ya se han subido documentos para este requerimiento.',
             ], 400);
         }
 
@@ -388,7 +399,7 @@ class RequerimientoController extends Controller
                 'idRequerimiento' => $requerimiento->idRequerimiento,
                 'idExpediente' => $request->idExpediente,
                 'idUsuario' =>  $request->idAbogado,
-                'idCatEstadoRequerimientos' => 3,
+                'idCatEstadoRequerimientos' => 3, //REQUERIMIENTO SUBIDO Y ENVIADO
             ]);
 
             $requerimiento->save();
@@ -689,65 +700,89 @@ class RequerimientoController extends Controller
             ], 500);
         }
     }
-    // Descargar documento por requerimiento
 
-
-    // Cambiar el estado del requerimiento
-    public function cambiarEstadoRequerimiento(Request $request, Requerimiento $requerimiento)
+    // admitir
+    public function admitirRequerimiento(Request $request, Requerimiento $requerimiento)
     {
-        $request->validate([
-            'accion' => 'required|in:aceptar,denegar',
-        ]);
-
-        $fechaLimite = Carbon::parse($requerimiento->fechaLimite);
-
-        // Verificar que ya haya pasado la fecha límite
-        if ($fechaLimite->gt(now())) {
-            return response()->json([
-                'status' => 400,
-                'message' => 'No se puede cambiar el estado del requerimiento antes de la fecha límite.',
-            ], 400);
-        }
-
+        // if (Carbon::parse($requerimiento->fechaLimite)->gt(now())) {
+        //     return response()->json([
+        //         'status' => 400,
+        //         'message' => 'No se puede admitir el requerimiento antes de la fecha límite.',
+        //     ], 400);
+        // }
+    
         try {
             DB::beginTransaction();
 
-            // Definir el nuevo estado
-            $nuevoEstado = $request->accion === 'aceptar' ? 6 : 7; // 6 es Admitido, 7 es Descartado
-
-            // Actualizar el requerimiento
-            $requerimiento->idCatEstadoRequerimientos = $nuevoEstado;
-            $requerimiento->save();
-
-            // Registrar en historial
             $historial = HistorialEstadoRequerimiento::create([
                 'idRequerimiento' => $requerimiento->idRequerimiento,
                 'idExpediente' => $requerimiento->idExpediente,
-                'idUsuario' => $request->idSecretario,
-                'idCatEstadoRequerimientos' => $nuevoEstado,
+                'idUsuario' => $requerimiento->idSecretario,
+                'idCatEstadoRequerimientos' => 6,
             ]);
-
+    
             DB::commit();
-
+    
             return response()->json([
                 'status' => 200,
-                'message' => 'Estado del requerimiento actualizado correctamente.',
+                'message' => 'Requerimiento admitido correctamente.',
                 'data' => [
-                    'requerimiento' => $requerimiento,
                     'historial' => $historial,
                 ]
             ], 200);
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error al cambiar el estado del requerimiento: ' . $e->getMessage());
-
+            Log::error('Error al admitir requerimiento: ' . $e->getMessage());
+    
             return response()->json([
                 'status' => 500,
-                'message' => 'Error al cambiar el estado del requerimiento.',
+                'message' => 'Error al admitir el requerimiento.',
                 'error' => $e->getMessage(),
             ], 500);
         }
     }
+    
+    //denegar requerimiento
+    public function denegarRequerimiento(Request $request, Requerimiento $requerimiento)
+{
+    // if (Carbon::parse($requerimiento->fechaLimite)->gt(now())) {
+    //     return response()->json([
+    //         'status' => 400,
+    //         'message' => 'No se puede denegar el requerimiento antes de la fecha límite.',
+    //     ], 400);
+    // }
+
+    try {
+        DB::beginTransaction();
+
+        $historial = HistorialEstadoRequerimiento::create([
+            'idRequerimiento' => $requerimiento->idRequerimiento,
+            'idExpediente' => $requerimiento->idExpediente,
+            'idUsuario' => $requerimiento->idSecretario,
+            'idCatEstadoRequerimientos' => 7,
+        ]);
+
+        DB::commit();
+
+        return response()->json([
+            'status' => 200,
+            'message' => 'Requerimiento denegado correctamente.',
+            'data' => [
+                'historial' => $historial,
+            ]
+        ], 200);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Error al denegar requerimiento: ' . $e->getMessage());
+
+        return response()->json([
+            'status' => 500,
+            'message' => 'Error al denegar el requerimiento.',
+            'error' => $e->getMessage(),
+        ], 500);
+    }
+}
+
 
     //Este metodo se utiliza para verificar si el requerimiento ya paso su
     // fecha limite e insertar el estado correspondiente
