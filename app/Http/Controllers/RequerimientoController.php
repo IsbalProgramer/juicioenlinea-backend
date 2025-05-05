@@ -55,13 +55,14 @@ class RequerimientoController extends Controller
      */
     public function store(Request $request)
     {
+
         // Validar los datos de la petición
         $validator = Validator::make($request->all(), [
 
             //Validaciones del requerimiento
             'idExpediente' => 'required|integer',
             'descripcion' => 'required|string',
-            'idSecretario' => 'required|integer',
+            // 'idSecretario' => 'required|integer',
             'fechaLimite' => [
                 'required',
                 'date',
@@ -101,6 +102,22 @@ class RequerimientoController extends Controller
         try {
             DB::beginTransaction();
 
+            // Obtener el payload del token desde los atributos de la solicitud
+            $jwtPayload = $request->attributes->get('jwt_payload');
+
+            // Agregar un registro temporal para inspeccionar el payload
+            $idGeneral = isset($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'])
+                ? json_decode($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'], true)['idGeneral']
+                : null;
+
+            if (!$idGeneral) {
+                return response()->json([
+                    'status' => 400,
+                    'message' => 'No se pudo obtener el idGeneral del token',
+                ], 400);
+            }
+
+
             // Guardar el documento en la base de datos
             $documento = new Documento();
             $documento->nombre = $request->file('documentoAcuerdo')->getClientOriginalName();
@@ -122,7 +139,7 @@ class RequerimientoController extends Controller
             $requerimiento = Requerimiento::create([
                 'idExpediente' => $request->idExpediente,
                 'descripcion' => $request->descripcion,
-                'idSecretario' => $request->idSecretario,
+                'idSecretario' => $idGeneral, //ASIGNACION DEL USUARIO
                 'idDocumentoAcuerdo' => $documentoID,
                 'fechaLimite' => $request->fechaLimite
             ]);
@@ -138,7 +155,7 @@ class RequerimientoController extends Controller
             $historial = HistorialEstadoRequerimiento::create([
                 'idRequerimiento' => $requerimientoID,
                 'idExpediente' => $request->idExpediente,
-                'idUsuario' => $request->idSecretario,
+                'idUsuario' =>  $idGeneral, //ASIGNACION DEL USUARIO
                 // 'idCatEstadoRequerimientos' => 1,
             ]);
 
@@ -354,7 +371,7 @@ class RequerimientoController extends Controller
             'documentoRequerimiento' => 'required|array|min:1',
             'documentoRequerimiento.*' => 'required|file|mimes:pdf,doc,docx|max:2048',
 
-            'idAbogado' => 'required|integer',
+            // 'idAbogado' => 'required|integer',
         ]);
 
         if ($validator->fails()) {
@@ -366,6 +383,22 @@ class RequerimientoController extends Controller
 
         try {
             DB::beginTransaction();
+
+            // Obtener el payload del token desde los atributos de la solicitud
+            $jwtPayload = $request->attributes->get('jwt_payload');
+
+            // Agregar un registro temporal para inspeccionar el payload
+            $idGeneral = isset($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'])
+                ? json_decode($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'], true)['idGeneral']
+                : null;
+
+            if (!$idGeneral) {
+                return response()->json([
+                    'status' => 400,
+                    'message' => 'No se pudo obtener el idGeneral del token',
+                ], 400);
+            }
+
 
             $documentos = [];
             $archivos = $request->file('documentoRequerimiento');
@@ -398,7 +431,7 @@ class RequerimientoController extends Controller
             $historial = HistorialEstadoRequerimiento::create([
                 'idRequerimiento' => $requerimiento->idRequerimiento,
                 'idExpediente' => $request->idExpediente,
-                'idUsuario' =>  $request->idAbogado,
+                'idUsuario' => $idGeneral,
                 'idCatEstadoRequerimientos' => 3, //REQUERIMIENTO SUBIDO Y ENVIADO
             ]);
 
@@ -516,190 +549,191 @@ class RequerimientoController extends Controller
         }
     }
 
-    //Actualizar documento del requerimiento
-    public function actualizarDocumento(Request $request, Requerimiento $requerimiento)
-    {
+    //Metodos que no 
+    // //Actualizar documento del requerimiento
+    // public function actualizarDocumento(Request $request, Requerimiento $requerimiento)
+    // {
 
-        $historialSubida = DB::table('historial_estado_requerimientos')
-            ->where('idRequerimiento', $requerimiento->idRequerimiento)
-            ->where('idCatEstadoRequerimientos', 3) // Subida de documento
-            ->orderByDesc('created_at')
-            ->first();
+    //     $historialSubida = DB::table('historial_estado_requerimientos')
+    //         ->where('idRequerimiento', $requerimiento->idRequerimiento)
+    //         ->where('idCatEstadoRequerimientos', 3) // Subida de documento
+    //         ->orderByDesc('created_at')
+    //         ->first();
 
-        if (!$historialSubida) {
-            return response()->json([
-                'status' => 400,
-                'message' => 'No se puede determinar quién subió el documento.',
-            ], 400);
-        }
+    //     if (!$historialSubida) {
+    //         return response()->json([
+    //             'status' => 400,
+    //             'message' => 'No se puede determinar quién subió el documento.',
+    //         ], 400);
+    //     }
 
-        $fechaLimite = $requerimiento->fechaLimite;
-        $abogado = $historialSubida->idUsuario;
+    //     $fechaLimite = $requerimiento->fechaLimite;
+    //     $abogado = $historialSubida->idUsuario;
 
-        if (Carbon::parse($fechaLimite)->lt(now())) {
-            return response()->json([
-                'status' => 400,
-                'message' => 'No se puede modificar el requerimiento porque la fecha límite ya ha pasado.',
-            ], 400);
-        }
+    //     if (Carbon::parse($fechaLimite)->lt(now())) {
+    //         return response()->json([
+    //             'status' => 400,
+    //             'message' => 'No se puede modificar el requerimiento porque la fecha límite ya ha pasado.',
+    //         ], 400);
+    //     }
 
-        $validator = Validator::make($request->all(), [
-            'folioDocumento' => 'required|string',
-            'documentoNuevo' => 'required|file|mimes:pdf,doc,docx|max:2048',
-        ]);
+    //     $validator = Validator::make($request->all(), [
+    //         'folioDocumento' => 'required|string',
+    //         'documentoNuevo' => 'required|file|mimes:pdf,doc,docx|max:2048',
+    //     ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => 422,
-                'errors' => $validator->messages(),
-            ], 422);
-        }
+    //     if ($validator->fails()) {
+    //         return response()->json([
+    //             'status' => 422,
+    //             'errors' => $validator->messages(),
+    //         ], 422);
+    //     }
 
 
-        try {
-            DB::beginTransaction();
+    //     try {
+    //         DB::beginTransaction();
 
-            // Verificar que el requerimiento tenga un documento asociado
-            if (!$requerimiento->idDocumentoNuevo) {
-                return response()->json([
-                    'status' => 404,
-                    'message' => 'No existe un documento asociado para actualizar.',
-                ], 404);
-            }
+    //         // Verificar que el requerimiento tenga un documento asociado
+    //         if (!$requerimiento->idDocumentoNuevo) {
+    //             return response()->json([
+    //                 'status' => 404,
+    //                 'message' => 'No existe un documento asociado para actualizar.',
+    //             ], 404);
+    //         }
 
-            // Buscar el documento existente
-            $documentoExistente = Documento::find($requerimiento->idDocumentoNuevo);
+    //         // Buscar el documento existente
+    //         $documentoExistente = Documento::find($requerimiento->idDocumentoNuevo);
 
-            if (!$documentoExistente) {
-                return response()->json([
-                    'status' => 404,
-                    'message' => 'Documento no encontrado.',
-                ], 404);
-            }
+    //         if (!$documentoExistente) {
+    //             return response()->json([
+    //                 'status' => 404,
+    //                 'message' => 'Documento no encontrado.',
+    //             ], 404);
+    //         }
 
-            // Actualizar folio aunque no haya archivo
-            $documentoExistente->folio = $request->folioDocumento;
+    //         // Actualizar folio aunque no haya archivo
+    //         $documentoExistente->folio = $request->folioDocumento;
 
-            if ($request->hasFile('documentoNuevo')) {
-                $archivo = $request->file('documentoNuevo');
-                $nombreArchivo = $archivo->getClientOriginalName();
-                $contenidoBase64 = base64_encode(file_get_contents($archivo));
+    //         if ($request->hasFile('documentoNuevo')) {
+    //             $archivo = $request->file('documentoNuevo');
+    //             $nombreArchivo = $archivo->getClientOriginalName();
+    //             $contenidoBase64 = base64_encode(file_get_contents($archivo));
 
-                $documentoExistente->nombre = $nombreArchivo;
-                $documentoExistente->documento = $contenidoBase64;
-            }
+    //             $documentoExistente->nombre = $nombreArchivo;
+    //             $documentoExistente->documento = $contenidoBase64;
+    //         }
 
-            $documentoExistente->save();
+    //         $documentoExistente->save();
 
-            // Crear historial siempre
-            $historial = HistorialEstadoRequerimiento::create([
-                'idRequerimiento' => $requerimiento->idRequerimiento,
-                'idExpediente' => $requerimiento->idExpediente,
-                'idUsuario' => $abogado,
-                'idCatEstadoRequerimientos' => 4, // Actualizado
-            ]);
+    //         // Crear historial siempre
+    //         $historial = HistorialEstadoRequerimiento::create([
+    //             'idRequerimiento' => $requerimiento->idRequerimiento,
+    //             'idExpediente' => $requerimiento->idExpediente,
+    //             'idUsuario' => $abogado,
+    //             'idCatEstadoRequerimientos' => 4, // Actualizado
+    //         ]);
 
-            DB::commit();
+    //         DB::commit();
 
-            return response()->json([
-                'status' => 200,
-                'message' => 'Documento actualizado correctamente',
-                'data' => [
-                    'requerimiento' => $requerimiento,
-                    'documento' => $documentoExistente,
-                    'historial' => $historial,
-                ]
-            ], 200);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'status' => 500,
-                'message' => 'Error al actualizar el documento',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-    //Eliminar documento del requerimiento
-    public function eliminarDocumento(Request $request, Requerimiento $requerimiento)
-    {
+    //         return response()->json([
+    //             'status' => 200,
+    //             'message' => 'Documento actualizado correctamente',
+    //             'data' => [
+    //                 'requerimiento' => $requerimiento,
+    //                 'documento' => $documentoExistente,
+    //                 'historial' => $historial,
+    //             ]
+    //         ], 200);
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         return response()->json([
+    //             'status' => 500,
+    //             'message' => 'Error al actualizar el documento',
+    //             'error' => $e->getMessage(),
+    //         ], 500);
+    //     }
+    // }
+    // //Eliminar documento del requerimiento
+    // public function eliminarDocumento(Request $request, Requerimiento $requerimiento)
+    // {
 
-        $historialSubida = DB::table('historial_estado_requerimientos')
-            ->where('idRequerimiento', $requerimiento->idRequerimiento)
-            ->where('idCatEstadoRequerimientos', 3) // Subida de documento
-            ->orderByDesc('created_at')
-            ->first();
+    //     $historialSubida = DB::table('historial_estado_requerimientos')
+    //         ->where('idRequerimiento', $requerimiento->idRequerimiento)
+    //         ->where('idCatEstadoRequerimientos', 3) // Subida de documento
+    //         ->orderByDesc('created_at')
+    //         ->first();
 
-        if (!$historialSubida) {
-            return response()->json([
-                'status' => 400,
-                'message' => 'No se puede determinar quién subió el documento.',
-            ], 400);
-        }
+    //     if (!$historialSubida) {
+    //         return response()->json([
+    //             'status' => 400,
+    //             'message' => 'No se puede determinar quién subió el documento.',
+    //         ], 400);
+    //     }
 
-        try {
-            DB::beginTransaction();
+    //     try {
+    //         DB::beginTransaction();
 
-            // Verificar que el requerimiento tenga un documento asignado
-            if (is_null($requerimiento->idDocumentoNuevo)) {
-                return response()->json([
-                    'status' => 404,
-                    'message' => 'No hay documento asignado al requerimiento para eliminar.',
-                ], 404);
-            }
+    //         // Verificar que el requerimiento tenga un documento asignado
+    //         if (is_null($requerimiento->idDocumentoNuevo)) {
+    //             return response()->json([
+    //                 'status' => 404,
+    //                 'message' => 'No hay documento asignado al requerimiento para eliminar.',
+    //             ], 404);
+    //         }
 
-            // Buscar el documento
-            $documento = Documento::find($requerimiento->idDocumentoNuevo);
+    //         // Buscar el documento
+    //         $documento = Documento::find($requerimiento->idDocumentoNuevo);
 
-            if (!$documento) {
-                return response()->json([
-                    'status' => 404,
-                    'message' => 'Documento no encontrado.',
-                ], 404);
-            }
+    //         if (!$documento) {
+    //             return response()->json([
+    //                 'status' => 404,
+    //                 'message' => 'Documento no encontrado.',
+    //             ], 404);
+    //         }
 
-            // Eliminar el documento
-            $documento->delete();
+    //         // Eliminar el documento
+    //         $documento->delete();
 
-            // Quitar la referencia en el requerimiento
-            $requerimiento->idDocumentoNuevo = null;
-            $requerimiento->save();
+    //         // Quitar la referencia en el requerimiento
+    //         $requerimiento->idDocumentoNuevo = null;
+    //         $requerimiento->save();
 
-            // Opcional: registrar en historial que se eliminó el documento
-            $historial = HistorialEstadoRequerimiento::create([
-                'idRequerimiento' => $requerimiento->idRequerimiento,
-                'idExpediente' => $requerimiento->idExpediente,
-                'idUsuario' => $historialSubida->idUsuario,
-                'idCatEstadoRequerimientos' => 5, //5 ES ELIMINADO
-            ]);
+    //         // Opcional: registrar en historial que se eliminó el documento
+    //         $historial = HistorialEstadoRequerimiento::create([
+    //             'idRequerimiento' => $requerimiento->idRequerimiento,
+    //             'idExpediente' => $requerimiento->idExpediente,
+    //             'idUsuario' => $historialSubida->idUsuario,
+    //             'idCatEstadoRequerimientos' => 5, //5 ES ELIMINADO
+    //         ]);
 
-            DB::commit();
+    //         DB::commit();
 
-            return response()->json([
-                'status' => 200,
-                'message' => 'Documento eliminado correctamente.',
-                'data' => [
-                    'requerimiento' => $requerimiento,
-                    'historial' => $historial,
-                ],
-            ], 200);
-        } catch (QueryException $e) {
-            DB::rollBack();
-            return response()->json([
-                'status' => 400,
-                'message' => 'Error en la base de datos',
-                'error' => $e->getMessage(),
-            ], 400);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error("Error al eliminar el documento del requerimiento: " . $e->getMessage());
+    //         return response()->json([
+    //             'status' => 200,
+    //             'message' => 'Documento eliminado correctamente.',
+    //             'data' => [
+    //                 'requerimiento' => $requerimiento,
+    //                 'historial' => $historial,
+    //             ],
+    //         ], 200);
+    //     } catch (QueryException $e) {
+    //         DB::rollBack();
+    //         return response()->json([
+    //             'status' => 400,
+    //             'message' => 'Error en la base de datos',
+    //             'error' => $e->getMessage(),
+    //         ], 400);
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         Log::error("Error al eliminar el documento del requerimiento: " . $e->getMessage());
 
-            return response()->json([
-                'status' => 500,
-                'message' => 'Error al eliminar el documento',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
+    //         return response()->json([
+    //             'status' => 500,
+    //             'message' => 'Error al eliminar el documento',
+    //             'error' => $e->getMessage(),
+    //         ], 500);
+    //     }
+    // }
 
     // admitir
     public function admitirRequerimiento(Request $request, Requerimiento $requerimiento)
@@ -710,19 +744,34 @@ class RequerimientoController extends Controller
         //         'message' => 'No se puede admitir el requerimiento antes de la fecha límite.',
         //     ], 400);
         // }
-    
+
         try {
             DB::beginTransaction();
+            // Obtener el payload del token desde los atributos de la solicitud
+            $jwtPayload = $request->attributes->get('jwt_payload');
+
+            // Agregar un registro temporal para inspeccionar el payload
+            $idGeneral = isset($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'])
+                ? json_decode($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'], true)['idGeneral']
+                : null;
+
+            if (!$idGeneral) {
+                return response()->json([
+                    'status' => 400,
+                    'message' => 'No se pudo obtener el idGeneral del token',
+                ], 400);
+            }
+
 
             $historial = HistorialEstadoRequerimiento::create([
                 'idRequerimiento' => $requerimiento->idRequerimiento,
                 'idExpediente' => $requerimiento->idExpediente,
-                'idUsuario' => $requerimiento->idSecretario,
+                'idUsuario' => $idGeneral,
                 'idCatEstadoRequerimientos' => 6,
             ]);
-    
+
             DB::commit();
-    
+
             return response()->json([
                 'status' => 200,
                 'message' => 'Requerimiento admitido correctamente.',
@@ -733,7 +782,7 @@ class RequerimientoController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error al admitir requerimiento: ' . $e->getMessage());
-    
+
             return response()->json([
                 'status' => 500,
                 'message' => 'Error al admitir el requerimiento.',
@@ -741,47 +790,63 @@ class RequerimientoController extends Controller
             ], 500);
         }
     }
-    
+
     //denegar requerimiento
     public function denegarRequerimiento(Request $request, Requerimiento $requerimiento)
-{
-    // if (Carbon::parse($requerimiento->fechaLimite)->gt(now())) {
-    //     return response()->json([
-    //         'status' => 400,
-    //         'message' => 'No se puede denegar el requerimiento antes de la fecha límite.',
-    //     ], 400);
-    // }
+    {
+        // if (Carbon::parse($requerimiento->fechaLimite)->gt(now())) {
+        //     return response()->json([
+        //         'status' => 400,
+        //         'message' => 'No se puede denegar el requerimiento antes de la fecha límite.',
+        //     ], 400);
+        // }
 
-    try {
-        DB::beginTransaction();
+        try {
+            DB::beginTransaction();
 
-        $historial = HistorialEstadoRequerimiento::create([
-            'idRequerimiento' => $requerimiento->idRequerimiento,
-            'idExpediente' => $requerimiento->idExpediente,
-            'idUsuario' => $requerimiento->idSecretario,
-            'idCatEstadoRequerimientos' => 7,
-        ]);
+            // Obtener el payload del token desde los atributos de la solicitud
+            $jwtPayload = $request->attributes->get('jwt_payload');
 
-        DB::commit();
+            // Agregar un registro temporal para inspeccionar el payload
+            $idGeneral = isset($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'])
+                ? json_decode($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'], true)['idGeneral']
+                : null;
 
-        return response()->json([
-            'status' => 200,
-            'message' => 'Requerimiento denegado correctamente.',
-            'data' => [
-                'historial' => $historial,
-            ]
-        ], 200);
-    } catch (\Exception $e) {
-        DB::rollBack();
-        Log::error('Error al denegar requerimiento: ' . $e->getMessage());
+            if (!$idGeneral) {
+                return response()->json([
+                    'status' => 400,
+                    'message' => 'No se pudo obtener el idGeneral del token',
+                ], 400);
+            }
 
-        return response()->json([
-            'status' => 500,
-            'message' => 'Error al denegar el requerimiento.',
-            'error' => $e->getMessage(),
-        ], 500);
+
+            $historial = HistorialEstadoRequerimiento::create([
+                'idRequerimiento' => $requerimiento->idRequerimiento,
+                'idExpediente' => $requerimiento->idExpediente,
+                'idUsuario' => $idGeneral,
+                'idCatEstadoRequerimientos' => 7,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'status' => 200,
+                'message' => 'Requerimiento denegado correctamente.',
+                'data' => [
+                    'historial' => $historial,
+                ]
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error al denegar requerimiento: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 500,
+                'message' => 'Error al denegar el requerimiento.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
-}
 
 
     //Este metodo se utiliza para verificar si el requerimiento ya paso su
@@ -815,11 +880,27 @@ class RequerimientoController extends Controller
             try {
                 DB::beginTransaction();
 
+                // Obtener el payload del token desde los atributos de la solicitud
+                $jwtPayload = $request->attributes->get('jwt_payload');
+
+                // Agregar un registro temporal para inspeccionar el payload
+                $idGeneral = isset($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'])
+                    ? json_decode($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'], true)['idGeneral']
+                    : null;
+
+                if (!$idGeneral) {
+                    return response()->json([
+                        'status' => 400,
+                        'message' => 'No se pudo obtener el idGeneral del token',
+                    ], 400);
+                }
+
+
                 // Registrar el cambio en el historial
                 $historial = HistorialEstadoRequerimiento::create([
                     'idRequerimiento' => $requerimiento->idRequerimiento,
                     'idExpediente' => $requerimiento->idExpediente,
-                    'idUsuario' => $requerimiento->idSecretario,
+                    'idUsuario' => $idGeneral,
                     'idCatEstadoRequerimientos' => 2, // 2 expirado
                 ]);
 

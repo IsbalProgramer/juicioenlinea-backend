@@ -21,7 +21,7 @@ return new class extends Migration
             // Claves foráneas
             $table->foreign('idRequerimiento')->references('idRequerimiento')->on('requerimientos');
             $table->foreign('idCatEstadoRequerimientos')->references('idCatEstadoRequerimientos')->on('cat_estado_requerimientos');
-            $table->foreign('idUsuario')->references('id')->on('users');
+            // $table->foreign('idUsuario')->references('id')->on('users');
         });
     }
 

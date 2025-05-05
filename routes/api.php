@@ -62,18 +62,19 @@ Route::prefix('Catalogo')->group(function(){
 
 
  Route::prefix('Requerimiento')->group(function(){
-    Route::post('CrearRequerimiento',[RequerimientoController::class,'store']);
-    Route::get('ListadoRequerimientos',[RequerimientoController::class,'index']);
+    Route::post('CrearRequerimiento',[RequerimientoController::class,'store'])->middleware(VerifyJwtToken::class);
+    Route::get('ListadoRequerimientos',[RequerimientoController::class,'index'])->middleware(VerifyJwtToken::class);
+    Route::get('ListadoRequerimientosAbogados',[RequerimientoController::class,'index']);
     Route::get('DetalleRequerimiento/{requerimiento}',[RequerimientoController::class,'show']);    
     Route::get('VerDocumento/{id}',[RequerimientoController::class,'verDocumento']); 
-    Route::post('SubirRequerimiento/{requerimiento}',[RequerimientoController::class,'subirRequerimiento']);
+    Route::post('SubirRequerimiento/{requerimiento}',[RequerimientoController::class,'subirRequerimiento'])->middleware(VerifyJwtToken::class);
     Route::get('ListarAcuerdo/{requerimiento}',[RequerimientoController::class, 'listarAcuerdo']);
     Route::get('ListarDocumentosRequerimiento/{requerimiento}',[RequerimientoController::class, 'listarDocumentosRequerimiento']);
     Route::post('ActualizarRequerimiento/{requerimiento}',[RequerimientoController::class, 'actualizarDocumento']);
     Route::post('EliminarRequerimiento/{requerimiento}',[RequerimientoController::class, 'eliminarDocumento']);
-    Route::post('RequerimientoExpirado/{requerimiento}', [RequerimientoController::class, 'estadoRequerimientoExpiro']);
-    Route::post('AdmitirRequerimiento/{requerimiento}',[RequerimientoController::class, 'admitirRequerimiento']);
-    Route::post('DenegarRequerimiento/{requerimiento}',[RequerimientoController::class, 'denegarRequerimiento']);
+    Route::post('RequerimientoExpirado/{requerimiento}', [RequerimientoController::class, 'estadoRequerimientoExpiro'])->middleware(VerifyJwtToken::class);
+    Route::post('AdmitirRequerimiento/{requerimiento}',[RequerimientoController::class, 'admitirRequerimiento'])->middleware(VerifyJwtToken::class);
+    Route::post('DenegarRequerimiento/{requerimiento}',[RequerimientoController::class, 'denegarRequerimiento'])->middleware(VerifyJwtToken::class);
     
     
 });

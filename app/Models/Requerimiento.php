@@ -36,10 +36,10 @@ class Requerimiento extends Model
         return $this->belongsToMany(Documento::class, 'documento_requerimiento', 'idRequerimiento', 'idDocumento');
     }
 
-    public function secretario()
-    {
-        return $this->belongsTo(User::class, 'idSecretario');
-    }
+    // public function secretario()
+    // {
+    //     return $this->belongsTo(User::class, 'idSecretario');
+    // }
 
     // public function abogado()
     // {
