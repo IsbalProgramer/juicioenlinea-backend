@@ -13,15 +13,15 @@ class EnsureTokenIsValid
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    // public function handle(Request $request, Closure $next): Response
-    // {
-    //     if (!Auth::guard('sanctum')->check()) {
-    //         return response()->json([
-    //             'message' => 'No estás autenticado. Por favor inicia sesión para acceder a esta ruta.',
-    //             'success' => false
-    //         ], 401);
-    //     }
+    public function handle(Request $request, Closure $next): Response
+    {
+        if (!Auth::guard('sanctum')->check()) {
+            return response()->json([
+                'message' => 'No estás autenticado. Por favor inicia sesión para acceder a esta ruta.',
+                'success' => false
+            ], 401);
+        }
 
-    //     return $next($request);
-    // }
+        return $next($request);
+    }
 }

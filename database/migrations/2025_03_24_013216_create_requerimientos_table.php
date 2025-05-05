@@ -23,7 +23,7 @@ return new class extends Migration
             // Claves foráneas
             // $table->foreign('idExpediente')->references('idExpediente')->on('expedientes');
             $table->foreign('idDocumentoAcuerdo')->references('idDocumento')->on('documentos');
-           $table->foreign('idSecretario')->references('id')->on('users')->onDelete('no action');
+        //    $table->foreign('idSecretario')->references('id')->on('users')->onDelete('no action');
           
         });
     }
