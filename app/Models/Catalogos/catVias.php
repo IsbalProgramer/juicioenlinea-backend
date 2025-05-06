@@ -11,7 +11,11 @@ class catVias extends Model
     protected $primaryKey = 'idCatVia';
     protected $fillable = [
         'nombre',
-        'activo'
-
+        'activo',
     ];
+
+    public function catMateriaVias()
+    {
+        return $this->hasMany(\App\Models\CatMateriaVia::class, 'idCatVia');
+    }
 }

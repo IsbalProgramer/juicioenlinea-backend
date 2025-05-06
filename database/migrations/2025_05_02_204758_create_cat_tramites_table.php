@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('cat_partes', function (Blueprint $table) {
-            $table->id('idCatParte');
+        Schema::create('cat_tramites', function (Blueprint $table) {
+            $table->id('idCatTramite');
             $table->string('nombre');
             $table->boolean('activo');
             $table->timestamps();
@@ -24,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('cat_partes');
+        Schema::dropIfExists('cat_tramites');
     }
 };

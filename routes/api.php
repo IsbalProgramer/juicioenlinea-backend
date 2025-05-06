@@ -9,6 +9,7 @@ use App\Http\Controllers\InicioController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DocumentoController;
+use App\Http\Controllers\PreRegistroController;
 use App\Http\Controllers\RequerimientoController;
 use Illuminate\Routing\RouteGroup;
 use Illuminate\Support\Facades\Auth;
@@ -38,9 +39,9 @@ use Illuminate\Routing\Route as RoutingRoute;
 // });
 
 Route::prefix('Inicio')->group(function(){
-    Route::post('CrearInicio',[InicioController::class,'store'])->middleware(VerifyJwtToken::class);
-    Route::get('ListadoInicios',[InicioController::class,'index'])->middleware(VerifyJwtToken::class);
-    Route::get('DetalleInicio/{idInicio}',[InicioController::class,'show']);    
+    Route::post('CrearInicio',[PreRegistroController::class,'store'])->middleware(VerifyJwtToken::class);
+    Route::get('ListadoInicios',[PreRegistroController::class,'index'])->middleware(VerifyJwtToken::class);
+    Route::get('DetalleInicio/{idInicio}',[PreRegistroController::class,'show']);    
     Route::get('Documento/{idDocumento}',[DocumentoController::class,'show']); // obtiene documentos
 
 });

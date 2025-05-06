@@ -5,6 +5,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
 
 
 class VerifyJwtToken
@@ -55,7 +56,50 @@ class VerifyJwtToken
         // Esto permite que otros componentes accedan a los datos del token
         $request->attributes->set('jwt_payload', $payload);
 
-        // Permite que la solicitud continúe hacia el siguiente middleware o controlador
+        // Obtener el idGeneral del payload
+        $idGeneral = isset($payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'])
+            ? json_decode($payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'], true)['idGeneral']
+            : null;
+
+        if (!$idGeneral) {
+            return response()->json(['error' => 'No se pudo obtener el idGeneral del token'], 400);
+        }
+
+        // Realizar la solicitud a la API externa
+        $idSistema = 4171; // ID del sistema fijo
+        $apiUrl = "https://api.tribunaloaxaca.gob.mx/permisos/api/Permisos/AreaSistemaUsuario";
+
+        // Registrar los datos enviados
+        Log::info('Datos enviados a la API externa:', [
+            'idSistema' => $idSistema,
+            'idGeneral' => $idGeneral,
+            'token' => $request->bearerToken(),
+        ]);
+
+        // Cambiar a POST si es necesario
+        $response = Http::withToken($request->bearerToken())
+            ->post("$apiUrl?idSistema=$idSistema&idGeneral=$idGeneral");
+
+        // Registrar la respuesta de la API
+        if ($response->failed()) {
+            Log::error('Error en la respuesta de la API externa:', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+            return response()->json(['error' => 'Error al obtener el idAreaSistemaUsuario'], 500);
+        }
+
+        $responseData = $response->json();
+        Log::info('Respuesta de la API externa:', $responseData);
+
+        if (!$responseData['success'] || !isset($responseData['data']['idAreaSistemaUsuario'])) {
+            return response()->json(['error' => 'No se pudo obtener el idAreaSistemaUsuario'], 400);
+        }
+
+        // Almacenar el idAreaSistemaUsuario en los atributos de la solicitud
+        $request->attributes->set('idAreaSistemaUsuario', $responseData['data']['idAreaSistemaUsuario']);
+
+        // Continuar con la solicitud
         return $next($request);
     }
 }

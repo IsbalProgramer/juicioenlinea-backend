@@ -15,10 +15,14 @@ class Parte extends Model
         'idCatGenero',
         'idCatParte',
         'direccion',
-        'idInicio' // Llave foránea 
+        'idPreregistro' // Llave foránea 
     ];
 
-    public function inicio(){
-        return $this->belongsTo(Inicio::class, 'idInicio');
+    /**
+     * Relación con PreRegistro
+     */
+    public function preregistro()
+    {
+        return $this->belongsTo(PreRegistro::class, 'idPreregistro');
     }
 }

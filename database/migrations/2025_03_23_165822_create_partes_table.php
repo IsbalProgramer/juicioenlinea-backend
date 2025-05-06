@@ -13,16 +13,16 @@ return new class extends Migration
     {
         Schema::create('partes', function (Blueprint $table) {
             $table->id('idParte');
-            $table->unsignedBigInteger('idInicio');
+            $table->unsignedBigInteger('idPreregistro');
             $table->string('nombre');
             $table->string('apellidoMaterno');
             $table->string('apellidoPaterno');
             $table->string('direccion');
             $table->unsignedBigInteger('idCatGenero');
             $table->unsignedBigInteger('idCatParte');
-            $table->foreign('idInicio')->references('idInicio')->on ('inicios')->onDelete('cascade');
+            $table->foreign('idPreregistro')->references('idPreregistro')->on('pre_registros')->onDelete('cascade');
             $table->foreign('idCatGenero')->references('idCatGenero')->on('cat_generos')->onUpdate('cascade')->onDelete('cascade');
-            $table->foreign('idCatParte')->references('idCatParte')->on('cat_partes')->onUpdate('cascade')->onDelete('cascade');
+            $table->foreign('idCatParte')->references('idCatParte')->on('cat_tipo_partes')->onUpdate('cascade')->onDelete('cascade');
             $table->timestamps();
         });
     }
