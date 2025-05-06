@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class catPartes extends Model
 {
     // Indicar el nombre de la tabla si es necesario
-    protected $table = 'cat_partes';
+    protected $table = 'cat_tipo_partes';
     protected $primaryKey = 'idCatParte';
     protected $fillable = [
         'nombre',
