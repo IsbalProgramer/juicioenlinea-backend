@@ -13,10 +13,12 @@ return new class extends Migration
     {
         Schema::create('historial_estado_inicios', function (Blueprint $table) {
             $table->id('idHistorialEstadoInicio');
-            $table->unsignedBigInteger('idInicio');
+            $table->unsignedBigInteger('idPreregistro');
             $table->unsignedBigInteger('idCatEstadoInicio');
             $table->dateTime('fechaEstado');
-            $table->foreign('idInicio')->references('idInicio')->on('inicios')->onUpdate('cascade')->onDelete('cascade');
+            $table->foreign('idPreregistro')->references('idPreregistro')->on('pre_registros')->onUpdate('cascade')->onDelete('cascade');
+            $table->foreign('idCatEstadoInicio')->references('idCatEstadoInicio')->on('cat_estado_inicios')->onUpdate('cascade')->onDelete('cascade');
+
             $table->timestamps();
         });
     }

@@ -59,20 +59,21 @@ class DatabaseSeeder extends Seeder
 
         ]);
         catEstadoInicios::create([
-            'nombre' => 'Creado',
+            'nombre' => 'Enviado',
             'activo' => 1,
 
         ]);
         catEstadoInicios::create([
-            'nombre' => 'Proceso',
+            'nombre' => 'En proceso',
             'activo' => 1,
 
         ]);
         catEstadoInicios::create([
-            'nombre' => 'Expediente asignado',
+            'nombre' => 'Asignado',
             'activo' => 1,
 
         ]);
+        
         catPartes::create([
             'nombre' => 'Demandadante',
             'activo' => 1,
@@ -84,21 +85,8 @@ class DatabaseSeeder extends Seeder
 
         ]);
 
-    
-        $faker = Faker::create();  // Crear una instancia de Faker
 
-        // Insertar 10 usuarios aleatorios
-        for ($i = 0; $i < 10; $i++) {
-            DB::table('users')->insert([
-                'name' => $faker->name, // Generar nombre aleatorio
-                'email' => $faker->unique()->safeEmail, // Generar correo electrónico único
-                'password' => Hash::make('contraseñaSegura' . $i), // Contraseña aleatoria
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-        
-        
+  
 
 
     }
