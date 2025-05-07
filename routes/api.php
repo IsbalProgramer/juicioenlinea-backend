@@ -66,10 +66,10 @@ Route::prefix('Requerimiento')->group(function () {
     Route::get('ListadoRequerimientos', [RequerimientoController::class, 'index'])->middleware(VerifyJwtToken::class);
     Route::get('ListadoRequerimientosAbogados', [RequerimientoController::class, 'listarRequerimientosAbogado'])->middleware(VerifyJwtToken::class);
     Route::get('DetalleRequerimiento/{requerimiento}', [RequerimientoController::class, 'show'])->middleware(VerifyJwtToken::class);
-    Route::get('VerDocumento/{id}', [RequerimientoController::class, 'verDocumento']);
+    Route::get('VerDocumento/{id}', [RequerimientoController::class, 'verDocumento'])->middleware(VerifyJwtToken::class);
     Route::post('SubirRequerimiento/{requerimiento}', [RequerimientoController::class, 'subirRequerimiento'])->middleware(VerifyJwtToken::class);
-    Route::get('ListarAcuerdo/{requerimiento}', [RequerimientoController::class, 'listarAcuerdo']);
-    Route::get('ListarDocumentosRequerimiento/{requerimiento}', [RequerimientoController::class, 'listarDocumentosRequerimiento']);
+    Route::get('ListarAcuerdo/{requerimiento}', [RequerimientoController::class, 'listarAcuerdo'])->middleware(VerifyJwtToken::class);
+    Route::get('ListarDocumentosRequerimiento/{requerimiento}', [RequerimientoController::class, 'listarDocumentosRequerimiento'])->middleware(VerifyJwtToken::class);
     // Route::post('ActualizarRequerimiento/{requerimiento}',[RequerimientoController::class, 'actualizarDocumento']);
     // Route::post('EliminarRequerimiento/{requerimiento}',[RequerimientoController::class, 'eliminarDocumento']);
     Route::post('RequerimientoExpirado/{requerimiento}', [RequerimientoController::class, 'estadoRequerimientoExpiro'])->middleware(VerifyJwtToken::class);

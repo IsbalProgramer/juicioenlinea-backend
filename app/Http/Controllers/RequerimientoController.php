@@ -39,7 +39,6 @@ class RequerimientoController extends Controller
                 ], 400);
             }
 
-            //Perfil secretario
             $perfiles = $request->attributes->get('perfilesUsuario') ?? [];
 
             $tienePerfilSecretario = collect($perfiles)->contains(function ($perfil) {
@@ -55,7 +54,7 @@ class RequerimientoController extends Controller
 
             $requerimiento = Requerimiento::with([
                 'historial:idHistorialEstadoRequerimientos,idCatEstadoRequerimientos,idRequerimiento'
-            ])->where('idSecretario', $idGeneral)->get();
+            ])->WHERE('idSecretario', $idGeneral)->get();
             return response()->json([
                 'status' => 200,
                 'message' => "Listado de requerimientos",
@@ -102,10 +101,8 @@ class RequerimientoController extends Controller
                 }
             ],
 
-            //validaciones del documento
             'documentoAcuerdo' => 'required|file|mimes:pdf,doc,docx|max:2048',
         ]);
-
 
         // Si la validación falla, devolver un error 422
         if ($validator->fails()) {
@@ -153,7 +150,6 @@ class RequerimientoController extends Controller
             // Guardar el documento en la base de datos
             $documento = new Documento();
             $documento->nombre = $request->file('documentoAcuerdo')->getClientOriginalName();
-            // $documento->tipo = 'Acuerdo';
             $documento->documento = base64_encode(file_get_contents($request->file('documentoAcuerdo'))); // Convertir el archivo a base64
             $documento->save();
 
@@ -187,6 +183,7 @@ class RequerimientoController extends Controller
                 'idRequerimiento' => $requerimientoID,
                 'idExpediente' => $request->idExpediente,
                 'idUsuario' =>  $idGeneral, //ASIGNACION DEL USUARIO
+                // 'idCatEstadoRequerimientos' => 1,
             ]);
 
             DB::commit();
@@ -223,24 +220,9 @@ class RequerimientoController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show($idRequerimiento, Request $request)
+    public function show($idRequerimiento)
     {
         try {
-
-            // Obtener el payload del token desde los atributos de la solicitud
-            $jwtPayload = $request->attributes->get('jwt_payload');
-
-            // Agregar un registro temporal para inspeccionar el payload
-            $idGeneral = isset($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'])
-                ? json_decode($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'], true)['idGeneral']
-                : null;
-
-            if (!$idGeneral) {
-                return response()->json([
-                    'status' => 400,
-                    'message' => 'No se pudo obtener el idGeneral del token',
-                ], 400);
-            }
 
             $requerimiento = Requerimiento::with(
                 'documentoAcuerdo:idDocumento',
@@ -287,6 +269,7 @@ class RequerimientoController extends Controller
 
     public function subirRequerimiento(Request $request, Requerimiento $requerimiento)
     {
+
         $fechaLimite = $requerimiento->fechaLimite;
 
         if (Carbon::parse($fechaLimite)->lt(now())) {
@@ -309,12 +292,8 @@ class RequerimientoController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            // 'folioDocumento' => 'required|array',
-            // 'folioDocumento.*' => 'required|string',
             'documentoRequerimiento' => 'required|array|min:1',
             'documentoRequerimiento.*' => 'required|file|mimes:pdf,doc,docx|max:2048',
-
-            // 'idAbogado' => 'required|integer',
         ]);
 
         if ($validator->fails()) {
@@ -342,7 +321,8 @@ class RequerimientoController extends Controller
                 ], 400);
             }
 
-            //Perfil Abogado
+
+            //Validar que el que suba solo sea el abogado 
             $perfiles = $request->attributes->get('perfilesUsuario') ?? [];
 
             $tienePerfilAbogado = collect($perfiles)->contains(function ($perfil) {
@@ -352,8 +332,18 @@ class RequerimientoController extends Controller
             if (!$tienePerfilAbogado) {
                 return response()->json([
                     'status' => 403,
-                    'message' => 'No tiene permisos.',
+                    'message' => 'No tiene permisos para subir un requerimiento. Se requiere el perfil de Abogado.',
                 ], 403);
+            }
+
+            // Define $idAbogado before using it
+            $idAbogado = $requerimiento->idAbogado;
+
+            if ($idGeneral != $idAbogado) {
+                return response()->json([
+                    'status' => 400,
+                    'message' => 'Requerimiento no asignado',
+                ], 400);
             }
 
             $documentos = [];
@@ -365,7 +355,6 @@ class RequerimientoController extends Controller
 
                 $documento = new Documento();
                 $documento->nombre = $nombreArchivo;
-                // $documento->tipo = 'requerimiento';
                 $documento->documento = $contenidoBase64;
                 $documento->save();
 
@@ -522,7 +511,8 @@ class RequerimientoController extends Controller
                 ], 400);
             }
 
-            //Perfil secretario
+            //Validacion que el que crea sea solo el Secretario
+
             $perfiles = $request->attributes->get('perfilesUsuario') ?? [];
 
             $tienePerfilSecretario = collect($perfiles)->contains(function ($perfil) {
@@ -532,9 +522,20 @@ class RequerimientoController extends Controller
             if (!$tienePerfilSecretario) {
                 return response()->json([
                     'status' => 403,
-                    'message' => 'No tiene permisos.',
+                    'message' => 'No tiene permisos para admitir un requerimiento. Se requiere el perfil de Secretario.',
                 ], 403);
             }
+
+                  // Define que el que creo sea el que admita o deniegue
+            $idSecretario = $requerimiento->idSecretario;
+
+            if ($idGeneral != $idSecretario) {
+                return response()->json([
+                    'status' => 400,
+                    'message' => 'Requerimiento no asignado',
+                ], 400);
+            }
+            
 
             $historial = HistorialEstadoRequerimiento::create([
                 'idRequerimiento' => $requerimiento->idRequerimiento,
@@ -595,9 +596,20 @@ class RequerimientoController extends Controller
             if (!$tienePerfilSecretario) {
                 return response()->json([
                     'status' => 403,
-                    'message' => 'No tiene permisos.',
+                    'message' => 'No tiene permisos para admitir un requerimiento. Se requiere el perfil de Secretario',
                 ], 403);
             }
+
+             // Define que el que creo sea el que admita o deniegue
+             $idSecretario = $requerimiento->idSecretario;
+
+             if ($idGeneral != $idSecretario) {
+                 return response()->json([
+                     'status' => 400,
+                     'message' => 'Requerimiento no asignado',
+                 ], 400);
+             }
+             
 
             $historial = HistorialEstadoRequerimiento::create([
                 'idRequerimiento' => $requerimiento->idRequerimiento,
@@ -674,7 +686,7 @@ class RequerimientoController extends Controller
                     ], 400);
                 }
 
-                //Perfil secretario
+                //Validar que solo sea secretario
                 $perfiles = $request->attributes->get('perfilesUsuario') ?? [];
 
                 $tienePerfilSecretario = collect($perfiles)->contains(function ($perfil) {
@@ -687,7 +699,6 @@ class RequerimientoController extends Controller
                         'message' => 'No tiene permisos.',
                     ], 403);
                 }
-
 
                 // Registrar el cambio en el historial
                 $historial = HistorialEstadoRequerimiento::create([
@@ -722,6 +733,7 @@ class RequerimientoController extends Controller
             'message' => 'La fecha límite del requerimiento aún no ha pasado.',
         ], 200);
     }
+
 
     public function listarRequerimientosAbogado(Request $request)
     {
