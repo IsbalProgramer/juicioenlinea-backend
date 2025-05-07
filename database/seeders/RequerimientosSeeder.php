@@ -8,7 +8,7 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 use App\Models\Catalogos\CatEstadoRequerimiento;
-
+use App\Models\AbogadoExpediente;
 
 class RequerimientosSeeder extends Seeder
 {
@@ -49,6 +49,16 @@ class RequerimientosSeeder extends Seeder
             'activo' => 1,
         ]);
 
+        AbogadoExpediente::create([
+            'idExpediente' => '0001/2020',
+            'idAbogado' => 30057,
+            'activo' => 1,
+        ]);
+        AbogadoExpediente::create([
+            'idExpediente' => sprintf('%04d/%d', rand(1, 9999), rand(2000, 2023)),
+            'idAbogado' => rand(10000, 99999),
+            'activo' => 1,
+        ]);
         
     }
 }

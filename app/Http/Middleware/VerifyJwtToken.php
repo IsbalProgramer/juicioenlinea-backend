@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Middleware;
+
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -98,6 +99,37 @@ class VerifyJwtToken
 
         // Almacenar el idAreaSistemaUsuario en los atributos de la solicitud
         $request->attributes->set('idAreaSistemaUsuario', $responseData['data']['idAreaSistemaUsuario']);
+
+
+
+        // NUEVA SOLICITUD: Obtener perfiles del usuario
+        $apiUrl2 = "https://api.tribunaloaxaca.gob.mx/permisos/api/Permisos/PerfilesUsuario";
+
+        // Registrar los datos enviados a la segunda API
+        Log::info('Consultando perfiles del usuario con idAreaSistemaUsuario:', [
+            'idAreaSistemaUsuario' => $responseData['data']['idAreaSistemaUsuario'],
+        ]);
+
+        $response2 = Http::withToken($request->bearerToken())
+            ->post("$apiUrl2?idAreaSistemaUsuario=" . $responseData['data']['idAreaSistemaUsuario']);
+
+        if ($response2->failed()) {
+            Log::error('Error en la respuesta de perfiles:', [
+                'status' => $response2->status(),
+                'body' => $response2->body(),
+            ]);
+            return response()->json(['error' => 'Error al obtener los perfiles del usuario'], 500);
+        }
+
+        $perfilesData = $response2->json();
+        Log::info('Perfiles del usuario:', $perfilesData);
+
+        if (!$perfilesData['success'] || !isset($perfilesData['data'])) {
+            return response()->json(['error' => 'No se pudo obtener los perfiles del usuario'], 400);
+        }
+
+        // Almacenar los perfiles en los atributos de la solicitud
+        $request->attributes->set('perfilesUsuario', $perfilesData['data']);
 
         // Continuar con la solicitud
         return $next($request);
