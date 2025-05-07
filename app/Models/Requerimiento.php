@@ -18,12 +18,9 @@ class Requerimiento extends Model
         'idExpediente',
         'descripcion',
         'idDocumentoAcuerdo',
-        'idDocumentoNuevo',
         'idSecretario',
-        // 'idAbogado',
-        // 'folioTramite',
+        'idAbogado',
         'fechaLimite',
-        'folioDocumento'
     ];
 
     public function documentoAcuerdo()

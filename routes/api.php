@@ -38,44 +38,41 @@ use Illuminate\Routing\Route as RoutingRoute;
 //     return response()->json(['token' => $token]);
 // });
 
-Route::prefix('Inicio')->group(function(){
-    Route::post('CrearInicio',[PreRegistroController::class,'store'])->middleware(VerifyJwtToken::class);
-    Route::get('ListadoInicios',[PreRegistroController::class,'index'])->middleware(VerifyJwtToken::class);
-    Route::get('DetalleInicio/{idInicio}',[PreRegistroController::class,'show']);    
-    Route::get('Documento/{idDocumento}',[DocumentoController::class,'show']); // obtiene documentos
+Route::prefix('Inicio')->group(function () {
+    Route::post('CrearInicio', [PreRegistroController::class, 'store'])->middleware(VerifyJwtToken::class);
+    Route::get('ListadoInicios', [PreRegistroController::class, 'index'])->middleware(VerifyJwtToken::class);
+    Route::get('DetalleInicio/{idInicio}', [PreRegistroController::class, 'show']);
+    Route::get('Documento/{idDocumento}', [DocumentoController::class, 'show']); // obtiene documentos
 
 });
 
-Route::prefix('Catalogo')->group(function(){
-    Route::get('Vias', [CatViasController::class,'index']);
-    Route::get('Partes', [CatPartesController::class,'index']);
-    Route::get('Materias', [CatMateriasController::class,'index']);
-    Route::get('Generos', [CatGenerosController::class,'index']);
-    Route::get('EstadosInicio', [CatEstadoInicioController::class,'index']);
-
+Route::prefix('Catalogo')->group(function () {
+    Route::get('Vias', [CatViasController::class, 'index']);
+    Route::get('Partes', [CatPartesController::class, 'index']);
+    Route::get('Materias', [CatMateriasController::class, 'index']);
+    Route::get('Generos', [CatGenerosController::class, 'index']);
+    Route::get('EstadosInicio', [CatEstadoInicioController::class, 'index']);
 });
 
 
 //Requerimiento -- requerimiento 
 // Route::post('requerimiento',[RequerimientoController::class,'store']); // inserta requerimiento
 // Route::get('/requerimiento/{id}/descargar-documento', [RequerimientoController::class, 'descargarDocumentoPorRequerimiento']); // obtiene requerimientos
- //Route::get('requerimiento/{requerimiento}', [RequerimientoController::class, 'show']); // obtiene requerimientos
+//Route::get('requerimiento/{requerimiento}', [RequerimientoController::class, 'show']); // obtiene requerimientos
 
 
- Route::prefix('Requerimiento')->group(function(){
-    Route::post('CrearRequerimiento',[RequerimientoController::class,'store'])->middleware(VerifyJwtToken::class);
-    Route::get('ListadoRequerimientos',[RequerimientoController::class,'index'])->middleware(VerifyJwtToken::class);
-    Route::get('ListadoRequerimientosAbogados',[RequerimientoController::class,'index']);
-    Route::get('DetalleRequerimiento/{requerimiento}',[RequerimientoController::class,'show']);    
-    Route::get('VerDocumento/{id}',[RequerimientoController::class,'verDocumento']); 
-    Route::post('SubirRequerimiento/{requerimiento}',[RequerimientoController::class,'subirRequerimiento'])->middleware(VerifyJwtToken::class);
-    Route::get('ListarAcuerdo/{requerimiento}',[RequerimientoController::class, 'listarAcuerdo']);
-    Route::get('ListarDocumentosRequerimiento/{requerimiento}',[RequerimientoController::class, 'listarDocumentosRequerimiento']);
-    Route::post('ActualizarRequerimiento/{requerimiento}',[RequerimientoController::class, 'actualizarDocumento']);
-    Route::post('EliminarRequerimiento/{requerimiento}',[RequerimientoController::class, 'eliminarDocumento']);
+Route::prefix('Requerimiento')->group(function () {
+    Route::post('CrearRequerimiento', [RequerimientoController::class, 'store'])->middleware(VerifyJwtToken::class);
+    Route::get('ListadoRequerimientos', [RequerimientoController::class, 'index'])->middleware(VerifyJwtToken::class);
+    Route::get('ListadoRequerimientosAbogados', [RequerimientoController::class, 'listarRequerimientosAbogado'])->middleware(VerifyJwtToken::class);
+    Route::get('DetalleRequerimiento/{requerimiento}', [RequerimientoController::class, 'show'])->middleware(VerifyJwtToken::class);
+    Route::get('VerDocumento/{id}', [RequerimientoController::class, 'verDocumento']);
+    Route::post('SubirRequerimiento/{requerimiento}', [RequerimientoController::class, 'subirRequerimiento'])->middleware(VerifyJwtToken::class);
+    Route::get('ListarAcuerdo/{requerimiento}', [RequerimientoController::class, 'listarAcuerdo']);
+    Route::get('ListarDocumentosRequerimiento/{requerimiento}', [RequerimientoController::class, 'listarDocumentosRequerimiento']);
+    // Route::post('ActualizarRequerimiento/{requerimiento}',[RequerimientoController::class, 'actualizarDocumento']);
+    // Route::post('EliminarRequerimiento/{requerimiento}',[RequerimientoController::class, 'eliminarDocumento']);
     Route::post('RequerimientoExpirado/{requerimiento}', [RequerimientoController::class, 'estadoRequerimientoExpiro'])->middleware(VerifyJwtToken::class);
-    Route::post('AdmitirRequerimiento/{requerimiento}',[RequerimientoController::class, 'admitirRequerimiento'])->middleware(VerifyJwtToken::class);
-    Route::post('DenegarRequerimiento/{requerimiento}',[RequerimientoController::class, 'denegarRequerimiento'])->middleware(VerifyJwtToken::class);
-    
-    
+    Route::post('AdmitirRequerimiento/{requerimiento}', [RequerimientoController::class, 'admitirRequerimiento'])->middleware(VerifyJwtToken::class);
+    Route::post('DenegarRequerimiento/{requerimiento}', [RequerimientoController::class, 'denegarRequerimiento'])->middleware(VerifyJwtToken::class);
 });
