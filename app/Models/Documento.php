@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Catalogos\CatTipoDocumento;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Requerimiento;
 
@@ -31,5 +32,12 @@ class Documento extends Model
     public function preregistro()
     {
         return $this->belongsTo(PreRegistro::class, 'idPreregistro');
+    }
+    /**
+     * Relación con CatTipoDocumento
+     */
+    public function catTipoDocumento()
+    {
+        return $this->belongsTo(CatTipoDocumento::class, 'idCatTipoDocumento');
     }
 }

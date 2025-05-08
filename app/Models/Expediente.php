@@ -22,10 +22,6 @@ class Expediente extends Model
      *
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
-    public function inicio(): BelongsTo
-    {
-        return $this->belongsTo(Inicio::class);
-    }
 
         public function tramites()
     {

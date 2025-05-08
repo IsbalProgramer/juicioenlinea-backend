@@ -13,14 +13,15 @@ return new class extends Migration
     {
         Schema::create('documentos', function (Blueprint $table) {
             $table->id('idDocumento');
-            $table->unsignedBigInteger('idPreregistro')->nullable(); // Relación con pre_registros
-            $table->unsignedBigInteger('idCatTipoDocumento')->nullable(); // Relación con cat_tipo_documentos
-            $table->string('nombre');
+            $table->unsignedBigInteger('idPreregistro'); // Relación con pre_registros
+            $table->bigInteger('idCatTipoDocumento')->nullable(); // Relación con cat_tipo_documentos
+            $table->string('nombre')->nullable();
             $table->longText('documento');
             $table->timestamps();
 
             // Clave foránea con pre_registros
             $table->foreign('idPreregistro')->references('idPreregistro')->on('pre_registros')->onDelete('cascade');
+            $table->foreign('idCatTipoDocumento')->references('idCatTipoDocumento')->on('cat_tipo_documentos')->onUpdate('cascade')->onDelete('cascade');
         });
     }
 

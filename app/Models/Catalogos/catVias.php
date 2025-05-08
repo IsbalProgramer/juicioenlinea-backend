@@ -4,7 +4,7 @@ namespace App\Models\Catalogos;
 
 use Illuminate\Database\Eloquent\Model;
 
-class catVias extends Model
+class CatVias extends Model
 {
     // Indicar el nombre de la tabla si es necesario
     protected $table = 'cat_vias';
@@ -17,5 +17,13 @@ class catVias extends Model
     public function catMateriaVias()
     {
         return $this->hasMany(\App\Models\CatMateriaVia::class, 'idCatVia');
+    }
+
+        /**
+     * Relación con CatMaterias
+     */
+    public function catMateria()
+    {
+        return $this->belongsTo(CatMaterias::class, 'idCatMateria');
     }
 }
