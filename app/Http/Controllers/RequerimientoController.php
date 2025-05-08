@@ -257,7 +257,6 @@ class RequerimientoController extends Controller
     public function update(Request $request, Requerimiento $requerimiento) {}
 
 
-
     /**
      * Remove the specified resource from storage.
      */
@@ -526,7 +525,7 @@ class RequerimientoController extends Controller
                 ], 403);
             }
 
-                  // Define que el que creo sea el que admita o deniegue
+            // Define que el que creo sea el que admita o deniegue
             $idSecretario = $requerimiento->idSecretario;
 
             if ($idGeneral != $idSecretario) {
@@ -535,7 +534,7 @@ class RequerimientoController extends Controller
                     'message' => 'Requerimiento no asignado',
                 ], 400);
             }
-            
+
 
             $historial = HistorialEstadoRequerimiento::create([
                 'idRequerimiento' => $requerimiento->idRequerimiento,
@@ -600,16 +599,16 @@ class RequerimientoController extends Controller
                 ], 403);
             }
 
-             // Define que el que creo sea el que admita o deniegue
-             $idSecretario = $requerimiento->idSecretario;
+            // Define que el que creo sea el que admita o deniegue
+            $idSecretario = $requerimiento->idSecretario;
 
-             if ($idGeneral != $idSecretario) {
-                 return response()->json([
-                     'status' => 400,
-                     'message' => 'Requerimiento no asignado',
-                 ], 400);
-             }
-             
+            if ($idGeneral != $idSecretario) {
+                return response()->json([
+                    'status' => 400,
+                    'message' => 'Requerimiento no asignado',
+                ], 400);
+            }
+
 
             $historial = HistorialEstadoRequerimiento::create([
                 'idRequerimiento' => $requerimiento->idRequerimiento,
