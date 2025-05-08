@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('documentos', function (Blueprint $table) {
             $table->id('idDocumento');
-            $table->unsignedBigInteger('idPreregistro'); // Relación con pre_registros
+            $table->unsignedBigInteger('idPreregistro')->nullable(); // Relación con pre_registros
             $table->bigInteger('idCatTipoDocumento')->nullable(); // Relación con cat_tipo_documentos
             $table->string('nombre')->nullable();
             $table->longText('documento');

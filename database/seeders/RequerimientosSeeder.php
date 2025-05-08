@@ -49,16 +49,39 @@ class RequerimientosSeeder extends Seeder
             'activo' => 1,
         ]);
 
+
         AbogadoExpediente::create([
             'idExpediente' => '0001/2020',
             'idAbogado' => 30057,
             'activo' => 1,
         ]);
+
         AbogadoExpediente::create([
-            'idExpediente' => sprintf('%04d/%d', rand(1, 9999), rand(2000, 2023)),
-            'idAbogado' => rand(10000, 99999),
+            'idExpediente' => '0001/2020',
+            'idAbogado' => 30058,
             'activo' => 1,
         ]);
         
+        AbogadoExpediente::create([
+            'idExpediente' => '0001/2020',
+            'idAbogado' => 30059,
+            'activo' => 1,
+        ]);
+        AbogadoExpediente::create([
+            'idExpediente' => '0002/2020',
+            'idAbogado' => 30060,
+            'activo' => 1,
+        ]);
+
+        AbogadoExpediente::create([
+            'idExpediente' => '0003/2020',
+            'idAbogado' => 30057,
+            'activo' => 1,
+        ]);
+        AbogadoExpediente::create([
+            'idExpediente' => '0002/2020',
+            'idAbogado' => 30059,
+            'activo' => 1,
+        ]);
     }
 }
