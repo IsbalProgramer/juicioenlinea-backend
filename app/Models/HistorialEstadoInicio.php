@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Models\Catalogos\catEstadoInicios;
+use App\Models\Catalogos\CatEstadoInicios;
 use Illuminate\Database\Eloquent\Model;
 
 class HistorialEstadoInicio extends Model
@@ -22,7 +22,7 @@ class HistorialEstadoInicio extends Model
 
     public function estado()
     {
-        return $this->belongsTo(catEstadoInicios::class, 'idCatEstadoInicio');
+        return $this->belongsTo(CatEstadoInicios::class, 'idCatEstadoInicio');
     }
 
 

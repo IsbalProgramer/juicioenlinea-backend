@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Catalogos\CatMaterias;
+use App\Models\Catalogos\CatVias;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\PreRegistro;
 
@@ -17,12 +19,12 @@ class CatMateriaVia extends Model
 
     public function catMateria()
     {
-        return $this->belongsTo(\App\Models\Catalogos\catMaterias::class, 'idCatMateria');
+        return $this->belongsTo(CatMaterias::class, 'idCatMateria');
     }
 
     public function catVia()
     {
-        return $this->belongsTo(\App\Models\Catalogos\catVias::class, 'idCatVia');
+        return $this->belongsTo(CatVias::class, 'idCatVia');
     }
 
     public function preRegistros()

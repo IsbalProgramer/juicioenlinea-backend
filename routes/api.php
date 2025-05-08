@@ -4,6 +4,7 @@ use App\Http\Controllers\Catalogos\CatEstadoInicioController;
 use App\Http\Controllers\Catalogos\CatGenerosController;
 use App\Http\Controllers\Catalogos\CatMateriasController;
 use App\Http\Controllers\Catalogos\CatPartesController;
+use App\Http\Controllers\Catalogos\CatTipoDocumentoController;
 use App\Http\Controllers\Catalogos\CatViasController;
 use App\Http\Controllers\InicioController;
 use Illuminate\Http\Request;
@@ -47,11 +48,12 @@ Route::prefix('Inicio')->group(function(){
 });
 
 Route::prefix('Catalogo')->group(function(){
-    Route::get('Vias', [CatViasController::class,'index']);
+    Route::get('Vias/{idCatMateria}', [CatViasController::class, 'show']); // Listar vías por idCatMateria
     Route::get('Partes', [CatPartesController::class,'index']);
     Route::get('Materias', [CatMateriasController::class,'index']);
     Route::get('Generos', [CatGenerosController::class,'index']);
     Route::get('EstadosInicio', [CatEstadoInicioController::class,'index']);
+    Route::get('TipoDocumentos', [CatTipoDocumentoController::class,'index']);
 
 });
 

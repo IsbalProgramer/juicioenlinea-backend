@@ -27,7 +27,13 @@ class PreRegistroController extends Controller
                 'partes',
                 'documentos:idPreregistro,nombre',
                 'catMateriaVia.catMateria',
-                'catMateriaVia.catVia'
+                'catMateriaVia.catVia',
+                'historialEstado' => function ($query) {
+                    $query->latest('fechaEstado')
+                        ->limit(1)
+                        ->select('idPreregistro', 'idCatEstadoInicio', 'fechaEstado')
+                        ->with('estado:idCatEstadoInicio,nombre');
+                }
             ])->get();
 
             return response()->json([
@@ -63,12 +69,14 @@ class PreRegistroController extends Controller
             'partes.*.idCatParte' => 'required|integer',
             'partes.*.direccion' => 'nullable|string|max:255',
             'documentos' => 'required|array|min:1',
-            'documentos.*.nombre' => 'required|string',
+            'documentos.*.idCatTipoDocumento' => 'nullable|integer',
+            'documentos.*.nombre' => 'nullable|string',
             'documentos.*.documento' => 'required|string',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
+                'success' => false,
                 'status' => 422,
                 'errors' => $validator->messages(),
             ], 422);
@@ -85,6 +93,7 @@ class PreRegistroController extends Controller
 
             if (!$idGeneral) {
                 return response()->json([
+                    'success' => false,
                     'status' => 400,
                     'message' => 'No se pudo obtener el idGeneral del token',
                 ], 400);
@@ -115,12 +124,28 @@ class PreRegistroController extends Controller
             // Insertar las partes asociadas
             $preRegistro->partes()->createMany($request->partes);
 
+            // Modificar los documentos para manejar idCatTipoDocumento y nombre
+            $documentos = collect($request->documentos)->map(function ($documento) {
+                if (isset($documento['idCatTipoDocumento']) && $documento['idCatTipoDocumento'] == -1) {
+                    // Si el idCatTipoDocumento es -1, almacena el nombre y el idCatTipoDocumento
+                    $documento['idCatTipoDocumento'] = -1;
+                } elseif (isset($documento['nombre']) && !isset($documento['idCatTipoDocumento'])) {
+                    // Si solo llega el nombre, asigna -1 al idCatTipoDocumento
+                    $documento['idCatTipoDocumento'] = -1;
+                } elseif (isset($documento['idCatTipoDocumento']) && $documento['idCatTipoDocumento'] != -1) {
+                    // Si llega un idCatTipoDocumento válido (distinto de -1), ignora el nombre
+                    $documento['nombre'] = null;
+                }
+                return $documento;
+            })->toArray();
+
             // Insertar los documentos asociados a este preregistro
-            $preRegistro->documentos()->createMany($request->documentos);
+            $preRegistro->documentos()->createMany($documentos);
 
             DB::commit(); // Confirmar transacción
 
             return response()->json([
+                'success' => true,
                 'status' => 200,
                 'message' => 'PreRegistro, partes, documentos y estado inicial creados exitosamente',
                 'data' => $preRegistro->makeHidden(['documentos.documento']) // Oculta el binario
@@ -129,6 +154,7 @@ class PreRegistroController extends Controller
             DB::rollBack(); // Revertir transacción en caso de error
 
             return response()->json([
+                'success' => false,
                 'status' => 500,
                 'message' => 'Error al crear el preregistro',
                 'error' => $e->getMessage(),

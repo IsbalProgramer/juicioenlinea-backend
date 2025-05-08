@@ -19,7 +19,7 @@ return new class extends Migration
 
             // Definir las claves foráneas
             $table->foreign('idCatMateria')->references('idCatMateria')->on('cat_materias')->onDelete('cascade');
-            $table->foreign('idCatVia')->references('idCatVia')->on('cat_vias')->onDelete('cascade');
+            $table->foreign('idCatVia')->references('idCatVia')->on('cat_vias')->onDelete('no action');
         });
     }
 
