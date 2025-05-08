@@ -228,6 +228,7 @@ class RequerimientoController extends Controller
                 'documentoAcuerdo:idDocumento',
                 'historial:idHistorialEstadoRequerimientos,idCatEstadoRequerimientos,idRequerimiento',
                 'documentoRequerimiento:idDocumento'
+                
             )->findOrFail($idRequerimiento);
             return response()->json([
                 'status' => 200,

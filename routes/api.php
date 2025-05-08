@@ -10,6 +10,7 @@ use App\Http\Controllers\InicioController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DocumentoController;
+use App\Http\Controllers\ExpedienteController;
 use App\Http\Controllers\PreRegistroController;
 use App\Http\Controllers\RequerimientoController;
 use Illuminate\Routing\RouteGroup;
@@ -17,7 +18,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use App\Http\Middleware\EnsureTokenIsValid;
 use App\Http\Middleware\VerifyJwtToken;
-
+use App\Models\Expediente;
 use Illuminate\Routing\Route as RoutingRoute;
 
 
@@ -79,3 +80,10 @@ Route::prefix('Requerimiento')->group(function () {
     Route::post('AdmitirRequerimiento/{requerimiento}', [RequerimientoController::class, 'admitirRequerimiento'])->middleware(VerifyJwtToken::class);
     Route::post('DenegarRequerimiento/{requerimiento}', [RequerimientoController::class, 'denegarRequerimiento'])->middleware(VerifyJwtToken::class);
 });
+
+Route::prefix('ExpedienteAbogado')->group( function () {
+    Route::get('Expedientes', [ExpedienteController::class, 'listarExpedientesDistintos'])->middleware(VerifyJwtToken::class);
+    Route::get('Expedientes/Abogados/{id}', [ExpedienteController::class, 'listarAbogadosPorExpediente'])->middleware(VerifyJwtToken::class);
+}
+);
+

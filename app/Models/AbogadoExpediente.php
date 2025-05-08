@@ -9,7 +9,7 @@ class AbogadoExpediente extends Model
     protected $table = 'abogado_expediente';
     protected $primaryKey = 'idAbogadoExpediente';
     protected $fillable = [
-        'idExpedeinte',
+        'idExpediente',
         'idAbogado',
         'activo'
     ];
