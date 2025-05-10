@@ -10,7 +10,7 @@ class CatEstadoInicios extends Model
     protected $table = 'cat_estado_inicios';
     protected $primaryKey = 'idCatEstadoInicio';
     protected $fillable = [
-        'nombre',
+        'descripcion',
         'activo'
 
     ];

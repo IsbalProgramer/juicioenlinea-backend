@@ -11,7 +11,8 @@ class CatTipoDocumento extends Model
     protected $primaryKey = 'idCatTipoDocumento'; // Nombre real de la clave primaria
 
     protected $fillable = [
-        'nombre',
+        'descripcion',
+        'requiereEscaneo',
         'activo',
     ];
 
