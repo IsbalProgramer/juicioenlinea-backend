@@ -11,10 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('cat_generos', function (Blueprint $table) {
-            $table->id('idCatGenero');
-            $table->string('nombre');
-            $table->boolean('activo');
+        Schema::create('cat_sexos', function (Blueprint $table) {
+            $table->id('idCatSexo');
+            $table->string('descripcion');
+            $table->boolean('activo')->default(true);
             $table->timestamps();
         });
     }

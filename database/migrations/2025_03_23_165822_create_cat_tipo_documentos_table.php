@@ -13,8 +13,10 @@ return new class extends Migration
     {
         Schema::create('cat_tipo_documentos', function (Blueprint $table) {
             $table->bigInteger('idCatTipoDocumento')->primary(); // Eliminar auto-incremento
-            $table->string('nombre');
-            $table->boolean('activo');
+            $table->string('descripcion');
+            $table->boolean('requiereEscaneo');
+            //true o 1 por defecto en activo al insertar
+            $table->boolean('activo')->default(true);
             $table->timestamps();
         });
     }

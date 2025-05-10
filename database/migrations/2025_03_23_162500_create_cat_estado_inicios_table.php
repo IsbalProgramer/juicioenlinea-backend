@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('cat_estado_inicios', function (Blueprint $table) {
             $table->id('idCatEstadoInicio');
-            $table->string('nombre');
-            $table->boolean('activo');
+            $table->string('descripcion');
+            $table->boolean('activo')->default(true);
             $table->timestamps();
         });
     }

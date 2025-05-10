@@ -13,13 +13,14 @@ return new class extends Migration
     {
         Schema::create('cat_materia_via', function (Blueprint $table) {
             $table->id('idCatMateriaVia');
+            $table->unsignedBigInteger('idCatTipoVia'); // Relación con cat_vias
             $table->unsignedBigInteger('idCatMateria'); // Relación con cat_materias
-            $table->unsignedBigInteger('idCatVia'); // Relación con cat_vias
+            $table->boolean('activo')->default(true);
             $table->timestamps();
 
             // Definir las claves foráneas
             $table->foreign('idCatMateria')->references('idCatMateria')->on('cat_materias')->onDelete('cascade');
-            $table->foreign('idCatVia')->references('idCatVia')->on('cat_vias')->onDelete('no action');
+            $table->foreign('idCatTipoVia')->references('idCatTipoVia')->on('cat_tipo_vias')->onDelete('no action');
         });
     }
 

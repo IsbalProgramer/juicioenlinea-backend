@@ -58,7 +58,7 @@ class PreRegistroController extends Controller
         $validator = Validator::make($request->all(), [
             'folioPreregistro' => 'required|string|max:191',
             'idCatMateria' => 'required|integer',
-            'idCatVia' => 'required|integer',
+            'idCatTipoVia' => 'required|integer',
             'sintesis' => 'nullable|string|max:255',
             'observaciones' => 'nullable|string|max:255',
             'partes' => 'required|array|min:1',
@@ -98,16 +98,21 @@ class PreRegistroController extends Controller
                     'message' => 'No se pudo obtener el idGeneral del token',
                 ], 400);
             }
+            
+            // Crear el folio consecutivo
+            $ultimoFolio = PreRegistro::latest('idPreregistro')->value('folioPreregistro');
+            $numeroConsecutivo = $ultimoFolio ? intval(explode('/', $ultimoFolio)[0]) + 1 : 1;
+            $folioPreregistro = str_pad($numeroConsecutivo, 4, '0', STR_PAD_LEFT) . '/' . now()->year;
 
             // Crear el registro en la tabla pivote "cat_materia_via"
             $catMateriaVia = CatMateriaVia::firstOrCreate([
                 'idCatMateria' => $request->idCatMateria,
-                'idCatVia' => $request->idCatVia,
+                'idCatTipoVia' => $request->idCatTipoVia,
             ]);
 
             // Crear el registro en la tabla "pre_registros"
             $preRegistro = PreRegistro::create([
-                'folioPreregistro' => $request->folioPreregistro,
+                'folioPreregistro' => $folioPreregistro,
                 'idCatMateriaVia' => $catMateriaVia->idCatMateriaVia, // Usar el ID generado en la tabla pivote
                 'idGeneral' => $idGeneral, // Asignar idGeneral al campo idGeneral
                 'fechaCreada' => now(),
@@ -170,7 +175,7 @@ class PreRegistroController extends Controller
         try {
             $preRegistro = PreRegistro::with([
                 'partes',
-                'documentos',
+                'documentos.catTipoDocumento', // Relación con el catálogo de tipos de documentos
                 'catMateriaVia.catMateria',
                 'catMateriaVia.catVia',
                 'historialEstado' => function ($query) {
@@ -181,8 +186,13 @@ class PreRegistroController extends Controller
                 }
             ])->findOrFail($idPreregistro);
 
-            $preRegistro->historialEstado->each(function ($historial) {
-                $historial->makeHidden('idCatEstadoInicio');
+            // Modificar los documentos para asignar el nombre desde el catálogo si es null
+            $preRegistro->documentos->transform(function ($documento) {
+                // Si el nombre es null y hay un idCatTipoDocumento, asignar el nombre desde el catálogo
+                if (is_null($documento->nombre) && $documento->catTipoDocumento) {
+                    $documento->nombre = $documento->catTipoDocumento->nombre; // Asignar el nombre desde el catálogo
+                }
+                return $documento;
             });
 
             return response()->json([

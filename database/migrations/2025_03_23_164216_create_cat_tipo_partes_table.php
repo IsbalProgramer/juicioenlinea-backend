@@ -12,9 +12,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('cat_tipo_partes', function (Blueprint $table) {
-            $table->id('idCatParte');
-            $table->string('nombre');
-            $table->boolean('activo');
+            $table->id('idCatTipoParte');
+            $table->string('descripcion');
+            $table->string('plural');
+            $table->string('tipo');
+            $table->boolean('activo')->default(true);
             $table->timestamps();
         });
     }

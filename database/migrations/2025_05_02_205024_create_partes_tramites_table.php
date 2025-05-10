@@ -18,12 +18,12 @@ return new class extends Migration
             $table->string('apellidoMaterno');
             $table->string('apellidoPaterno');
             $table->string('direccion');
-            $table->unsignedBigInteger('idCatGenero');
-            $table->unsignedBigInteger('idCatParte');
+            $table->unsignedBigInteger('idCatSexo');
+            $table->unsignedBigInteger('idCatTipoParte');
             
             $table->foreign('idTramite')->references('idTramite')->on ('tramites')->onDelete('cascade');
-            $table->foreign('idCatGenero')->references('idCatGenero')->on('cat_generos')->onUpdate('cascade')->onDelete('cascade');
-            $table->foreign('idCatParte')->references('idCatParte')->on('cat_tipo_partes')->onUpdate('cascade')->onDelete('cascade');
+            $table->foreign('idCatSexo')->references('idCatSexo')->on('cat_sexos')->onUpdate('cascade')->onDelete('cascade');
+            $table->foreign('idCatTipoParte')->references('idCatTipoParte')->on('cat_tipo_partes')->onUpdate('cascade')->onDelete('cascade');
             $table->timestamps();
         });
     }

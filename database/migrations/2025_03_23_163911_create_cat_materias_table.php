@@ -13,8 +13,9 @@ return new class extends Migration
     {
         Schema::create('cat_materias', function (Blueprint $table) {
             $table->id('idCatMateria');
-            $table->string('nombre');
-            $table->boolean('activo');
+            $table->string('descripcion');
+            $table->string('claveMateria');
+            $table->boolean('activo')->default(true);
             $table->timestamps();
         });
     }
