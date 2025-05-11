@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use \Illuminate\Database\QueryException;
 use Exception;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class RequerimientoController extends Controller
 {
@@ -286,22 +287,7 @@ class RequerimientoController extends Controller
 
     public function subirRequerimiento(Requerimiento $requerimiento, Request $request)
     {
-        // $fechaLimite = $requerimiento->fechaLimite;
-        // if (Carbon::parse($fechaLimite)->lt(now())) {
-        //     return response()->json([
-        //     'status' => 400,
-        //     'message' => 'No se puede subir el requerimiento porque la fecha límite ya ha pasado.',
-        //     ], 400);
-        // }
 
-        // $fechaLimite = Carbon::parse($requerimiento->fechaLimite);
-
-        // if ($fechaLimite->isPast()) {
-        //     return response()->json([
-        //         'status' => 400,
-        //         'message' => 'No se puede subir el requerimiento porque la fecha límite ya ha pasado.',
-        //     ], 400);
-        // }
 
         $fechaLimite = Carbon::parse($requerimiento->fechaLimite)->endOfDay();
 
@@ -405,6 +391,59 @@ class RequerimientoController extends Controller
                 $documentos[] = $documento;
             }
 
+            // Crear HTML del acuse
+            $html = "
+    <h2 style='text-align:center;'>ACUSE DE RECIBO</h2>
+    <p><strong>Requerimiento ID:</strong> {$requerimiento->idRequerimiento}</p>
+    <p><strong>Expediente ID:</strong> {$requerimiento->idExpediente}</p>
+    <p><strong>Descripcion:</strong> {$requerimiento->descripcion}</p>
+    <p><strong>Secretario:</strong> {$requerimiento->idSecretario}</p>
+    <p><strong>Abogado que envia:</strong> {$idGeneral}</p>
+    <p><strong>Fecha de recepción:</strong> " . now()->format('Y-m-d H:i:s') . "</p>
+    <h4>Documentos entregados:</h4>
+    <ul>
+";
+
+            foreach ($documentos as $doc) {
+                $nombre = isset($doc->nombre) && !empty($doc->nombre) ? $doc->nombre : 'Documento sin nombre';
+                if (isset($doc->idCatTipoDocumento) && $doc->idCatTipoDocumento > 0) {
+                    // Buscar el nombre del tipo de documento
+                    $tipo = DB::table('cat_tipo_documentos')
+                        ->where('idCatTipoDocumento', $doc->idCatTipoDocumento)
+                        ->value('nombre');
+
+                    if (!$tipo) {
+                        Log::warning("Tabla 'cat_tipo_documento' no encontrada o sin datos para idCatTipoDocumento: {$doc->idCatTipoDocumento}");
+                        $tipo = 'Sin tipo';
+                    }
+                } elseif (isset($doc->idCatTipoDocumento) && $doc->idCatTipoDocumento == -1) {
+                    $tipo = $nombre; // Usar el nombre del documento si el tipo es -1
+                } else {
+                    $tipo = 'Sin tipo';
+                }
+                $html .= "<li>{$tipo}</li>";
+            }
+
+            $html .= "</ul>";
+
+            // Generar PDF desde el HTML
+            $pdf = Pdf::loadHTML($html);
+
+            // Codificar en base64
+            $pdfBase64 = base64_encode($pdf->output());
+
+            // Guardar como Documento
+            $acuseDocumento = new Documento();
+            $acuseDocumento->documento = $pdfBase64;
+            // $acuseDocumento->idCatTipoDocumento = 999; // ID especial para acuses
+            $acuseDocumento->save();
+            // Asociar el acuse directamente en el campo del requerimiento
+            $requerimiento->idDocumentoAcuse = $acuseDocumento->idDocumento;
+            $requerimiento->save();
+            $documentos[] = $acuseDocumento;
+
+
+
             // Historial general del requerimiento
             $historial = HistorialEstadoRequerimiento::create([
                 'idRequerimiento' => $requerimiento->idRequerimiento,
@@ -423,18 +462,19 @@ class RequerimientoController extends Controller
                     'requerimiento' => $requerimiento,
                     'documentos' => $documentos,
                     'historial' => $historial,
+
                 ]
             ], 200);
         } catch (QueryException $e) {
             DB::rollBack();
 
-            if ($e->getCode() == 23000) {
-                return response()->json([
-                    'status' => 400,
-                    'message' => 'Algún folio de documento ya existe.',
-                    'error' => $e->getMessage(),
-                ], 400);
-            }
+            // if ($e->getCode() == 23000) {
+            //     return response()->json([
+            //         'status' => 400,
+            //         'message' => 'Algún folio de documento ya existe.',
+            //         'error' => $e->getMessage(),
+            //     ], 400);
+            // }
 
             return response()->json([
                 'status' => 400,
@@ -500,6 +540,58 @@ class RequerimientoController extends Controller
         }
     }
 
+    public function listarAcuse($idRequerimiento)
+    {
+        try {
+            $requerimiento = Requerimiento::with(['documentoAcuse'])->findOrFail($idRequerimiento);
+
+            $documentos = [];
+            if ($requerimiento->documentoAcuse) {
+                $requerimiento->documentoAcuse->tipo = 'Acuse';
+                $documentos[] = $requerimiento->documentoAcuse;
+            }
+
+            return response()->json([
+                'status' => 200,
+                'message' => "Listado de documentos de acuse del requerimiento",
+                'data' => $documentos
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'message' => "No se encontró el registro",
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function listarAuto($idRequerimiento)
+    {
+        try {
+            $requerimiento = Requerimiento::with(['documentoAuto'])->findOrFail($idRequerimiento);
+
+            $documentos = [];
+            if ($requerimiento->documentoAuto) {
+                $requerimiento->documentoAuto->tipo = 'Auto';
+                $documentos[] = $requerimiento->documentoAuto;
+            }
+
+            return response()->json([
+                'status' => 200,
+                'message' => "Listado de documentos de auto del requerimiento",
+                'data' => $documentos
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'message' => "No se encontró el registro",
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+
+
     public function listarDocumentosRequerimiento($idRequerimiento)
     {
         try {
@@ -527,15 +619,15 @@ class RequerimientoController extends Controller
         }
     }
 
+
     // admitir
     public function admitirRequerimiento(Request $request, Requerimiento $requerimiento)
     {
         try {
             DB::beginTransaction();
-            // Obtener el payload del token desde los atributos de la solicitud
-            $jwtPayload = $request->attributes->get('jwt_payload');
 
-            // Agregar un registro temporal para inspeccionar el payload
+            // Obtener el payload del token
+            $jwtPayload = $request->attributes->get('jwt_payload');
             $idGeneral = isset($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'])
                 ? json_decode($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'], true)['idGeneral']
                 : null;
@@ -547,10 +639,8 @@ class RequerimientoController extends Controller
                 ], 400);
             }
 
-            //Validacion que el que crea sea solo el Secretario
-
+            // Validar perfil de secretario
             $perfiles = $request->attributes->get('perfilesUsuario') ?? [];
-
             $tienePerfilSecretario = collect($perfiles)->contains(function ($perfil) {
                 return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'secretario';
             });
@@ -562,17 +652,46 @@ class RequerimientoController extends Controller
                 ], 403);
             }
 
-            // Define que el que creo sea el que admita o deniegue
-            $idSecretario = $requerimiento->idSecretario;
-
-            if ($idGeneral != $idSecretario) {
+            // Verificar que el secretario que creó el requerimiento lo admita
+            if ($idGeneral != $requerimiento->idSecretario) {
                 return response()->json([
                     'status' => 400,
                     'message' => 'Requerimiento no asignado',
                 ], 400);
             }
 
+            // Validar el archivo
+            $validator = Validator::make($request->all(), [
+                'documentoAuto' => 'required|file|mimes:pdf,doc,docx|max:2048',
+            ]);
 
+            if ($validator->fails()) {
+                $errors = $validator->messages()->all();
+                return response()->json([
+                    'status' => 422,
+                    'message' => implode(', ', $errors),
+                ], 422);
+            }
+
+            // Verificar que el archivo existe y es válido
+            $archivo = $request->file('documentoAuto');
+            if (!$archivo || !$archivo->isValid()) {
+                return response()->json([
+                    'status' => 400,
+                    'message' => 'Archivo no válido o no enviado correctamente.',
+                ], 400);
+            }
+
+            // Guardar el documento
+            $documento = new Documento();
+            $documento->documento = base64_encode(file_get_contents($archivo)); // Convertir a base64
+            $documento->save();
+
+            // Asignar el documento al requerimiento
+            $requerimiento->idDocumentoAuto = $documento->idDocumento;
+            $requerimiento->save();
+
+            // Crear historial
             $historial = HistorialEstadoRequerimiento::create([
                 'idRequerimiento' => $requerimiento->idRequerimiento,
                 'idExpediente' => $requerimiento->idExpediente,
@@ -586,6 +705,9 @@ class RequerimientoController extends Controller
                 'status' => 200,
                 'message' => 'Requerimiento admitido correctamente.',
                 'data' => [
+                    'requerimiento' => $requerimiento,
+                    'documento_id' => $documento->idDocumento,
+                    'documento' => $documento,
                     'historial' => $historial,
                 ]
             ], 200);
@@ -600,6 +722,7 @@ class RequerimientoController extends Controller
             ], 500);
         }
     }
+
 
     //denegar requerimiento
     public function denegarRequerimiento(Request $request, Requerimiento $requerimiento)
@@ -646,6 +769,36 @@ class RequerimientoController extends Controller
                 ], 400);
             }
 
+            // Validar el archivo
+            $validator = Validator::make($request->all(), [
+                'documentoAuto' => 'required|file|mimes:pdf,doc,docx|max:2048',
+            ]);
+
+            if ($validator->fails()) {
+                $errors = $validator->messages()->all();
+                return response()->json([
+                    'status' => 422,
+                    'message' => implode(', ', $errors),
+                ], 422);
+            }
+
+            // Verificar que el archivo existe y es válido
+            $archivo = $request->file('documentoAuto');
+            if (!$archivo || !$archivo->isValid()) {
+                return response()->json([
+                    'status' => 400,
+                    'message' => 'Archivo no válido o no enviado correctamente.',
+                ], 400);
+            }
+
+            // Guardar el documento
+            $documento = new Documento();
+            $documento->documento = base64_encode(file_get_contents($archivo)); // Convertir a base64
+            $documento->save();
+
+            // Asignar el documento al requerimiento
+            $requerimiento->idDocumentoAuto = $documento->idDocumento;
+            $requerimiento->save();
 
             $historial = HistorialEstadoRequerimiento::create([
                 'idRequerimiento' => $requerimiento->idRequerimiento,
@@ -660,6 +813,9 @@ class RequerimientoController extends Controller
                 'status' => 200,
                 'message' => 'Requerimiento denegado correctamente.',
                 'data' => [
+                    'requerimiento' => $requerimiento,
+                    'documento_id' => $documento->idDocumento,
+                    'documento' => $documento,
                     'historial' => $historial,
                 ]
             ], 200);
@@ -802,6 +958,18 @@ class RequerimientoController extends Controller
                     'status' => 403,
                     'message' => 'No tiene permisos.',
                 ], 403);
+            }
+
+            // Verificar y actualizar el estado de los requerimientos expirados
+            $requerimientos = Requerimiento::where('idSecretario', $idGeneral)->get();
+
+            foreach ($requerimientos as $requerimiento) {
+                $fechaLimite = Carbon::parse($requerimiento->fechaLimite);
+                $estadoFinal = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
+
+                if ($fechaLimite->lt(now()) && $estadoFinal == 1) {
+                    $this->estadoRequerimientoExpiro($requerimiento, $request);
+                }
             }
 
             $requerimiento = Requerimiento::with([

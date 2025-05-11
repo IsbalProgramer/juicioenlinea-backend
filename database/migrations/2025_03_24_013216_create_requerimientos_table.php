@@ -17,11 +17,13 @@ return new class extends Migration
             $table->string('idExpediente');
             $table->unsignedBigInteger('idDocumentoAcuerdo');
             $table->unsignedBigInteger('idDocumentoAuto')->nullable();
+            $table->unsignedBigInteger('idDocumentoAcuse')->nullable();
             $table->unsignedBigInteger('idSecretario');
             $table->unsignedBigInteger('idAbogado');
             $table->timestamps();
-            $table->dateTime('fechaLimite');
-
+            // $table->dateTime('fechaLimite');
+            $table->dateTime('fechaLimite', 6); // precisión de 6 dígitos = microsegundos
+            
             // Claves foráneas
             // $table->foreign('idExpediente')->references('idExpediente')->on('expedientes');
             $table->foreign('idDocumentoAcuerdo')->references('idDocumento')->on('documentos');
