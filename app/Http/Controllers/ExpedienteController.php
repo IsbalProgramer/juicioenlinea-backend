@@ -12,33 +12,33 @@ class ExpedienteController extends Controller
     {
         try {
 
-            // Obtener el payload del token desde los atributos de la solicitud
-            $jwtPayload = $request->attributes->get('jwt_payload');
+            // // Obtener el payload del token desde los atributos de la solicitud
+            // $jwtPayload = $request->attributes->get('jwt_payload');
 
-            // Agregar un registro temporal para inspeccionar el payload
-            $idGeneral = isset($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'])
-                ? json_decode($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'], true)['idGeneral']
-                : null;
+            // // Agregar un registro temporal para inspeccionar el payload
+            // $idGeneral = isset($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'])
+            //     ? json_decode($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'], true)['idGeneral']
+            //     : null;
 
-            if (!$idGeneral) {
-                return response()->json([
-                    'status' => 400,
-                    'message' => 'No se pudo obtener el idGeneral del token',
-                ], 400);
-            }
+            // if (!$idGeneral) {
+            //     return response()->json([
+            //         'status' => 400,
+            //         'message' => 'No se pudo obtener el idGeneral del token',
+            //     ], 400);
+            // }
 
-            $perfiles = $request->attributes->get('perfilesUsuario') ?? [];
+            // $perfiles = $request->attributes->get('perfilesUsuario') ?? [];
 
-            $tienePerfilSecretario = collect($perfiles)->contains(function ($perfil) {
-                return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'secretario';
-            });
+            // $tienePerfilSecretario = collect($perfiles)->contains(function ($perfil) {
+            //     return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'secretario';
+            // });
 
-            if (!$tienePerfilSecretario) {
-                return response()->json([
-                    'status' => 403,
-                    'message' => 'No tiene permisos.',
-                ], 403);
-            }
+            // if (!$tienePerfilSecretario) {
+            //     return response()->json([
+            //         'status' => 403,
+            //         'message' => 'No tiene permisos.',
+            //     ], 403);
+            // }
 
             $expediente = AbogadoExpediente::with([
             ])->select('idExpediente')->distinct()->get();
@@ -60,33 +60,33 @@ class ExpedienteController extends Controller
     {
         try {
 
-            // Obtener el payload del token desde los atributos de la solicitud
-            $jwtPayload = $request->attributes->get('jwt_payload');
+            // // Obtener el payload del token desde los atributos de la solicitud
+            // $jwtPayload = $request->attributes->get('jwt_payload');
 
-            // Agregar un registro temporal para inspeccionar el payload
-            $idGeneral = isset($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'])
-                ? json_decode($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'], true)['idGeneral']
-                : null;
+            // // Agregar un registro temporal para inspeccionar el payload
+            // $idGeneral = isset($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'])
+            //     ? json_decode($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'], true)['idGeneral']
+            //     : null;
 
-            if (!$idGeneral) {
-                return response()->json([
-                    'status' => 400,
-                    'message' => 'No se pudo obtener el idGeneral del token',
-                ], 400);
-            }
+            // if (!$idGeneral) {
+            //     return response()->json([
+            //         'status' => 400,
+            //         'message' => 'No se pudo obtener el idGeneral del token',
+            //     ], 400);
+            // }
 
-            $perfiles = $request->attributes->get('perfilesUsuario') ?? [];
+            // $perfiles = $request->attributes->get('perfilesUsuario') ?? [];
 
-            $tienePerfilSecretario = collect($perfiles)->contains(function ($perfil) {
-                return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'secretario';
-            });
+            // $tienePerfilSecretario = collect($perfiles)->contains(function ($perfil) {
+            //     return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'secretario';
+            // });
 
-            if (!$tienePerfilSecretario) {
-                return response()->json([
-                    'status' => 403,
-                    'message' => 'No tiene permisos.',
-                ], 403);
-            }
+            // if (!$tienePerfilSecretario) {
+            //     return response()->json([
+            //         'status' => 403,
+            //         'message' => 'No tiene permisos.',
+            //     ], 403);
+            // }
 
             $abogados = AbogadoExpediente::select('idAbogado')
                 ->where('abogado_expediente.idExpediente', str_replace('-', '/', $idExpediente))

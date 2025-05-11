@@ -52,18 +52,32 @@ class RequerimientoController extends Controller
                 ], 403);
             }
 
-            $requerimiento = Requerimiento::with([
+            // Verificar y actualizar el estado de los requerimientos expirados
+            $requerimientos = Requerimiento::where('idSecretario', $idGeneral)->get();
+
+            foreach ($requerimientos as $requerimiento) {
+                $fechaLimite = Carbon::parse($requerimiento->fechaLimite);
+                $estadoFinal = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
+
+                if ($fechaLimite->lt(now()) && $estadoFinal == 1) {
+                    $this->estadoRequerimientoExpiro($requerimiento, $request);
+                }
+            }
+
+            // Listar los requerimientos con sus relaciones
+            $requerimientos = Requerimiento::with([
                 'historial:idHistorialEstadoRequerimientos,idCatEstadoRequerimientos,idRequerimiento'
-            ])->WHERE('idSecretario', $idGeneral)->get();
+            ])->where('idSecretario', $idGeneral)->get();
+
             return response()->json([
                 'status' => 200,
                 'message' => "Listado de requerimientos",
-                'data' => $requerimiento
+                'data' => $requerimientos
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 500,
-                'message' => 'Error al obtener la lista de requeirimientos',
+                'message' => 'Error al obtener la lista de requerimientos',
                 'error' => $e->getMessage(),
             ], 500);
         }
@@ -95,10 +109,12 @@ class RequerimientoController extends Controller
                 'required',
                 'date',
                 function ($attribute, $value, $fail) {
-                    if (Carbon::parse($value)->lte(now())) {
+                    $fechaLimite = Carbon::parse($value)->endOfDay(); // <--- Añade esto
+                    if ($fechaLimite->lte(now())) {
                         $fail('La fecha límite debe ser posterior a la fecha actual.');
                     }
                 }
+
             ],
 
             'documentoAcuerdo' => 'required|file|mimes:pdf,doc,docx|max:2048',
@@ -149,7 +165,7 @@ class RequerimientoController extends Controller
 
             // Guardar el documento en la base de datos
             $documento = new Documento();
-            $documento->nombre = $request->file('documentoAcuerdo')->getClientOriginalName();
+            // $documento->nombre = $request->file('documentoAcuerdo')->getClientOriginalName();
             $documento->documento = base64_encode(file_get_contents($request->file('documentoAcuerdo'))); // Convertir el archivo a base64
             $documento->save();
 
@@ -167,7 +183,8 @@ class RequerimientoController extends Controller
                 'descripcion' => $request->descripcion,
                 'idSecretario' => $idGeneral, //ASIGNACION DEL USUARIO
                 'idDocumentoAcuerdo' => $documentoID,
-                'fechaLimite' => $request->fechaLimite,
+                // 'fechaLimite' => $request->fechaLimite,
+                'fechaLimite' => Carbon::parse($request->fechaLimite)->endOfDay(),
                 'idAbogado' => $request->idAbogado
             ]);
 
@@ -228,7 +245,7 @@ class RequerimientoController extends Controller
                 'documentoAcuerdo:idDocumento',
                 'historial:idHistorialEstadoRequerimientos,idCatEstadoRequerimientos,idRequerimiento',
                 'documentoRequerimiento:idDocumento'
-                
+
             )->findOrFail($idRequerimiento);
             return response()->json([
                 'status' => 200,
@@ -267,15 +284,31 @@ class RequerimientoController extends Controller
     }
 
 
-    public function subirRequerimiento(Request $request, Requerimiento $requerimiento)
+    public function subirRequerimiento(Requerimiento $requerimiento, Request $request)
     {
+        // $fechaLimite = $requerimiento->fechaLimite;
+        // if (Carbon::parse($fechaLimite)->lt(now())) {
+        //     return response()->json([
+        //     'status' => 400,
+        //     'message' => 'No se puede subir el requerimiento porque la fecha límite ya ha pasado.',
+        //     ], 400);
+        // }
 
-        $fechaLimite = $requerimiento->fechaLimite;
+        // $fechaLimite = Carbon::parse($requerimiento->fechaLimite);
 
-        if (Carbon::parse($fechaLimite)->lt(now())) {
+        // if ($fechaLimite->isPast()) {
+        //     return response()->json([
+        //         'status' => 400,
+        //         'message' => 'No se puede subir el requerimiento porque la fecha límite ya ha pasado.',
+        //     ], 400);
+        // }
+
+        $fechaLimite = Carbon::parse($requerimiento->fechaLimite)->endOfDay();
+
+        if ($fechaLimite->isPast()) {
             return response()->json([
                 'status' => 400,
-                'message' => 'No se puede modificar el requerimiento porque la fecha límite ya ha pasado.',
+                'message' => 'No se puede subir el requerimiento porque la fecha límite ya ha pasado.',
             ], 400);
         }
 
@@ -294,6 +327,10 @@ class RequerimientoController extends Controller
         $validator = Validator::make($request->all(), [
             'documentoRequerimiento' => 'required|array|min:1',
             'documentoRequerimiento.*' => 'required|file|mimes:pdf,doc,docx|max:2048',
+            'idCatTipoDocumento' => 'required|array|min:1',
+            'idCatTipoDocumento.*' => 'required|integer',
+            'nombre' => 'nullable|array|min:1',
+            'nombre.*' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -309,7 +346,6 @@ class RequerimientoController extends Controller
             // Obtener el payload del token desde los atributos de la solicitud
             $jwtPayload = $request->attributes->get('jwt_payload');
 
-            // Agregar un registro temporal para inspeccionar el payload
             $idGeneral = isset($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'])
                 ? json_decode($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'], true)['idGeneral']
                 : null;
@@ -321,8 +357,7 @@ class RequerimientoController extends Controller
                 ], 400);
             }
 
-
-            //Validar que el que suba solo sea el abogado 
+            // Validar que el que suba solo sea el abogado 
             $perfiles = $request->attributes->get('perfilesUsuario') ?? [];
 
             $tienePerfilAbogado = collect($perfiles)->contains(function ($perfil) {
@@ -336,7 +371,6 @@ class RequerimientoController extends Controller
                 ], 403);
             }
 
-            // Define $idAbogado before using it
             $idAbogado = $requerimiento->idAbogado;
 
             if ($idGeneral != $idAbogado) {
@@ -346,16 +380,18 @@ class RequerimientoController extends Controller
                 ], 400);
             }
 
-            $documentos = [];
             $archivos = $request->file('documentoRequerimiento');
+            $documentos = [];
 
             foreach ($archivos as $index => $archivo) {
-                $nombreArchivo = $archivo->getClientOriginalName();
                 $contenidoBase64 = base64_encode(file_get_contents($archivo));
 
                 $documento = new Documento();
-                $documento->nombre = $nombreArchivo;
                 $documento->documento = $contenidoBase64;
+                $documento->nombre = $request->idCatTipoDocumento[$index] == -1
+                    ? ($request->nombre[$index] ?? $archivo->getClientOriginalName())
+                    : null;
+                $documento->idCatTipoDocumento = $request->idCatTipoDocumento[$index];
                 $documento->save();
 
                 // Relacionar con requerimiento en tabla pivote
@@ -374,7 +410,7 @@ class RequerimientoController extends Controller
                 'idRequerimiento' => $requerimiento->idRequerimiento,
                 'idExpediente' => $request->idExpediente,
                 'idUsuario' => $idGeneral,
-                'idCatEstadoRequerimientos' => 3, //REQUERIMIENTO SUBIDO Y ENVIADO
+                'idCatEstadoRequerimientos' => 3, // REQUERIMIENTO SUBIDO Y ENVIADO
             ]);
 
             $requerimiento->save();
@@ -424,7 +460,7 @@ class RequerimientoController extends Controller
     public function verDocumento($idDocumento)
     {
         try {
-            $documento = Documento::select('nombre', 'documento')->findOrFail($idDocumento);
+            $documento = Documento::select('documento', 'idCatTipoDocumento', 'nombre')->findOrFail($idDocumento);
             return response()->json([
                 'status' => 200,
                 'message' => 'Detalle del documento',
