@@ -48,14 +48,13 @@ Route::prefix('Inicio')->group(function () {
 
 });
 
-Route::prefix('Catalogo')->group(function(){
+Route::prefix('Catalogo')->group(function () {
     Route::get('Vias/{idCatMateria}', [CatViasController::class, 'show']); // Listar vías por idCatMateria
-    Route::get('Partes', [CatPartesController::class,'index']);
-    Route::get('Materias', [CatMateriasController::class,'index']);
-    Route::get('Generos', [CatGenerosController::class,'index']);
-    Route::get('EstadosInicio', [CatEstadoInicioController::class,'index']);
-    Route::get('TipoDocumentos', [CatTipoDocumentoController::class,'index']);
-
+    Route::get('Partes', [CatPartesController::class, 'index']);
+    Route::get('Materias', [CatMateriasController::class, 'index']);
+    Route::get('Generos', [CatGenerosController::class, 'index']);
+    Route::get('EstadosInicio', [CatEstadoInicioController::class, 'index']);
+    Route::get('TipoDocumentos', [CatTipoDocumentoController::class, 'index']);
 });
 
 
@@ -73,7 +72,9 @@ Route::prefix('Requerimiento')->group(function () {
     Route::get('VerDocumento/{id}', [RequerimientoController::class, 'verDocumento'])->middleware(VerifyJwtToken::class);
     Route::post('SubirRequerimiento/{requerimiento}', [RequerimientoController::class, 'subirRequerimiento'])->middleware(VerifyJwtToken::class);
     Route::get('ListarAcuerdo/{requerimiento}', [RequerimientoController::class, 'listarAcuerdo'])->middleware(VerifyJwtToken::class);
+    Route::get('ListarAcuse/{requerimiento}', [RequerimientoController::class, 'listarAcuse'])->middleware(VerifyJwtToken::class);
     Route::get('ListarDocumentosRequerimiento/{requerimiento}', [RequerimientoController::class, 'listarDocumentosRequerimiento'])->middleware(VerifyJwtToken::class);
+    Route::get('ListarAuto/{requerimiento}', [RequerimientoController::class, 'listarAuto'])->middleware(VerifyJwtToken::class);
     // Route::post('ActualizarRequerimiento/{requerimiento}',[RequerimientoController::class, 'actualizarDocumento']);
     // Route::post('EliminarRequerimiento/{requerimiento}',[RequerimientoController::class, 'eliminarDocumento']);
     Route::post('RequerimientoExpirado/{requerimiento}', [RequerimientoController::class, 'estadoRequerimientoExpiro'])->middleware(VerifyJwtToken::class);
@@ -81,9 +82,9 @@ Route::prefix('Requerimiento')->group(function () {
     Route::post('DenegarRequerimiento/{requerimiento}', [RequerimientoController::class, 'denegarRequerimiento'])->middleware(VerifyJwtToken::class);
 });
 
-Route::prefix('ExpedienteAbogado')->group( function () {
-    Route::get('Expedientes', [ExpedienteController::class, 'listarExpedientesDistintos']);//->middleware(VerifyJwtToken::class);
-    Route::get('Expedientes/Abogados/{id}', [ExpedienteController::class, 'listarAbogadosPorExpediente']);//->middleware(VerifyJwtToken::class);
-}
+Route::prefix('ExpedienteAbogado')->group(
+    function () {
+        Route::get('Expedientes', [ExpedienteController::class, 'listarExpedientesDistintos']); //->middleware(VerifyJwtToken::class);
+        Route::get('Expedientes/Abogados/{id}', [ExpedienteController::class, 'listarAbogadosPorExpediente']); //->middleware(VerifyJwtToken::class);
+    }
 );
-
