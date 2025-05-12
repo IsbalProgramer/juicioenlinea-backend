@@ -166,7 +166,7 @@ class RequerimientoController extends Controller
 
             // Guardar el documento en la base de datos
             $documento = new Documento();
-            // $documento->nombre = $request->file('documentoAcuerdo')->getClientOriginalName();
+            $documento->idCatTipoDocumento = 129;
             $documento->documento = base64_encode(file_get_contents($request->file('documentoAcuerdo'))); // Convertir el archivo a base64
             $documento->save();
 
@@ -410,7 +410,7 @@ class RequerimientoController extends Controller
                     // Buscar el nombre del tipo de documento
                     $tipo = DB::table('cat_tipo_documentos')
                         ->where('idCatTipoDocumento', $doc->idCatTipoDocumento)
-                        ->value('nombre');
+                        ->value('descripcion');
 
                     if (!$tipo) {
                         Log::warning("Tabla 'cat_tipo_documento' no encontrada o sin datos para idCatTipoDocumento: {$doc->idCatTipoDocumento}");
@@ -435,9 +435,8 @@ class RequerimientoController extends Controller
             // Guardar como Documento
             $acuseDocumento = new Documento();
             $acuseDocumento->documento = $pdfBase64;
-            // $acuseDocumento->idCatTipoDocumento = 999; // ID especial para acuses
+            $acuseDocumento->idCatTipoDocumento = 131; 
             $acuseDocumento->save();
-            // Asociar el acuse directamente en el campo del requerimiento
             $requerimiento->idDocumentoAcuse = $acuseDocumento->idDocumento;
             $requerimiento->save();
             $documentos[] = $acuseDocumento;
@@ -685,6 +684,7 @@ class RequerimientoController extends Controller
             // Guardar el documento
             $documento = new Documento();
             $documento->documento = base64_encode(file_get_contents($archivo)); // Convertir a base64
+            $documento->idCatTipoDocumento =130; 
             $documento->save();
 
             // Asignar el documento al requerimiento
@@ -794,6 +794,7 @@ class RequerimientoController extends Controller
             // Guardar el documento
             $documento = new Documento();
             $documento->documento = base64_encode(file_get_contents($archivo)); // Convertir a base64
+            $documento->idCatTipoDocumento=130; 
             $documento->save();
 
             // Asignar el documento al requerimiento
