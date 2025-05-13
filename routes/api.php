@@ -86,5 +86,6 @@ Route::prefix('ExpedienteAbogado')->group(
     function () {
         Route::get('Expedientes', [ExpedienteController::class, 'listarExpedientesDistintos']); //->middleware(VerifyJwtToken::class);
         Route::get('Expedientes/Abogados/{id}', [ExpedienteController::class, 'listarAbogadosPorExpediente']); //->middleware(VerifyJwtToken::class);
+        Route::get('ListarExpedientesGenerales', [ExpedienteController::class, 'listarExpedientesGeneralesAbogados'])->middleware(VerifyJwtToken::class);
     }
 );

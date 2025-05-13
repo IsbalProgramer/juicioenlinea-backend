@@ -19,7 +19,9 @@ return new class extends Migration
             $table->unsignedBigInteger('idDocumentoAuto')->nullable();
             $table->unsignedBigInteger('idDocumentoAcuse')->nullable();
             $table->unsignedBigInteger('idSecretario');
+            $table->unsignedBigInteger('usuarioSecretario');
             $table->unsignedBigInteger('idAbogado');
+            $table->unsignedBigInteger('usuarioAbogado')->nullable();
             $table->timestamps();
             // $table->dateTime('fechaLimite');
             $table->dateTime('fechaLimite', 6); // precisión de 6 dígitos = microsegundos

@@ -22,6 +22,7 @@ class Requerimiento extends Model
         'idDocumentoAcuse',
         'idDocumentoAuto',
         'idSecretario',
+        'usuarioSecretario',
         'idAbogado',
         'fechaLimite',
     ];
