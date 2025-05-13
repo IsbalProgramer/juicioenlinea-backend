@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Models;
+
+use App\Models\Catalogos\CatMateriaVia;
 use App\Models\Parte;
 use App\Models\Documento;
 
@@ -27,7 +29,6 @@ class PreRegistro extends Model
     {
         return $this->belongsTo(CatMateriaVia::class, 'idCatMateriaVia');
     }
-
     public function partes()
     {
         return $this->hasMany(Parte::class, 'idPreregistro');

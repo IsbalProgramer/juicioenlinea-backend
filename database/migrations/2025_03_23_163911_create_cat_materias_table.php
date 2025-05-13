@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id('idCatMateria');
             $table->string('descripcion');
             $table->string('claveMateria');
-            $table->boolean('activo')->default(true);
+            $table->boolean('activo');
             $table->timestamps();
         });
     }

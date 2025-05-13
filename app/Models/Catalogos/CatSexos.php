@@ -4,11 +4,11 @@ namespace App\Models\Catalogos;
 
 use Illuminate\Database\Eloquent\Model;
 
-class CatGeneros extends Model
+class CatSexos extends Model
 {
         // Indicar el nombre de la tabla si es necesario
         protected $table = 'cat_sexos';
-        protected $primaryKey = 'idCatGenero';
+        protected $primaryKey = 'idCatSexo';
         protected $fillable = [
             'descripcion',
             'activo'

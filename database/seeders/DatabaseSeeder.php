@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Catalogos\CatGeneros;
 use App\Models\Catalogos\CatMaterias;
 use App\Models\Catalogos\CatEstadoInicios;
+use App\Models\Catalogos\CatSexos;
 use App\Models\Catalogos\CatTipoDocumento;
 use Illuminate\Database\Seeder;
 
@@ -17,21 +18,21 @@ class DatabaseSeeder extends Seeder
     {
         // Crear materias
         $materias = [
-            ['descripcion' => 'CIVIL', 'claveMateria' => 'C' ],
-            ['descripcion' => 'FAMILIAR', 'claveMateria' => 'F' ],
-            ['descripcion' => 'MERCANTIL', 'claveMateria' => 'M' ],
-            ['descripcion' => 'MERCANTIL ORAL', 'claveMateria' => 'O' ],
-            ['descripcion' => 'LABORAL', 'claveMateria' => 'L' ],
-            ['descripcion' => 'FAMILIAR PATERNIDAD', 'claveMateria' => 'PT' ],
+            ['descripcion' => 'CIVIL', 'claveMateria' => 'C', 'activo' => 1 ],
+            ['descripcion' => 'FAMILIAR', 'claveMateria' => 'F', 'activo' => 1 ],
+            ['descripcion' => 'MERCANTIL', 'claveMateria' => 'M', 'activo' => 0 ],
+            ['descripcion' => 'MERCANTIL ORAL', 'claveMateria' => 'O', 'activo' => 0 ],
+            ['descripcion' => 'LABORAL', 'claveMateria' => 'L', 'activo' => 0 ],
+            ['descripcion' => 'FAMILIAR PATERNIDAD', 'claveMateria' => 'PT', 'activo' => 1 ],
         ];
         foreach ($materias as $materia) {
             CatMaterias::create($materia);
         }
 
         // Crear géneros
-        CatGeneros::create(['descripcion' => 'HOMBRE' ]);
-        CatGeneros::create(['descripcion' => 'MUJER' ]);
-        CatGeneros::create(['descripcion' => 'OTRO' ]);
+        CatSexos::create(['descripcion' => 'HOMBRE' ]);
+        CatSexos::create(['descripcion' => 'MUJER' ]);
+        CatSexos::create(['descripcion' => 'OTRO' ]);
 
         // Crear estados iniciales
         CatEstadoInicios::create(['descripcion' => 'Enviado' ]);

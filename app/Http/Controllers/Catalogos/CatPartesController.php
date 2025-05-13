@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Catalogos;
 
 use App\Http\Controllers\Controller;
-use App\Models\Catalogos\catPartes;
+use App\Models\Catalogos\CatTipoPartes;
 use Illuminate\Http\Request;
 
 class CatPartesController extends Controller
@@ -14,7 +14,7 @@ class CatPartesController extends Controller
     public function index()
     {
         try {
-            $catPartes = catPartes::all();
+            $catPartes = CatTipoPartes::all();
             return response()->json([
                 'status' => 200,
                 'message' => "Catálogos de partes",

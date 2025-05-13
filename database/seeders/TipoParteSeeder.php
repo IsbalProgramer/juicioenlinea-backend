@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Catalogos\CatPartes;
+use App\Models\Catalogos\CatTipoPartes;
 use Illuminate\Database\Seeder;
 
 class TipoParteSeeder extends Seeder
@@ -50,7 +51,7 @@ class TipoParteSeeder extends Seeder
         ];
 
         foreach ($tiposPartes as $tipoParte) {
-            CatPartes::create($tipoParte);
+            CatTipoPartes::create($tipoParte);
         }
     }
 }

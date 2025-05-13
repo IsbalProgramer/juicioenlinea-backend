@@ -17,7 +17,7 @@ class CatMaterias extends Model
 
     public function catMateriaVias()
     {
-        return $this->hasMany(\App\Models\CatMateriaVia::class, 'idCatMateria');
+        return $this->hasMany(CatMateriaVia::class, 'idCatMateria');
     }
 
 
