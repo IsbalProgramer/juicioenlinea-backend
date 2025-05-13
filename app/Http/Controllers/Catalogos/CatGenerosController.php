@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Catalogos;
 
 use App\Http\Controllers\Controller;
-use App\Models\Catalogos\catGeneros;
+use App\Models\Catalogos\CatSexos;
 use Illuminate\Http\Request;
 
 class CatGenerosController extends Controller
@@ -14,7 +14,7 @@ class CatGenerosController extends Controller
     public function index()
     {
         try {
-            $catGeneros = catGeneros::all();
+            $catGeneros = CatSexos::all();
             return response()->json([
                 'status' => 200,
                 'message' => "Catálogos de géneros",

@@ -3,7 +3,8 @@
 namespace App\Http\Controllers\Catalogos;
 
 use App\Http\Controllers\Controller;
-use App\Models\Catalogos\CatVias;
+use App\Models\Catalogos\CatMateriaVia;
+use App\Models\Catalogos\CatTipoVias;
 use Illuminate\Http\Request;
 
 class CatViasController extends Controller
@@ -14,7 +15,7 @@ class CatViasController extends Controller
     public function index()
     {
         try {
-            $catVias = CatVias::all();
+            $catVias = CatTipoVias::all();
             return response()->json([
                 'status' => 200,
                 'message' => "Catálogos de vias",
@@ -43,13 +44,17 @@ class CatViasController extends Controller
     public function show(string $idCatMateria)
     {
         try {
-            // Obtener las vías relacionadas con la materia específica
-            $catVias = CatVias::where('idCatMateria', $idCatMateria)->get();
+            // Obtener los idCatTipoVia relacionados a la materia
+            $vias = CatMateriaVia::where('idCatMateria', $idCatMateria)
+                ->with('catVia') 
+                ->get() 
+                ->pluck('catVia') // Extrae solo las vías relacionadas
+                ->filter(); // Elimina valores nulos
 
             return response()->json([
                 'status' => 200,
                 'message' => "Vías relacionadas con la materia $idCatMateria",
-                'data' => $catVias
+                'data' => $vias->values()
             ], 200);
         } catch (\Exception $e) {
             return response()->json([

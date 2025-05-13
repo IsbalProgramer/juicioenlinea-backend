@@ -4,7 +4,7 @@ namespace App\Models\Catalogos;
 
 use Illuminate\Database\Eloquent\Model;
 
-class CatPartes extends Model
+class CatTipoPartes extends Model
 {
     // Indicar el nombre de la tabla si es necesario
     protected $table = 'cat_tipo_partes';

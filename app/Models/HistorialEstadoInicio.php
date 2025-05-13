@@ -10,7 +10,7 @@ class HistorialEstadoInicio extends Model
     protected $table = 'historial_estado_inicios';
     protected $primaryKey = 'idHistorialEstadoInicio';
     protected $fillable = [
-        'idInicio',
+        'idPreregistro',
         'idCatEstadoInicio',
         'fechaEstado',
     ];
