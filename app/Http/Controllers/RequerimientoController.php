@@ -180,34 +180,6 @@ class RequerimientoController extends Controller
 
             //Api para subir un archivo 
             $apiDocumento = 'https://api.tribunaloaxaca.gob.mx/NasApi/api/Nas';
-            // $ruta='PERICIALES/JuicioEnLinea/Juzgados';
-
-            // //el expediente vinene en este formato 0001/2020 quiero quepara mi ruta sea 2020/0001
-            // $expediente = $request->idExpediente;
-            // $expediente = explode('/', $expediente);
-            // $expediente = $expediente[1] . '/' . $expediente[0];
-            // $ruta .= $expediente . '/';
-            // $ruta .= 'REQUERIMIENTOS/';
-            // $ruta .= $request->idExpediente . '/';
-            // $ruta .= 'ACUERDOS';
-            // // $ruta .= $request->idExpediente . '_ACUERDO_' . now()->format('YmdHis') . '.pdf';
-            // $documentoAcuerdo = $request->file('documentoAcuerdo');
-            // $nombreOriginal = pathinfo($documentoAcuerdo->getClientOriginalName(), PATHINFO_FILENAME);
-            // $extension = $documentoAcuerdo->getClientOriginalExtension();
-            // $timestamp = now()->format('Ymd_His');
-            // $nuevoNombre = "{$nombreOriginal}_{$timestamp}.{$extension}";
-            // $documentoAcuerdo->storeAs('acuerdos', $nuevoNombre);
-            // // $documentoAcuerdo = base64_encode(file_get_contents($documentoAcuerdo)); // Convertir el archivo a base64
-            // $response = Http::withToken($request->bearerToken())
-            //     ->post("$apiDocumento?path=$ruta&fileName=$documentoAcuerdo");
-            // if ($response->failed()) {
-            //     return response()->json([
-            //         'status' => 500,
-            //         'message' => 'Error al subir el documento a la API.',
-            //         'error' => $response->json(),
-            //     ], 500);
-            // }
-
             $documentoAcuerdo = $request->file('documentoAcuerdo');
 
             $nombreOriginal = pathinfo($documentoAcuerdo->getClientOriginalName(), PATHINFO_FILENAME);
