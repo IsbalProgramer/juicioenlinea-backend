@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use \Illuminate\Database\QueryException;
 use Exception;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Dflydev\DotAccessData\Data;
 use Illuminate\Support\Facades\Http;
 
 class RequerimientoController extends Controller
@@ -162,8 +163,6 @@ class RequerimientoController extends Controller
                 ], 400);
             }
 
-
-
             //Validacion que el que crea sea solo el Secretario
 
             $perfiles = $request->attributes->get('perfilesUsuario') ?? [];
@@ -179,10 +178,76 @@ class RequerimientoController extends Controller
                 ], 403);
             }
 
+            //Api para subir un archivo 
+            $apiDocumento = 'https://api.tribunaloaxaca.gob.mx/NasApi/api/Nas';
+            // $ruta='PERICIALES/JuicioEnLinea/Juzgados';
+
+            // //el expediente vinene en este formato 0001/2020 quiero quepara mi ruta sea 2020/0001
+            // $expediente = $request->idExpediente;
+            // $expediente = explode('/', $expediente);
+            // $expediente = $expediente[1] . '/' . $expediente[0];
+            // $ruta .= $expediente . '/';
+            // $ruta .= 'REQUERIMIENTOS/';
+            // $ruta .= $request->idExpediente . '/';
+            // $ruta .= 'ACUERDOS';
+            // // $ruta .= $request->idExpediente . '_ACUERDO_' . now()->format('YmdHis') . '.pdf';
+            // $documentoAcuerdo = $request->file('documentoAcuerdo');
+            // $nombreOriginal = pathinfo($documentoAcuerdo->getClientOriginalName(), PATHINFO_FILENAME);
+            // $extension = $documentoAcuerdo->getClientOriginalExtension();
+            // $timestamp = now()->format('Ymd_His');
+            // $nuevoNombre = "{$nombreOriginal}_{$timestamp}.{$extension}";
+            // $documentoAcuerdo->storeAs('acuerdos', $nuevoNombre);
+            // // $documentoAcuerdo = base64_encode(file_get_contents($documentoAcuerdo)); // Convertir el archivo a base64
+            // $response = Http::withToken($request->bearerToken())
+            //     ->post("$apiDocumento?path=$ruta&fileName=$documentoAcuerdo");
+            // if ($response->failed()) {
+            //     return response()->json([
+            //         'status' => 500,
+            //         'message' => 'Error al subir el documento a la API.',
+            //         'error' => $response->json(),
+            //     ], 500);
+            // }
+
+            $documentoAcuerdo = $request->file('documentoAcuerdo');
+
+            $nombreOriginal = pathinfo($documentoAcuerdo->getClientOriginalName(), PATHINFO_FILENAME);
+            $extension = $documentoAcuerdo->getClientOriginalExtension();
+            $timestamp = now()->format('Ymd_His');
+            $nuevoNombre = "{$nombreOriginal}_{$timestamp}.{$extension}";
+
+            // Ruta para almacenamiento local si lo necesitas
+            $documentoAcuerdo->storeAs('acuerdos', $nuevoNombre);
+
+            // Construcción de la ruta
+            $expediente = explode('/', $request->idExpediente);
+            $expedienteRuta = $expediente[1] . '/' . $expediente[0];
+
+            $ruta = "PERICIALES/Juzgados/{$expedienteRuta}/REQUERIMIENTOS/ACUERDOS";
+
+            // Enviar el archivo como multipart/form-data
+            $response = Http::withToken($request->bearerToken())
+                ->attach(
+                    'file',                             // nombre del campo
+                    file_get_contents($documentoAcuerdo), // contenido del archivo
+                    $nuevoNombre                        // nombre del archivo
+                )
+                ->post($apiDocumento, [
+                    'path' => $ruta
+                ]);
+
+            if ($response->failed()) {
+                return response()->json([
+                    'status' => 500,
+                    'message' => 'Error al subir el documento a la API.',
+                    'error' => $response->json(),
+                ], 500);
+            }
+
             // Guardar el documento en la base de datos
             $documento = new Documento();
             $documento->idCatTipoDocumento = 129;
-            $documento->documento = base64_encode(file_get_contents($request->file('documentoAcuerdo'))); // Convertir el archivo a base64
+
+            $documento->documento = $ruta . '/' . $nuevoNombre;
             $documento->save();
 
             // Obtener el ID del documento recién creado
@@ -303,8 +368,6 @@ class RequerimientoController extends Controller
 
     public function subirRequerimiento(Requerimiento $requerimiento, Request $request)
     {
-
-
         $fechaLimite = Carbon::parse($requerimiento->fechaLimite)->endOfDay();
 
         if ($fechaLimite->isPast()) {
@@ -550,15 +613,51 @@ class RequerimientoController extends Controller
     /**
      * Descargar un documento almacenado en base64
      */
-    public function verDocumento($idDocumento)
+    public function verDocumento($idDocumento, Request $request)
     {
         try {
-            $documento = Documento::select('documento', 'idCatTipoDocumento', 'nombre')->findOrFail($idDocumento);
+            // Validar el ID del documento
+            if (!$idDocumento) {
+                return response()->json([
+                    'status' => 400,
+                    'message' => 'ID de documento no proporcionado',
+                ], 400);
+            }
+
+            $apiDocumento = 'https://api.tribunaloaxaca.gob.mx/NasApi/api/Nas';
+
+
+            $documento = Documento::find($idDocumento);
+            if (!$documento) {
+                return response()->json([
+                    'status' => 404,
+                    'message' => 'Documento no encontrado',
+                ], 404);
+            }
+            $documentoRuta = $documento->documento;
+            $documentoNombre = explode('/', $documentoRuta);
+            $documentoNombre = end($documentoNombre);
+            $documentoRuta = str_replace($documentoNombre, '', $documentoRuta); // Eliminar el nombre del documento de la ruta
+
+            $response = Http::withToken($request->bearerToken())
+                ->get($apiDocumento . '?' . http_build_query([
+                    'path' => $documentoRuta,
+                    'fileName' => $documentoNombre
+                ]));
+
             return response()->json([
                 'status' => 200,
-                'message' => 'Detalle del documento',
-                'data' => $documento
+                'message' => 'Documento encontrado',
+                'data' => $response->json(),
             ], 200);
+
+            if ($response->failed()) {
+                return response()->json([
+                    'status' => 500,
+                    'message' => 'Error al descargar el documento',
+                    'error' => $response->json(),
+                ], 500);
+            }
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 500,
