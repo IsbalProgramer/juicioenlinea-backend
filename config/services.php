@@ -34,5 +34,8 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+    'nas_api' => [
+        'url' => env('NAS_API_URL', 'https://api.tribunaloaxaca.gob.mx/NasApi/api/Nas'),
+    ],
 
 ];

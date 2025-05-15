@@ -12,6 +12,7 @@ use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Database\QueryException;
+use App\Services\NasApiService;
 
 class PreRegistroController extends Controller
 {
@@ -53,7 +54,7 @@ class PreRegistroController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(Request $request, NasApiService $nasApiService)
     {
         $validator = Validator::make($request->all(), [
             'idCatMateria' => 'required|integer',
@@ -67,10 +68,9 @@ class PreRegistroController extends Controller
             'partes.*.idCatSexo' => 'required|integer',
             'partes.*.idCatTipoParte' => 'required|integer',
             'partes.*.direccion' => 'nullable|string|max:255',
-            
-            'documentos.*.idCatTipoDocumento' => 'nullable|integer',
+            'documentos.*.idCatTipoDocumento' => 'required|integer',
             'documentos.*.nombre' => 'nullable|string',
-            'documentos.*.documento' => 'required|string',
+            'documentos.*.documento' => 'required|file',
         ]);
 
         if ($validator->fails()) {
@@ -110,7 +110,8 @@ class PreRegistroController extends Controller
             // Crear el folio consecutivo
             $ultimoFolio = PreRegistro::latest('idPreregistro')->value('folioPreregistro');
             $numeroConsecutivo = $ultimoFolio ? intval(explode('/', $ultimoFolio)[0]) + 1 : 1;
-            $folioPreregistro = str_pad($numeroConsecutivo, 4, '0', STR_PAD_LEFT) . '/' . now()->year;
+            $anio = now()->year;
+            $folioPreregistro = str_pad($numeroConsecutivo, 4, '0', STR_PAD_LEFT) . '/' . $anio;
 
             // Crear el registro en la tabla pivote "cat_materia_via"
             $catMateriaVia = CatMateriaVia::firstOrCreate([
@@ -137,17 +138,30 @@ class PreRegistroController extends Controller
             // Insertar las partes asociadas
             $preRegistro->partes()->createMany($request->partes);
 
-            // Modificar los documentos para manejar idCatTipoDocumento y nombre
-            $documentos = collect($request->documentos)->map(function ($documento) {
-                if (isset($documento['idCatTipoDocumento']) && $documento['idCatTipoDocumento'] == -1) {
-                    $documento['idCatTipoDocumento'] = -1;
-                } elseif (isset($documento['nombre']) && !isset($documento['idCatTipoDocumento'])) {
-                    $documento['idCatTipoDocumento'] = -1;
-                } elseif (isset($documento['idCatTipoDocumento']) && $documento['idCatTipoDocumento'] != -1) {
-                    $documento['nombre'] = null;
-                }
-                return $documento;
-            })->toArray();
+            // Subir documentos al NAS y preparar datos para la base
+            $documentos = [];
+            $folioSoloNumero = explode('/', $folioPreregistro)[0];
+            foreach ($request->documentos as $documento) {
+                $file = $documento['documento'];
+                $idCatTipoDocumento = $documento['idCatTipoDocumento'] ?? -1;
+                $nombreDocumento = $documento['nombre'] ?? 'documento';
+            
+                $ruta = "PERICIALES/PREREGISTROS/{$anio}/{$folioSoloNumero}";
+            
+                // año_mes_dia_segundos_idTipoDocumento_nombreDocumento.ext
+                $timestamp = now()->format('Y_m_d_His');
+                $nombreArchivo = "{$timestamp}_{$idCatTipoDocumento}_{$nombreDocumento}.{$file->getClientOriginalExtension()}";
+            
+                // Subir archivo al NAS
+                $nasApiService->subirArchivo($file, $ruta, $request->bearerToken(), $nombreArchivo);
+            
+                // Guardar en la base: nombre solo si idCatTipoDocumento == -1, si no, null
+                $documentos[] = [
+                    'idCatTipoDocumento' => $idCatTipoDocumento,
+                    'nombre' => $idCatTipoDocumento == -1 ? $nombreDocumento : null,
+                    'documento' => $ruta . '/' . $nombreArchivo,
+                ];
+            }
 
             // Insertar los documentos asociados a este preregistro
             $preRegistro->documentos()->createMany($documentos);
