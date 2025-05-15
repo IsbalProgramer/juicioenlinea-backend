@@ -89,7 +89,7 @@ Route::prefix('ExpedienteAbogado')->group(
     }
 );
 
-Route::prefix('Documento')->group(
+Route::prefix('Documentos')->group(
     function () {
     Route::get('VerDocumento/{id}', [DocumentoController::class, 'show'])->middleware(VerifyJwtToken::class);
 });

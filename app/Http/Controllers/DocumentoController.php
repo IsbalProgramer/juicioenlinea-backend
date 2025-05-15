@@ -125,10 +125,5 @@ class DocumentoController extends Controller
         }
     }
 
-    /**
-     * Ver el documento
-     */
-
-
 
 }
