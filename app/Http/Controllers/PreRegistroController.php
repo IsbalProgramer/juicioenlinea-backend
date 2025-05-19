@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Database\QueryException;
 use App\Services\NasApiService;
+use App\Services\PermisosApiService;
 
 class PreRegistroController extends Controller
 {
@@ -54,7 +55,7 @@ class PreRegistroController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request, NasApiService $nasApiService)
+    public function store(Request $request, NasApiService $nasApiService,PermisosApiService $permisosApiService)
     {
         $validator = Validator::make($request->all(), [
             'idCatMateria' => 'required|integer',
@@ -95,11 +96,20 @@ class PreRegistroController extends Controller
 
             // Obtener el payload del token desde los atributos de la solicitud
             $jwtPayload = $request->attributes->get('jwt_payload');
-            $idGeneral = isset($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'])
-                ? json_decode($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'], true)['idGeneral']
-                : null;
+            $datosUsuario = $permisosApiService->obtenerDatosUsuario($jwtPayload);
 
-            if (!$idGeneral) {
+            if (!$datosUsuario || !isset($datosUsuario['idGeneral']) || !isset($datosUsuario['Usr'])) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 400,
+                    'message' => 'No se pudo obtener el idGeneral o Usr del token',
+                ], 400);
+            }
+            
+            $idGeneral = $datosUsuario['idGeneral'];
+            $usr = $datosUsuario['Usr'];
+
+            if (!$idGeneral || !$usr) {
                 return response()->json([
                     'success' => false,
                     'status' => 400,
@@ -119,11 +129,12 @@ class PreRegistroController extends Controller
                 'idCatTipoVia' => $request->idCatTipoVia,
             ]);
 
-            // Crear el registro en la tabla "pre_registros"
+
             $preRegistro = PreRegistro::create([
                 'folioPreregistro' => $folioPreregistro,
                 'idCatMateriaVia' => $catMateriaVia->idCatMateriaVia,
                 'idGeneral' => $idGeneral,
+                'usr' => $usr,
                 'fechaCreada' => now(),
                 'sintesis' => $request->sintesis,
                 'observaciones' => $request->observaciones,
@@ -250,9 +261,42 @@ class PreRegistroController extends Controller
      */
     public function update(Request $request, PreRegistro $preRegistro)
     {
-        //
+        // Valida solo los campos permitidos
+        $validator = Validator::make($request->all(), [
+            'idCatJuzgado' => 'required|integer',
+            'idExpediente' => 'required',
+            'fechaResponse' => 'required|date',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'status' => 422,
+                'errors' => $validator->messages(),
+            ], 422);
+        }
+    
+        try {
+            $preRegistro->update([
+                'idCatJuzgado' => $request->idCatJuzgado,
+                'idExpediente' => $request->idExpediente,
+                'fechaResponse' => $request->fechaResponse,
+            ]);
+    
+            return response()->json([
+                'success' => true,
+                'status' => 200,
+                'message' => 'PreRegistro actualizado correctamente',
+                'data' => $preRegistro->fresh()
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'status' => 500,
+                'message' => 'Error al actualizar el preregistro',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
-
     /**
      * Remove the specified resource from storage.
      */

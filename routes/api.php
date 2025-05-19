@@ -22,29 +22,12 @@ use App\Models\Expediente;
 use Illuminate\Routing\Route as RoutingRoute;
 
 
-// Route::get('/user', function (Request $request) {
-//     return $request->user();
-// })->middleware('auth:sanctum');
-
-// Route::post('/login', function (Request $request) {
-//     $credentials = $request->only('email', 'password');
-
-
-//     if (!Auth::attempt($credentials)) {
-//         return response()->json(['message' => 'Credenciales inválidas'], 401);
-//     }
-
-//     $user = Auth::user();
-//     $token = $user->createToken('token-personal')->plainTextToken;
-
-//     return response()->json(['token' => $token]);
-// });
-
 Route::prefix('Inicio')->group(function () {
-    Route::post('CrearInicio', [PreRegistroController::class, 'store'])->middleware(VerifyJwtToken::class);
-    Route::get('ListadoInicios', [PreRegistroController::class, 'index'])->middleware(VerifyJwtToken::class);
-    Route::get('DetalleInicio/{idInicio}', [PreRegistroController::class, 'show']);
+    Route::post('CrearPreregistro', [PreRegistroController::class, 'store'])->middleware(VerifyJwtToken::class);
+    Route::get('ListadoPreregistros', [PreRegistroController::class, 'index'])->middleware(VerifyJwtToken::class);
+    Route::get('DetallePreregistro/{idInicio}', [PreRegistroController::class, 'show']);
     Route::get('Documento/{idDocumento}', [DocumentoController::class, 'show']); // obtiene documentos
+    Route::put('ActualizarPreregistro/{preRegistro}', [PreRegistroController::class, 'update']);
 
 });
 
@@ -57,11 +40,6 @@ Route::prefix('Catalogo')->group(function () {
     Route::get('TipoDocumentos', [CatTipoDocumentoController::class, 'index']);
 });
 
-
-//Requerimiento -- requerimiento 
-// Route::post('requerimiento',[RequerimientoController::class,'store']); // inserta requerimiento
-// Route::get('/requerimiento/{id}/descargar-documento', [RequerimientoController::class, 'descargarDocumentoPorRequerimiento']); // obtiene requerimientos
-//Route::get('requerimiento/{requerimiento}', [RequerimientoController::class, 'show']); // obtiene requerimientos
 
 
 Route::prefix('Requerimiento')->group(function () {
