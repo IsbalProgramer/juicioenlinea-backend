@@ -18,7 +18,12 @@ return new class extends Migration
             $table->string('sintesis')->nullable();
             $table->string('observaciones')->nullable();
             $table->dateTime('fechaCreada');
-            $table->unsignedBigInteger('idGeneral');
+            $table->integer('idGeneral');
+            $table->integer('usr');
+            $table->unsignedBigInteger('idCatJuzgado')->nullable();
+            $table->string('idExpediente')->nullable();
+            $table->dateTime('fechaResponse')->nullable();
+
             $table->timestamps();
 
             // Definir la clave foránea

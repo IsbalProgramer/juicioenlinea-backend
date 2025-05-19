@@ -5,9 +5,7 @@ namespace App\Models;
 use App\Models\Catalogos\CatMateriaVia;
 use App\Models\Parte;
 use App\Models\Documento;
-
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class PreRegistro extends Model
 {
@@ -21,8 +19,10 @@ class PreRegistro extends Model
         'observaciones',
         'fechaCreada',
         'idGeneral',
+        'usr',
         'idCatJuzgado',
         'idExpediente',
+        'fechaResponse'
     ];
 
     public function catMateriaVia()

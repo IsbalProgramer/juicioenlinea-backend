@@ -57,6 +57,11 @@ class VerifyJwtToken
         // Esto permite que otros componentes accedan a los datos del token
         $request->attributes->set('jwt_payload', $payload);
 
+
+
+
+
+// Verifica si el token tiene un campo 'http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'
         // Obtener el idGeneral del payload
         $idGeneral = isset($payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'])
             ? json_decode($payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'], true)['idGeneral']
