@@ -43,10 +43,8 @@ class DatabaseSeeder extends Seeder
         $this->call(TipoMateriaViaSeeder::class);
         $this->call(TipoParteSeeder::class);
         $this->call(TipoDocumentoSeeder::class);
+        $this->call(RequerimientosSeeder::class);
 
-
-
-  
     }
 }
 

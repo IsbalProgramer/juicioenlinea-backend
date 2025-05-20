@@ -17,6 +17,9 @@ return new class extends Migration
             $table->bigInteger('idCatTipoDocumento')->nullable(); // Relación con cat_tipo_documentos
             $table->string('nombre')->nullable();
             $table->longText('documento');
+            $table->string('folio')->nullable(); //Folio para el acuerdo y el oficio Requerimiento -->Yo lo genero--> es continueo por cada expeidente 
+            $table->string('idExpediente')->nullable(); // Relación con expedientes la uso para la continuedad del folio por expediente 
+            //Es nullable para que no haya problemas al crear el documento
             $table->timestamps();
 
             // Clave foránea con pre_registros

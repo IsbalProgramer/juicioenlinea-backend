@@ -161,7 +161,7 @@ class TipoDocumentoSeeder extends Seeder
             
             //Documentos de requerimiento que no estan 
             ['IdCatTipoDocumento' => 129, 'Descripcion' => 'ACUERDO DE REQUERIMIENTO', 'RequiereEscaneo' => 1 ],
-            ['IdCatTipoDocumento' => 130, 'Descripcion' => 'AUTO DE REQUERIMIENTO', 'RequiereEscaneo' => 1 ],
+            ['IdCatTipoDocumento' => 130, 'Descripcion' => 'OFICIO DE REQUERIMIENTO', 'RequiereEscaneo' => 1 ],
             ['IdCatTipoDocumento' => 131, 'Descripcion' => 'ACUSE DE REQUERIMIENTO', 'RequiereEscaneo' => 1 ],
             
                 ];
