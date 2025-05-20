@@ -32,15 +32,6 @@ class RequerimientosSeeder extends Seeder
         ]);
 
         CatEstadoRequerimiento::create([
-            'nombre' => 'Requerimiento Actualizado',
-            'activo' => 1,
-        ]);
-
-        CatEstadoRequerimiento::create([
-            'nombre' => 'Requerimiento Eliminado',
-            'activo' => 1,
-        ]);
-        CatEstadoRequerimiento::create([
             'nombre' => 'Requerimiento Admitido',
             'activo' => 1,
         ]);
@@ -48,7 +39,6 @@ class RequerimientosSeeder extends Seeder
             'nombre' => 'Requerimiento Descartado',
             'activo' => 1,
         ]);
-
 
         AbogadoExpediente::create([
             'idExpediente' => '0001/2020',

@@ -12,14 +12,15 @@ class HistorialEstadoRequerimiento extends Model
     protected $primaryKey = 'idHistorialEstadoRequerimientos';
     protected $fillable = [
         'idRequerimiento',
-        'fechaEstado',
+        'created_at',
+        'updated_at',
         'idCatEstadoRequerimientos',
         'idUsuario'
     ];
 
     public function requerimiento()
     {
-        return $this->belongsTo(Requerimiento::class, 'idRequerimiento');
+        return $this->belongsTo(Requerimiento::class, 'idRequerimiento')->orderBy('created_at');
     }
 
     public function catEstadoRequerimiento()
@@ -27,10 +28,10 @@ class HistorialEstadoRequerimiento extends Model
         return $this->belongsTo(CatEstadoRequerimiento::class, 'idCatEstadoRequerimientos');
     }
 
-    public function general()
-    {
-        return $this->belongsTo(User::class, 'idGeneral');
-    }
+    // public function general()
+    // {
+    //     return $this->belongsTo(User::class, 'idGeneral');
+    // }
 
     
 

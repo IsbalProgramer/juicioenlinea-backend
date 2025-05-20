@@ -14,22 +14,21 @@ return new class extends Migration
         Schema::create('requerimientos', function (Blueprint $table) {
             $table->id('idRequerimiento');
             $table->string('descripcion');
+            $table->string('descripcionRechazo')->nullable();
             $table->string('idExpediente');
             $table->unsignedBigInteger('idDocumentoAcuerdo');
-            $table->unsignedBigInteger('idDocumentoAuto')->nullable();
             $table->unsignedBigInteger('idDocumentoAcuse')->nullable();
+            $table->unsignedBigInteger('idDocumentoOficioRequerimiento')->nullable();
             $table->unsignedBigInteger('idSecretario');
             $table->unsignedBigInteger('usuarioSecretario');
             $table->unsignedBigInteger('idAbogado');
             $table->unsignedBigInteger('usuarioAbogado')->nullable();
-            $table->timestamps();
-            // $table->dateTime('fechaLimite');
+            $table->timestamps();;
             $table->dateTime('fechaLimite', 6); // precisión de 6 dígitos = microsegundos
-            
+
             // Claves foráneas
             // $table->foreign('idExpediente')->references('idExpediente')->on('expedientes');
-            $table->foreign('idDocumentoAcuerdo')->references('idDocumento')->on('documentos');
-            // $table->foreign('idSecretario')->references('id')->on('users')->onDelete('no action');
+            // $table->foreign('idDocumentoAcuerdo')->references('idDocumento')->on('documentos');
         });
     }
 
