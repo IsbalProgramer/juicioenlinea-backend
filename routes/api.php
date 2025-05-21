@@ -25,9 +25,9 @@ use Illuminate\Routing\Route as RoutingRoute;
 Route::prefix('Inicio')->group(function () {
     Route::post('CrearPreregistro', [PreRegistroController::class, 'store'])->middleware(VerifyJwtToken::class);
     Route::get('ListadoPreregistros', [PreRegistroController::class, 'index'])->middleware(VerifyJwtToken::class);
-    Route::get('DetallePreregistro/{idInicio}', [PreRegistroController::class, 'show']);
-    Route::get('Documento/{idDocumento}', [DocumentoController::class, 'show']); // obtiene documentos
-    Route::put('ActualizarPreregistro/{preRegistro}', [PreRegistroController::class, 'update']);
+    Route::get('DetallePreregistro/{idInicio}', [PreRegistroController::class, 'show'])->middleware(VerifyJwtToken::class);
+    Route::get('Documento/{idDocumento}', [DocumentoController::class, 'show'])->middleware(VerifyJwtToken::class);
+    Route::put('ActualizarPreregistro/{preRegistro}', [PreRegistroController::class, 'update'])->middleware(VerifyJwtToken::class);
 
 });
 
@@ -70,4 +70,9 @@ Route::prefix('ExpedienteAbogado')->group(
 Route::prefix('Documento')->group(function () {
     Route::get('VerDocumento/{id}', [DocumentoController::class, 'verDocumento'])->middleware(VerifyJwtToken::class);
     
+});
+
+Route::prefix('Expediente')->group(function () {
+    Route::get('Listar', [ExpedienteController::class, 'index'])->middleware(VerifyJwtToken::class);
+    Route::post('Asignar', [ExpedienteController::class, 'store'])->middleware(VerifyJwtToken::class);
 });

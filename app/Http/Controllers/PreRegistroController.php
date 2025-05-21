@@ -22,9 +22,22 @@ class PreRegistroController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request, PermisosApiService $permisosApiService)
     {
         try {
+            // Obtener el payload del token desde los atributos de la solicitud
+            $jwtPayload = $request->attributes->get('jwt_payload');
+            $datosUsuario = $permisosApiService->obtenerDatosUsuario($jwtPayload);
+
+            if (!$datosUsuario || !isset($datosUsuario['idGeneral'])) {
+                return response()->json([
+                    'status' => 400,
+                    'message' => 'No se pudo obtener el idGeneral del token',
+                ], 400);
+            }
+
+            $idGeneral = $datosUsuario['idGeneral'];
+
             $preRegistros = PreRegistro::with([
                 'partes',
                 'documentos:idPreregistro,nombre',
@@ -36,7 +49,9 @@ class PreRegistroController extends Controller
                         ->select('idPreregistro', 'idCatEstadoInicio', 'fechaEstado')
                         ->with('estado:idCatEstadoInicio,descripcion');
                 }
-            ])->get();
+            ])
+                ->where('idGeneral', $idGeneral)
+                ->get();
 
             return response()->json([
                 'status' => 200,
@@ -55,7 +70,7 @@ class PreRegistroController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request, NasApiService $nasApiService,PermisosApiService $permisosApiService)
+    public function store(Request $request, NasApiService $nasApiService, PermisosApiService $permisosApiService)
     {
         $validator = Validator::make($request->all(), [
             'idCatMateria' => 'required|integer',
@@ -105,7 +120,7 @@ class PreRegistroController extends Controller
                     'message' => 'No se pudo obtener el idGeneral o Usr del token',
                 ], 400);
             }
-            
+
             $idGeneral = $datosUsuario['idGeneral'];
             $usr = $datosUsuario['Usr'];
 
@@ -113,8 +128,42 @@ class PreRegistroController extends Controller
                 return response()->json([
                     'success' => false,
                     'status' => 400,
-                    'message' => 'No se pudo obtener el idGeneral del token',
+                    'message' => 'No se pudo obtener el idGeneral',
                 ], 400);
+            }
+
+            // Obtener idAreaSistemaUsuario
+            $token = $request->bearerToken();
+            $idAreaSistemaUsuario = $permisosApiService->obtenerIdAreaSistemaUsuario($token, $idGeneral);
+
+            if (!$idAreaSistemaUsuario) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 403,
+                    'message' => 'No se pudo obtener el área del usuario.',
+                ], 403);
+            }
+
+            // Obtener perfiles del usuario
+            $perfiles = $permisosApiService->obtenerPerfilesUsuario($token, $idAreaSistemaUsuario);
+
+            // Validar que tenga el perfil "Abogado"
+            $tienePerfilAbogado = false;
+            if (is_array($perfiles)) {
+                foreach ($perfiles as $perfil) {
+                    if (isset($perfil['descripcion']) && strtolower($perfil['descripcion']) === 'abogado') {
+                        $tienePerfilAbogado = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!$tienePerfilAbogado) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 403,
+                    'message' => 'No tienes permisos para realizar esta acción.',
+                ], 403);
             }
 
             // Crear el folio consecutivo
@@ -156,16 +205,16 @@ class PreRegistroController extends Controller
                 $file = $documento['documento'];
                 $idCatTipoDocumento = $documento['idCatTipoDocumento'] ?? -1;
                 $nombreDocumento = $documento['nombre'] ?? 'documento';
-            
+
                 $ruta = "PERICIALES/PREREGISTROS/{$anio}/{$folioSoloNumero}";
-            
+
                 // año_mes_dia_segundos_idTipoDocumento_nombreDocumento.ext
                 $timestamp = now()->format('Y_m_d_His');
                 $nombreArchivo = "{$timestamp}_{$idCatTipoDocumento}_{$nombreDocumento}.{$file->getClientOriginalExtension()}";
-            
+
                 // Subir archivo al NAS
                 $nasApiService->subirArchivo($file, $ruta, $request->bearerToken(), $nombreArchivo);
-            
+
                 // Guardar en la base: nombre solo si idCatTipoDocumento == -1, si no, null
                 $documentos[] = [
                     'idCatTipoDocumento' => $idCatTipoDocumento,
@@ -182,7 +231,7 @@ class PreRegistroController extends Controller
             return response()->json([
                 'success' => true,
                 'status' => 200,
-                'message' => 'PreRegistro, partes, documentos y estado inicial creados exitosamente',
+                'message' => 'Pre-Registro creado exitosamente',
                 'data' => $preRegistro->makeHidden(['documentos.documento']),
             ], 200);
         } catch (\Exception $e) {
@@ -200,9 +249,22 @@ class PreRegistroController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show($idPreregistro)
+public function show(Request $request, PermisosApiService $permisosApiService, $idPreregistro)
     {
         try {
+            // Obtener el payload del token desde los atributos de la solicitud
+            $jwtPayload = $request->attributes->get('jwt_payload');
+            $datosUsuario = $permisosApiService->obtenerDatosUsuario($jwtPayload);
+
+            if (!$datosUsuario || !isset($datosUsuario['idGeneral'])) {
+                return response()->json([
+                    'status' => 400,
+                    'message' => 'No se pudo obtener el idGeneral del token',
+                ], 400);
+            }
+
+            $idGeneral = $datosUsuario['idGeneral'];
+
             $preRegistro = PreRegistro::with([
                 'partes.catTipoParte',
                 'partes.catSexo',
@@ -215,7 +277,9 @@ class PreRegistroController extends Controller
                         ->select('idPreregistro', 'idCatEstadoInicio', 'fechaEstado')
                         ->with('estado:idCatEstadoInicio,descripcion');
                 }
-            ])->findOrFail($idPreregistro);
+            ])
+            ->where('idGeneral', $idGeneral)
+            ->findOrFail($idPreregistro);
 
             // Transformar las partes para incluir solo los datos necesarios
             $preRegistro->partes->transform(function ($parte) {
@@ -274,14 +338,14 @@ class PreRegistroController extends Controller
                 'errors' => $validator->messages(),
             ], 422);
         }
-    
+
         try {
             $preRegistro->update([
                 'idCatJuzgado' => $request->idCatJuzgado,
                 'idExpediente' => $request->idExpediente,
                 'fechaResponse' => $request->fechaResponse,
             ]);
-    
+
             return response()->json([
                 'success' => true,
                 'status' => 200,

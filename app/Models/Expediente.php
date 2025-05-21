@@ -3,18 +3,17 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Expediente extends Model
 {
     protected $table = 'expedientes'; // Nombre de la tabla
     protected $primaryKey = 'idExpediente'; // Clave primaria
+    public $timestamps = false;
     protected $fillable = [
-        'sintesis',
-        'folio_preregistro',
-        'archivado',
-        'idUsuario',
+        'idPreregistro',
+        'NumExpediente',
+        'idCatJuzgado',
+        'fechaResponse',
     ];
 
     /**
@@ -26,5 +25,9 @@ class Expediente extends Model
         public function tramites()
     {
         return $this->hasMany(Tramite::class, 'idExpediente');
+    }
+    public function preRegistro()
+    {
+        return $this->belongsTo(PreRegistro::class, 'idPreregistro');
     }
 }
