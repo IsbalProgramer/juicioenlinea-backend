@@ -20,7 +20,8 @@ class Requerimiento extends Model
         'descripcion',
         'idDocumentoAcuerdo',
         'idDocumentoAcuse',
-        'idDocumentoAuto',
+        'idDocumentoOficioRequerimiento',
+        'descripcionRechazo',
         'idSecretario',
         'usuarioSecretario',
         'idAbogado',
@@ -37,19 +38,19 @@ class Requerimiento extends Model
         return $this->belongsTo(Documento::class, 'idDocumentoAcuse');
     }
 
-    public function documentoAuto()
+    public function documentoOficioRequerimiento()
     {
-        return $this->belongsTo(Documento::class, 'idDocumentoAuto');
+        return $this->belongsTo(Documento::class, 'idDocumentoOficioRequerimiento');
     }
 
-    public function documentoRequerimiento()
+    public function documentosRequerimiento()
     {
         return $this->belongsToMany(Documento::class, 'documento_requerimiento', 'idRequerimiento', 'idDocumento');
     }
 
     public function historial()
     {
-        return $this->hasMany(HistorialEstadoRequerimiento::class, 'idRequerimiento');
+        return $this->hasMany(HistorialEstadoRequerimiento::class, 'idRequerimiento')->orderBy('created_at');
     }
 
     public function getFechaLimiteAttribute($value)

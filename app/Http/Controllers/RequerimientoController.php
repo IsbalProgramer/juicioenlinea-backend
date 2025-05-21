@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\AuthHelper;
+use App\Helpers\FolioHelper;
 use App\Models\Requerimiento;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -10,13 +12,12 @@ use App\Models\Documento;
 use App\Models\HistorialEstadoRequerimiento;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use \Illuminate\Database\QueryException;
 use Exception;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Dflydev\DotAccessData\Data;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use App\Services\PermisosApiService;
 
 class RequerimientoController extends Controller
 {
@@ -24,35 +25,58 @@ class RequerimientoController extends Controller
      * Display a listing of the resource.
      */
 
-    public function index(Request $request)
+    public function index(Request $request, PermisosApiService $permisosApiService)
     {
         try {
 
             // Obtener el payload del token desde los atributos de la solicitud
             $jwtPayload = $request->attributes->get('jwt_payload');
+            $datosUsuario = $permisosApiService->obtenerDatosUsuario($jwtPayload);
 
-            // Agregar un registro temporal para inspeccionar el payload
-            $idGeneral = isset($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'])
-                ? json_decode($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'], true)['idGeneral']
-                : null;
-
-            if (!$idGeneral) {
+            if (!$datosUsuario || !isset($datosUsuario['idGeneral']) || !isset($datosUsuario['Usr'])) {
                 return response()->json([
+                    'success' => false,
+                    'status' => 400,
+                    'message' => 'No se pudo obtener el idGeneral o Usr del token',
+                ], 400);
+            }
+
+            $idGeneral = $datosUsuario['idGeneral'];
+            $usr = $datosUsuario['Usr'];
+
+            if (!$idGeneral || !$usr) {
+                return response()->json([
+                    'success' => false,
                     'status' => 400,
                     'message' => 'No se pudo obtener el idGeneral del token',
                 ], 400);
             }
 
-            $perfiles = $request->attributes->get('perfilesUsuario') ?? [];
+            $idSistema = $permisosApiService->obtenerIdAreaSistemaUsuario($request->bearerToken(), $datosUsuario['idGeneral'], 4171);
+            if (!$idSistema) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 400,
+                    'message' => 'No se pudo obtener el idAreaSistemaUsuario del token',
+                ], 400);
+            }
+            $perfiles = $permisosApiService->obtenerPerfilesUsuario($request->bearerToken(), $idSistema);
+            if (!$perfiles) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 400,
+                    'message' => 'No se pudo obtener los perfiles del usuario',
+                ], 400);
+            }
 
             $tienePerfilSecretario = collect($perfiles)->contains(function ($perfil) {
-                return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'secretario';
+                return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === strtolower(trim('secretario'));
             });
 
             if (!$tienePerfilSecretario) {
                 return response()->json([
                     'status' => 403,
-                    'message' => 'No tiene permisos.',
+                    'message' => 'No tiene permisos para realizar esta acción.',
                 ], 403);
             }
 
@@ -60,13 +84,15 @@ class RequerimientoController extends Controller
             $requerimientos = Requerimiento::where('idSecretario', $idGeneral)->get();
 
             foreach ($requerimientos as $requerimiento) {
-                $fechaLimite = Carbon::parse($requerimiento->fechaLimite);
-                $estadoFinal = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
 
-                if ($fechaLimite->lt(now()) && $estadoFinal == 1) {
-                    $this->estadoRequerimientoExpiro($requerimiento, $request);
+                $estadoFinal = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
+                $fechaLimite = $requerimiento->fechaLimite;
+                $fechaActual = now();
+
+                if (($fechaLimite < $fechaActual) && $estadoFinal == 1) {
+                    $this->estadoRequerimientoExpiro($requerimiento, $request, $permisosApiService);
                 }
-            }
+            };
 
             // Listar los requerimientos con sus relaciones
             $requerimientos = Requerimiento::with([
@@ -99,7 +125,7 @@ class RequerimientoController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(Request $request, PermisosApiService $permisosApiService)
     {
 
         // Validar los datos de la petición
@@ -139,45 +165,55 @@ class RequerimientoController extends Controller
 
             // Obtener el payload del token desde los atributos de la solicitud
             $jwtPayload = $request->attributes->get('jwt_payload');
+            $datosUsuario = $permisosApiService->obtenerDatosUsuario($jwtPayload);
 
-            // Agregar un registro temporal para inspeccionar el payload
-            $idGeneral = isset($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'])
-                ? json_decode($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'], true)['idGeneral']
-                : null;
-
-            if (!$idGeneral) {
+            if (!$datosUsuario || !isset($datosUsuario['idGeneral']) || !isset($datosUsuario['Usr'])) {
                 return response()->json([
+                    'success' => false,
+                    'status' => 400,
+                    'message' => 'No se pudo obtener el idGeneral o Usr del token',
+                ], 400);
+            }
+
+            $idGeneral = $datosUsuario['idGeneral'];
+            $usr = $datosUsuario['Usr'];
+
+            if (!$idGeneral || !$usr) {
+                return response()->json([
+                    'success' => false,
                     'status' => 400,
                     'message' => 'No se pudo obtener el idGeneral del token',
                 ], 400);
             }
 
-            // Agregar un registro temporal para inspeccionar el payload
-            $usuario = isset($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'])
-                ? json_decode($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'], true)['Usr']
-                : null;
-
-            if (!$usuario) {
+            $idSistema = $permisosApiService->obtenerIdAreaSistemaUsuario($request->bearerToken(), $datosUsuario['idGeneral'], 4171);
+            if (!$idSistema) {
                 return response()->json([
+                    'success' => false,
                     'status' => 400,
-                    'message' => 'No se pudo obtener el usuario del token',
+                    'message' => 'No se pudo obtener el idAreaSistemaUsuario del token',
+                ], 400);
+            }
+            $perfiles = $permisosApiService->obtenerPerfilesUsuario($request->bearerToken(), $idSistema);
+            if (!$perfiles) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 400,
+                    'message' => 'No se pudo obtener los perfiles del usuario',
                 ], 400);
             }
 
-            //Validacion que el que crea sea solo el Secretario
-
-            $perfiles = $request->attributes->get('perfilesUsuario') ?? [];
-
             $tienePerfilSecretario = collect($perfiles)->contains(function ($perfil) {
-                return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'secretario';
+                return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === strtolower(trim('secretario'));
             });
 
             if (!$tienePerfilSecretario) {
                 return response()->json([
                     'status' => 403,
-                    'message' => 'No tiene permisos.',
+                    'message' => 'No tiene permisos para realizar esta acción.',
                 ], 403);
             }
+
 
             //Api para subir un archivo 
             $apiDocumento = 'https://api.tribunaloaxaca.gob.mx/NasApi/api/Nas';
@@ -216,17 +252,16 @@ class RequerimientoController extends Controller
                 ], 500);
             }
 
-            // Guardar el documento en la base de datos
+            // Guardar el documento 
             $documento = new Documento();
             $documento->idCatTipoDocumento = 129;
-
+            $documento->idExpediente = $request->idExpediente;
+            $documento->folio = FolioHelper::generarFolio($request->idExpediente);
             $documento->documento = $ruta . '/' . $nuevoNombre;
             $documento->save();
 
             // Obtener el ID del documento recién creado
             $documentoID = $documento->idDocumento ?? Documento::latest('idDocumentoAcuerdo')->first()->idDocumento;
-
-            // Si el ID del documento no se generó, lanzar una excepción
             if (!$documentoID) {
                 throw new \Exception("Error: No se generó un ID para el documento.");
             }
@@ -236,11 +271,11 @@ class RequerimientoController extends Controller
                 'idExpediente' => $request->idExpediente,
                 'descripcion' => $request->descripcion,
                 'idSecretario' => $idGeneral, //ASIGNACION DEL USUARIO
-                'usuarioSecretario' => $usuario,
+                'usuarioSecretario' => $usr,
                 'idDocumentoAcuerdo' => $documentoID,
-                // 'fechaLimite' => $request->fechaLimite,
                 'fechaLimite' => Carbon::parse($request->fechaLimite)->endOfDay(),
-                'idAbogado' => $request->idAbogado
+                'idAbogado' => $request->idAbogado,
+
             ]);
 
             // Obtener el ID del requerimiento recién creado
@@ -255,7 +290,6 @@ class RequerimientoController extends Controller
                 'idRequerimiento' => $requerimientoID,
                 'idExpediente' => $request->idExpediente,
                 'idUsuario' =>  $idGeneral, //ASIGNACION DEL USUARIO
-                // 'idCatEstadoRequerimientos' => 1,
             ]);
 
             DB::commit();
@@ -295,13 +329,64 @@ class RequerimientoController extends Controller
     public function show($idRequerimiento)
     {
         try {
-
-            $requerimiento = Requerimiento::with(
-                'documentoAcuerdo:idDocumento',
+            $requerimiento = Requerimiento::with([
+                'documentoAcuerdo.catTipoDocumento',
                 'historial:idHistorialEstadoRequerimientos,idCatEstadoRequerimientos,idRequerimiento',
-                'documentoRequerimiento:idDocumento'
+                'documentosRequerimiento.catTipoDocumento',
+                'documentoAcuse.catTipoDocumento',
+                'documentoOficioRequerimiento.catTipoDocumento',
+            ])->findOrFail($idRequerimiento);
 
-            )->findOrFail($idRequerimiento);
+            //Acuerdo
+            $documentoAcuerdo = $requerimiento->documentoAcuerdo;
+
+            if ($documentoAcuerdo) {
+                $tipoDocumento = $documentoAcuerdo->idCatTipoDocumento;
+                if ($tipoDocumento == -1) {
+                    $documentoAcuerdo->nombre = $documentoAcuerdo->nombre;
+                } elseif ($documentoAcuerdo->catTipoDocumento) {
+                    $documentoAcuerdo->nombre = $documentoAcuerdo->catTipoDocumento->descripcion;
+                }
+                unset($documentoAcuerdo->catTipoDocumento);
+            }
+
+            //Acuse
+            $documentoOficioRequerimiento = $requerimiento->documentoOficioRequerimiento;
+            if ($documentoOficioRequerimiento) {
+                $tipoDocumento = $documentoOficioRequerimiento->idCatTipoDocumento;
+                if ($tipoDocumento == -1) {
+                    $documentoOficioRequerimiento->nombre = $documentoOficioRequerimiento->nombre;
+                } elseif ($documentoOficioRequerimiento->catTipoDocumento) {
+                    $documentoOficioRequerimiento->nombre = $documentoOficioRequerimiento->catTipoDocumento->descripcion;
+                }
+                unset($documentoOficioRequerimiento->catTipoDocumento);
+            }
+
+            //Acuse
+            $documentoAcuse = $requerimiento->documentoAcuse;
+            if ($documentoAcuse) {
+                $tipoDocumento = $documentoAcuse->idCatTipoDocumento;
+                if ($tipoDocumento == -1) {
+                    $documentoAcuse->nombre = $documentoAcuse->nombre;
+                } elseif ($documentoAcuse->catTipoDocumento) {
+                    $documentoAcuse->nombre = $documentoAcuse->catTipoDocumento->descripcion;
+                }
+                unset($documentoAcuse->catTipoDocumento);
+            }
+
+            //Documentos Requerimiento
+            foreach ($requerimiento->documentosRequerimiento as $documento) {
+                if ($documento->idCatTipoDocumento == -1) {
+                    $documento->nombre = $documento->nombre;
+                } elseif ($documento->catTipoDocumento) {
+                    $documento->nombre = $documento->catTipoDocumento->descripcion;
+                } else {
+                    $documento->nombre = null;
+                }
+
+                unset($documento->catTipoDocumento);
+            }
+
             return response()->json([
                 'status' => 200,
                 'message' => "Detalle del requerimiento",
@@ -310,8 +395,8 @@ class RequerimientoController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 500,
-                'message' => "No se encontro el registro",
-                'data' => $e
+                'message' => 'Error al obtener el requerimiento',
+                'error' => $e->getMessage()
             ], 500);
         }
     }
@@ -339,18 +424,18 @@ class RequerimientoController extends Controller
     }
 
 
-    public function subirRequerimiento(Requerimiento $requerimiento, Request $request)
+    public function subirRequerimiento(Requerimiento $requerimiento, Request $request, PermisosApiService $permisosApiService)
     {
-        $fechaLimite = Carbon::parse($requerimiento->fechaLimite)->endOfDay();
+        // $fechaLimite = Carbon::parse($requerimiento->fechaLimite)->endOfDay();
 
-        if ($fechaLimite->isPast()) {
-            return response()->json([
-                'status' => 400,
-                'message' => 'No se puede subir el requerimiento porque la fecha límite ya ha pasado.',
-            ], 400);
-        }
+        // if ($fechaLimite->isPast()) {
+        //     return response()->json([
+        //         'status' => 400,
+        //         'message' => 'No se puede subir el requerimiento porque la fecha límite ya ha pasado.',
+        //     ], 400);
+        // }
 
-        // Verificar si ya se subió un documento para este requerimiento
+        //Verificar si ya se subió un documento para este requerimiento
         $documentosExistentes = DB::table('documento_requerimiento')
             ->where('idRequerimiento', $requerimiento->idRequerimiento)
             ->exists();
@@ -363,6 +448,7 @@ class RequerimientoController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
+            'documentoOficioRequerimiento' => 'required|file|mimes:pdf,doc,docx',
             'documentoRequerimiento' => 'required|array|min:1',
             'documentoRequerimiento.*' => 'required|file|mimes:pdf,doc,docx',
             'idCatTipoDocumento' => 'required|array|min:1',
@@ -381,46 +467,58 @@ class RequerimientoController extends Controller
         try {
             DB::beginTransaction();
 
+
             // Obtener el payload del token desde los atributos de la solicitud
             $jwtPayload = $request->attributes->get('jwt_payload');
+            $datosUsuario = $permisosApiService->obtenerDatosUsuario($jwtPayload);
 
-            $idGeneral = isset($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'])
-                ? json_decode($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'], true)['idGeneral']
-                : null;
-
-            if (!$idGeneral) {
+            if (!$datosUsuario || !isset($datosUsuario['idGeneral']) || !isset($datosUsuario['Usr'])) {
                 return response()->json([
+                    'success' => false,
+                    'status' => 400,
+                    'message' => 'No se pudo obtener el idGeneral o Usr del token',
+                ], 400);
+            }
+
+            $idGeneral = $datosUsuario['idGeneral'];
+            $usr = $datosUsuario['Usr'];
+
+            if (!$idGeneral || !$usr) {
+                return response()->json([
+                    'success' => false,
                     'status' => 400,
                     'message' => 'No se pudo obtener el idGeneral del token',
                 ], 400);
             }
 
-            // Agregar un registro temporal para inspeccionar el payload
-            $usuario = isset($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'])
-                ? json_decode($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'], true)['Usr']
-                : null;
-
-            if (!$usuario) {
+            $idSistema = $permisosApiService->obtenerIdAreaSistemaUsuario($request->bearerToken(), $datosUsuario['idGeneral'], 4171);
+            if (!$idSistema) {
                 return response()->json([
+                    'success' => false,
                     'status' => 400,
-                    'message' => 'No se pudo obtener el usuario del token',
+                    'message' => 'No se pudo obtener el idAreaSistemaUsuario del token',
+                ], 400);
+            }
+            $perfiles = $permisosApiService->obtenerPerfilesUsuario($request->bearerToken(), $idSistema);
+            if (!$perfiles) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 400,
+                    'message' => 'No se pudo obtener los perfiles del usuario',
                 ], 400);
             }
 
-
-            // Validar que el que suba solo sea el abogado 
-            $perfiles = $request->attributes->get('perfilesUsuario') ?? [];
-
             $tienePerfilAbogado = collect($perfiles)->contains(function ($perfil) {
-                return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'abogado';
+                return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === strtolower(trim('abogado'));
             });
 
             if (!$tienePerfilAbogado) {
                 return response()->json([
                     'status' => 403,
-                    'message' => 'No tiene permisos para subir un requerimiento. Se requiere el perfil de Abogado.',
+                    'message' => 'No tiene permisos.',
                 ], 403);
             }
+
 
             $idAbogado = $requerimiento->idAbogado;
 
@@ -431,17 +529,65 @@ class RequerimientoController extends Controller
                 ], 400);
             }
 
+            $documentos = [];
 
-            //   //Api para subir un archivo 
+            //Api para subir un archivo 
             $apiDocumento = 'https://api.tribunaloaxaca.gob.mx/NasApi/api/Nas';
 
+            //oficio requerimiento
+            $documentoOficioRequerimiento = $request->file('documentoOficioRequerimiento');
+            $nombreOriginal = pathinfo($documentoOficioRequerimiento->getClientOriginalName(), PATHINFO_FILENAME);
+            $extension = $documentoOficioRequerimiento->getClientOriginalExtension();
+            $timestamp = now()->format('Ymd_His');
+            $nuevoNombre = "{$nombreOriginal}_{$timestamp}.{$extension}";
+
+            // Ruta para almacenamiento local si lo necesitas
+            $documentoOficioRequerimiento->storeAs('oficioRequerimiento', $nuevoNombre);
+
+            // Construcción de la ruta
+            $expediente = explode('/', $requerimiento->idExpediente);
+            $expedienteRuta = $expediente[1] . '/' . $expediente[0];
+
+            $ruta = "PERICIALES/JUZGADOS/{$expedienteRuta}/REQUERIMIENTOS/OFICIOREQUERIMIENTO";
+
+            // Enviar el archivo como multipart/form-data
+            $response = Http::withToken($request->bearerToken())
+                ->attach(
+                    'file',                             // nombre del campo
+                    file_get_contents($documentoOficioRequerimiento), // contenido del archivo
+                    $nuevoNombre                        // nombre del archivo
+                )
+                ->post($apiDocumento, [
+                    'path' => $ruta
+                ]);
+
+            if ($response->failed()) {
+                return response()->json([
+                    'status' => 500,
+                    'message' => 'Error al subir el documento a la API.',
+                    'error' => $response->json(),
+                ], 500);
+            }
+
+            // Guardar el documento en la base de datos
+            $documentoR = new Documento();
+            $documentoR->idCatTipoDocumento = 130;
+            $documentoR->idExpediente = $requerimiento->idExpediente;
+            $documentoR->folio = FolioHelper::generarFolio($requerimiento->idExpediente);
+            $documentoR->documento = $ruta . '/' . $nuevoNombre;
+            $documentoR->save();
+
+            $requerimiento->idDocumentoOficioRequerimiento = $documentoR->idDocumento;
+            $requerimiento->save();
+
+            $documentos[] = $documentoR;
+
+            //archivos requeridos
             $archivos = $request->file('documentoRequerimiento');
             $expediente = explode('/', $requerimiento->idExpediente);
             $expedienteRuta = $expediente[1] . '/' . $expediente[0];
             $ruta = "PERICIALES/JUZGADOS/{$expedienteRuta}/REQUERIMIENTOS/TRAMITESRECIBIDOS";
 
-
-            $documentos = [];
 
             foreach ($archivos as $index => $archivo) {
                 $nombreOriginal = pathinfo($archivo->getClientOriginalName(), PATHINFO_FILENAME);
@@ -506,32 +652,13 @@ class RequerimientoController extends Controller
                 ], 500);
             }
 
-            $response2 = Http::withToken($request->bearerToken())
-                ->timeout(60) // 60 segundos de espera
-                ->post("$apiDatos?Usuario=" . $usuario);
-
-            if ($response2->failed()) {
-                return response()->json([
-                    'status' => 500,
-                    'message' => 'Error al consultar los datos del usuario abogado.',
-                    'error' => $response2->body(),
-                ], 500);
-            }
-
-
-            $data1 = $response1->json();
-            $datosUsuarioSecretario = isset($data1['data']['pD_Abogados'][0]['nombre'])
-                ? ucwords(strtolower($data1['data']['pD_Abogados'][0]['nombre']))
-                : 'Nombre no disponible';
-
-            $data2 = $response2->json();
-            $datosUsuarioAbogado = isset($data2['data']['pD_Abogados'][0]['nombre'])
-                ? ucwords(strtolower($data2['data']['pD_Abogados'][0]['nombre']))
-                : 'Nombre no disponible';
+            $token = $request->bearerToken();
+            $datosUsuarioSecretario = AuthHelper::obtenerNombreUsuarioDesdeApi($requerimiento->usuarioSecretario, $token);
+            $datosUsuarioAbogado = AuthHelper::obtenerNombreUsuarioDesdeApi($usr, $token);
 
 
             // Crear HTML del acuse
-            //                    <p><strong>Requerimiento:</strong> {$requerimiento->idRequerimiento}</p>
+            //<p><strong>Requerimiento:</strong> {$requerimiento->idRequerimiento}</p>
             $html = "
                     <h2 style='text-align:center;'>ACUSE DE RECIBO</h2>
 
@@ -604,13 +731,13 @@ class RequerimientoController extends Controller
 
             // Guardar en base de datos
             $acuseDocumento = new Documento();
-            $acuseDocumento->idCatTipoDocumento = 129;
+            $acuseDocumento->idCatTipoDocumento = 131;
             $acuseDocumento->documento = $ruta . '/' . $nuevoNombre;
             $acuseDocumento->save();
 
             // Asociar a requerimiento
             $requerimiento->idDocumentoAcuse = $acuseDocumento->idDocumento;
-            $requerimiento->usuarioAbogado = $usuario;
+            $requerimiento->usuarioAbogado = $usr;
             $requerimiento->save();
 
             // Agregar a lista de documentos
@@ -655,190 +782,69 @@ class RequerimientoController extends Controller
      * Descargar un documento almacenado en base64
      */
 
-
-    public function listarAcuerdo($idRequerimiento)
-    {
-        try {
-            $requerimiento = Requerimiento::with(['documentoAcuerdo'])->findOrFail($idRequerimiento);
-
-            $documentos = [];
-            if ($requerimiento->documentoAcuerdo) {
-                $requerimiento->documentoAcuerdo->tipo = 'Acuerdo';
-                $documentos[] = $requerimiento->documentoAcuerdo;
-            }
-
-            return response()->json([
-                'status' => 200,
-                'message' => "Listado de documentos de acuerdo del requerimiento",
-                'data' => $documentos
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 500,
-                'message' => "No se encontró el registro",
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    public function listarAcuse($idRequerimiento)
-    {
-        try {
-            $requerimiento = Requerimiento::with(['documentoAcuse'])->findOrFail($idRequerimiento);
-
-            $documentos = [];
-            if ($requerimiento->documentoAcuse) {
-                $requerimiento->documentoAcuse->tipo = 'Acuse';
-                $documentos[] = $requerimiento->documentoAcuse;
-            }
-
-            return response()->json([
-                'status' => 200,
-                'message' => "Listado de documentos de acuse del requerimiento",
-                'data' => $documentos
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 500,
-                'message' => "No se encontró el registro",
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    public function listarAuto($idRequerimiento)
-    {
-        try {
-            $requerimiento = Requerimiento::with(['documentoAuto'])->findOrFail($idRequerimiento);
-
-            $documentos = [];
-            if ($requerimiento->documentoAuto) {
-                $requerimiento->documentoAuto->tipo = 'Auto';
-                $documentos[] = $requerimiento->documentoAuto;
-            }
-
-            return response()->json([
-                'status' => 200,
-                'message' => "Listado de documentos de auto del requerimiento",
-                'data' => $documentos
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 500,
-                'message' => "No se encontró el registro",
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-
-
-    public function listarDocumentosRequerimiento($idRequerimiento)
-    {
-        try {
-            $requerimiento = Requerimiento::with(['documentoRequerimiento'])->findOrFail($idRequerimiento);
-
-            $documentos = [];
-            if ($requerimiento->documentoRequerimiento) {
-                foreach ($requerimiento->documentoRequerimiento as $documento) {
-                    $documento->tipo = 'requerimiento';
-                    $documentos[] = $documento;
-                }
-            }
-
-            return response()->json([
-                'status' => 200,
-                'message' => "Listado de documentos de requerimiento",
-                'data' => $documentos
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 500,
-                'message' => "No se encontró el registro",
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-
     // admitir
-    public function admitirRequerimiento(Request $request, Requerimiento $requerimiento)
+    public function admitirRequerimiento(Request $request, Requerimiento $requerimiento, PermisosApiService $permisosApiService)
     {
         try {
             DB::beginTransaction();
 
-            // Obtener el payload del token
+            // Obtener el payload del token desde los atributos de la solicitud
             $jwtPayload = $request->attributes->get('jwt_payload');
-            $idGeneral = isset($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'])
-                ? json_decode($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'], true)['idGeneral']
-                : null;
+            $datosUsuario = $permisosApiService->obtenerDatosUsuario($jwtPayload);
 
-            if (!$idGeneral) {
+            if (!$datosUsuario || !isset($datosUsuario['idGeneral']) || !isset($datosUsuario['Usr'])) {
                 return response()->json([
+                    'success' => false,
+                    'status' => 400,
+                    'message' => 'No se pudo obtener el idGeneral o Usr del token',
+                ], 400);
+            }
+
+            $idGeneral = $datosUsuario['idGeneral'];
+            $usr = $datosUsuario['Usr'];
+
+            if (!$idGeneral || !$usr) {
+                return response()->json([
+                    'success' => false,
                     'status' => 400,
                     'message' => 'No se pudo obtener el idGeneral del token',
                 ], 400);
             }
 
-            // Validar perfil de secretario
-            $perfiles = $request->attributes->get('perfilesUsuario') ?? [];
+            $idSistema = $permisosApiService->obtenerIdAreaSistemaUsuario($request->bearerToken(), $datosUsuario['idGeneral'], 4171);
+            if (!$idSistema) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 400,
+                    'message' => 'No se pudo obtener el idAreaSistemaUsuario del token',
+                ], 400);
+            }
+            $perfiles = $permisosApiService->obtenerPerfilesUsuario($request->bearerToken(), $idSistema);
+            if (!$perfiles) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 400,
+                    'message' => 'No se pudo obtener los perfiles del usuario',
+                ], 400);
+            }
+
             $tienePerfilSecretario = collect($perfiles)->contains(function ($perfil) {
-                return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'secretario';
+                return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === strtolower(trim('secretario'));
             });
 
             if (!$tienePerfilSecretario) {
                 return response()->json([
                     'status' => 403,
-                    'message' => 'No tiene permisos para admitir un requerimiento. Se requiere el perfil de Secretario.',
+                    'message' => 'No tiene permisos.',
                 ], 403);
             }
-
-            // Verificar que el secretario que creó el requerimiento lo admita
-            if ($idGeneral != $requerimiento->idSecretario) {
-                return response()->json([
-                    'status' => 400,
-                    'message' => 'Requerimiento no asignado',
-                ], 400);
-            }
-
-            // Validar el archivo
-            $validator = Validator::make($request->all(), [
-                'documentoAuto' => 'required|file|mimes:pdf,doc,docx|max:2048',
-            ]);
-
-            if ($validator->fails()) {
-                $errors = $validator->messages()->all();
-                return response()->json([
-                    'status' => 422,
-                    'message' => implode(', ', $errors),
-                ], 422);
-            }
-
-            // Verificar que el archivo existe y es válido
-            $archivo = $request->file('documentoAuto');
-            if (!$archivo || !$archivo->isValid()) {
-                return response()->json([
-                    'status' => 400,
-                    'message' => 'Archivo no válido o no enviado correctamente.',
-                ], 400);
-            }
-
-            // Guardar el documento
-            $documento = new Documento();
-            $documento->documento = base64_encode(file_get_contents($archivo)); // Convertir a base64
-            $documento->idCatTipoDocumento = 130;
-            $documento->save();
-
-            // Asignar el documento al requerimiento
-            $requerimiento->idDocumentoAuto = $documento->idDocumento;
-            $requerimiento->save();
 
             // Crear historial
             $historial = HistorialEstadoRequerimiento::create([
                 'idRequerimiento' => $requerimiento->idRequerimiento,
                 'idExpediente' => $requerimiento->idExpediente,
                 'idUsuario' => $idGeneral,
-                'idCatEstadoRequerimientos' => 6,
+                'idCatEstadoRequerimientos' => 4
             ]);
 
             DB::commit();
@@ -848,8 +854,8 @@ class RequerimientoController extends Controller
                 'message' => 'Requerimiento admitido correctamente.',
                 'data' => [
                     'requerimiento' => $requerimiento,
-                    'documento_id' => $documento->idDocumento,
-                    'documento' => $documento,
+                    // 'documento_id' => $documento->idDocumento,
+                    // 'documento' => $documento,
                     'historial' => $historial,
                 ]
             ], 200);
@@ -867,37 +873,60 @@ class RequerimientoController extends Controller
 
 
     //denegar requerimiento
-    public function denegarRequerimiento(Request $request, Requerimiento $requerimiento)
+    public function denegarRequerimiento(Request $request, Requerimiento $requerimiento, PermisosApiService $permisosApiService)
     {
         try {
             DB::beginTransaction();
 
+
             // Obtener el payload del token desde los atributos de la solicitud
             $jwtPayload = $request->attributes->get('jwt_payload');
+            $datosUsuario = $permisosApiService->obtenerDatosUsuario($jwtPayload);
 
-            // Agregar un registro temporal para inspeccionar el payload
-            $idGeneral = isset($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'])
-                ? json_decode($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'], true)['idGeneral']
-                : null;
-
-            if (!$idGeneral) {
+            if (!$datosUsuario || !isset($datosUsuario['idGeneral']) || !isset($datosUsuario['Usr'])) {
                 return response()->json([
+                    'success' => false,
+                    'status' => 400,
+                    'message' => 'No se pudo obtener el idGeneral o Usr del token',
+                ], 400);
+            }
+
+            $idGeneral = $datosUsuario['idGeneral'];
+            $usr = $datosUsuario['Usr'];
+
+            if (!$idGeneral || !$usr) {
+                return response()->json([
+                    'success' => false,
                     'status' => 400,
                     'message' => 'No se pudo obtener el idGeneral del token',
                 ], 400);
             }
 
-            //Perfil secretario
-            $perfiles = $request->attributes->get('perfilesUsuario') ?? [];
+            $idSistema = $permisosApiService->obtenerIdAreaSistemaUsuario($request->bearerToken(), $datosUsuario['idGeneral'], 4171);
+            if (!$idSistema) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 400,
+                    'message' => 'No se pudo obtener el idAreaSistemaUsuario del token',
+                ], 400);
+            }
+            $perfiles = $permisosApiService->obtenerPerfilesUsuario($request->bearerToken(), $idSistema);
+            if (!$perfiles) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 400,
+                    'message' => 'No se pudo obtener los perfiles del usuario',
+                ], 400);
+            }
 
             $tienePerfilSecretario = collect($perfiles)->contains(function ($perfil) {
-                return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'secretario';
+                return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === strtolower(trim('secretario'));
             });
 
             if (!$tienePerfilSecretario) {
                 return response()->json([
                     'status' => 403,
-                    'message' => 'No tiene permisos para admitir un requerimiento. Se requiere el perfil de Secretario',
+                    'message' => 'No tiene permisos.',
                 ], 403);
             }
 
@@ -913,7 +942,7 @@ class RequerimientoController extends Controller
 
             // Validar el archivo
             $validator = Validator::make($request->all(), [
-                'documentoAuto' => 'required|file|mimes:pdf,doc,docx|max:2048',
+                'descripcionRechazo' => 'required|string',
             ]);
 
             if ($validator->fails()) {
@@ -924,30 +953,16 @@ class RequerimientoController extends Controller
                 ], 422);
             }
 
-            // Verificar que el archivo existe y es válido
-            $archivo = $request->file('documentoAuto');
-            if (!$archivo || !$archivo->isValid()) {
-                return response()->json([
-                    'status' => 400,
-                    'message' => 'Archivo no válido o no enviado correctamente.',
-                ], 400);
-            }
 
-            // Guardar el documento
-            $documento = new Documento();
-            $documento->documento = base64_encode(file_get_contents($archivo)); // Convertir a base64
-            $documento->idCatTipoDocumento = 130;
-            $documento->save();
-
-            // Asignar el documento al requerimiento
-            $requerimiento->idDocumentoAuto = $documento->idDocumento;
+            $requerimiento->descripcionRechazo = $request->descripcionRechazo;
             $requerimiento->save();
+
 
             $historial = HistorialEstadoRequerimiento::create([
                 'idRequerimiento' => $requerimiento->idRequerimiento,
                 'idExpediente' => $requerimiento->idExpediente,
                 'idUsuario' => $idGeneral,
-                'idCatEstadoRequerimientos' => 7,
+                'idCatEstadoRequerimientos' => 5,
             ]);
 
             DB::commit();
@@ -957,8 +972,8 @@ class RequerimientoController extends Controller
                 'message' => 'Requerimiento denegado correctamente.',
                 'data' => [
                     'requerimiento' => $requerimiento,
-                    'documento_id' => $documento->idDocumento,
-                    'documento' => $documento,
+                    // 'documento_id' => $documento->idDocumento,
+                    // 'documento' => $documento,
                     'historial' => $historial,
                 ]
             ], 200);
@@ -979,7 +994,7 @@ class RequerimientoController extends Controller
     // fecha limite e insertar el estado correspondiente
     //en el historial de requerimiento
 
-    public function estadoRequerimientoExpiro(Requerimiento $requerimiento, Request $request)
+    public function estadoRequerimientoExpiro(Requerimiento $requerimiento, Request $request, PermisosApiService $permisosApiService)
     {
         if (!$requerimiento) {
             return response()->json([
@@ -1006,34 +1021,56 @@ class RequerimientoController extends Controller
             try {
                 DB::beginTransaction();
 
-                // Obtener el payload del token desde los atributos de la solicitud
-                $jwtPayload = $request->attributes->get('jwt_payload');
+    // Obtener el payload del token desde los atributos de la solicitud
+            $jwtPayload = $request->attributes->get('jwt_payload');
+            $datosUsuario = $permisosApiService->obtenerDatosUsuario($jwtPayload);
 
-                // Agregar un registro temporal para inspeccionar el payload
-                $idGeneral = isset($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'])
-                    ? json_decode($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'], true)['idGeneral']
-                    : null;
+                        if (!$datosUsuario || !isset($datosUsuario['idGeneral']) || !isset($datosUsuario['Usr'])) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 400,
+                    'message' => 'No se pudo obtener el idGeneral o Usr del token',
+                ], 400);
+            }
+            
+            $idGeneral = $datosUsuario['idGeneral'];
+            $usr = $datosUsuario['Usr'];
 
-                if (!$idGeneral) {
-                    return response()->json([
-                        'status' => 400,
-                        'message' => 'No se pudo obtener el idGeneral del token',
-                    ], 400);
-                }
+            if (!$idGeneral || !$usr) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 400,
+                    'message' => 'No se pudo obtener el idGeneral del token',
+                ], 400);
+            }
 
-                //Validar que solo sea secretario
-                $perfiles = $request->attributes->get('perfilesUsuario') ?? [];
+            $idSistema = $permisosApiService->obtenerIdAreaSistemaUsuario($request->bearerToken(), $datosUsuario['idGeneral'], 4171);
+            if (!$idSistema) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 400,
+                    'message' => 'No se pudo obtener el idAreaSistemaUsuario del token',
+                ], 400);
+            }
+            $perfiles = $permisosApiService->obtenerPerfilesUsuario($request->bearerToken(), $idSistema);
+            if (!$perfiles) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 400,
+                    'message' => 'No se pudo obtener los perfiles del usuario',
+                ], 400);
+            }
 
-                $tienePerfilSecretario = collect($perfiles)->contains(function ($perfil) {
-                    return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'secretario';
-                });
+           $tienePerfilSecretario = collect($perfiles)->contains(function ($perfil) {
+                return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === strtolower(trim('secretario'));
+            });
 
-                if (!$tienePerfilSecretario) {
-                    return response()->json([
-                        'status' => 403,
-                        'message' => 'No tiene permisos.',
-                    ], 403);
-                }
+            if (!$tienePerfilSecretario) {
+                return response()->json([
+                    'status' => 403,
+                    'message' => 'No tiene permisos.',
+                ], 403);
+            }
 
                 // Registrar el cambio en el historial
                 $historial = HistorialEstadoRequerimiento::create([
@@ -1070,30 +1107,53 @@ class RequerimientoController extends Controller
     }
 
 
-    public function listarRequerimientosAbogado(Request $request)
+    public function listarRequerimientosAbogado(Request $request, PermisosApiService $permisosApiService)
     {
         try {
 
-            // Obtener el payload del token desde los atributos de la solicitud
+
+                        // Obtener el payload del token desde los atributos de la solicitud
             $jwtPayload = $request->attributes->get('jwt_payload');
+            $datosUsuario = $permisosApiService->obtenerDatosUsuario($jwtPayload);
 
-            // Agregar un registro temporal para inspeccionar el payload
-            $idGeneral = isset($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'])
-                ? json_decode($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'], true)['idGeneral']
-                : null;
-
-            if (!$idGeneral) {
+                        if (!$datosUsuario || !isset($datosUsuario['idGeneral']) || !isset($datosUsuario['Usr'])) {
                 return response()->json([
+                    'success' => false,
+                    'status' => 400,
+                    'message' => 'No se pudo obtener el idGeneral o Usr del token',
+                ], 400);
+            }
+            
+            $idGeneral = $datosUsuario['idGeneral'];
+            $usr = $datosUsuario['Usr'];
+
+            if (!$idGeneral || !$usr) {
+                return response()->json([
+                    'success' => false,
                     'status' => 400,
                     'message' => 'No se pudo obtener el idGeneral del token',
                 ], 400);
             }
 
-            // Perfil abogado
-            $perfiles = $request->attributes->get('perfilesUsuario') ?? [];
+            $idSistema = $permisosApiService->obtenerIdAreaSistemaUsuario($request->bearerToken(), $datosUsuario['idGeneral'], 4171);
+            if (!$idSistema) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 400,
+                    'message' => 'No se pudo obtener el idAreaSistemaUsuario del token',
+                ], 400);
+            }
+            $perfiles = $permisosApiService->obtenerPerfilesUsuario($request->bearerToken(), $idSistema);
+            if (!$perfiles) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 400,
+                    'message' => 'No se pudo obtener los perfiles del usuario',
+                ], 400);
+            }
 
-            $tienePerfilAbogado = collect($perfiles)->contains(function ($perfil) {
-                return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'abogado';
+           $tienePerfilAbogado = collect($perfiles)->contains(function ($perfil) {
+                return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === strtolower(trim('abogado'));
             });
 
             if (!$tienePerfilAbogado) {
@@ -1103,15 +1163,29 @@ class RequerimientoController extends Controller
                 ], 403);
             }
 
+
             // Verificar y actualizar el estado de los requerimientos expirados
             $requerimientos = Requerimiento::where('idAbogado', $idGeneral)->get();
 
+            // foreach ($requerimientos as $requerimiento) {
+            //     $fechaLimite = Carbon::parse($requerimiento->fechaLimite);
+            //     $estadoFinal = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
+
+            //     if ($fechaLimite->lt(now()) && $estadoFinal == 1) {
+            //         $this->estadoRequerimientoExpiro($requerimiento, $request);
+            //     }
+            // }
+
             foreach ($requerimientos as $requerimiento) {
-                $fechaLimite = Carbon::parse($requerimiento->fechaLimite);
+
+                $fechaLimite = $requerimiento->fechaLimite;
+                $fechaActual = now();
+
+                // Obtener el último estado del requerimiento
                 $estadoFinal = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
 
-                if ($fechaLimite->lt(now()) && $estadoFinal == 1) {
-                    $this->estadoRequerimientoExpiro($requerimiento, $request);
+                if (($fechaLimite >= $fechaActual) && $estadoFinal == 1) {
+                    $this->estadoRequerimientoExpiro($requerimiento, $request, $permisosApiService);
                 }
             }
 

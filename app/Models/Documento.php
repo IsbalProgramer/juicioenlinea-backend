@@ -19,6 +19,8 @@ class Documento extends Model
         'idCatTipoDocumento',
         'nombre',
         'documento',
+        'folio',
+        'idExpediente',
     ];
 
 
@@ -26,6 +28,23 @@ class Documento extends Model
     {
         return $this->belongsToMany(Requerimiento::class, 'documento_requerimiento', 'idDocumento', 'idRequerimiento');
     }
+
+
+    public function requerimientoAcuerdo()
+    {
+        return $this->hasOne(Requerimiento::class, 'idDocumentoAcuerdo');
+    }
+
+    public function requerimientoAcuse()
+    {
+        return $this->hasOne(Requerimiento::class, 'idDocumentoAcuse');
+    }
+
+    public function requerimientoOficio()
+    {
+        return $this->hasOne(Requerimiento::class, 'idDocumentoOficioRequerimiento');
+    }
+
     /**
      * Relación con PreRegistro
      */

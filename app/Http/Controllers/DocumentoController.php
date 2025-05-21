@@ -15,9 +15,7 @@ class DocumentoController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request)
-    {
-    }
+    public function index(Request $request) {}
 
     /**
      * Show the form for creating a new resource.
@@ -27,7 +25,7 @@ class DocumentoController extends Controller
         //
     }
 
- 
+
     /**
      * Display the specified resource.
      */
@@ -63,7 +61,18 @@ class DocumentoController extends Controller
                     'fileName' => $documentoNombre
                 ]));
 
-            return $response;
+            // return $response;  
+
+            $data = $response->json();  // Este $data ya es un array asociativo
+
+            $data['nombre'] = $documento->nombre ?? 'Sin nombre';
+            $tipoDocumento = DB::table('cat_tipo_documentos')
+                ->where('idCatTipoDocumento', $documento->idCatTipoDocumento)
+                ->first();
+            $data['descripcion'] = $tipoDocumento->descripcion ?? 'Sin descripción';
+
+            return response()->json($data);
+
 
             if ($response->failed()) {
                 return response()->json([
@@ -103,7 +112,7 @@ class DocumentoController extends Controller
     public function destroy(Documento $documento)
     {
         //
-        
+
     }
 
     //crear un metodo para eliminar un documento 
@@ -124,11 +133,5 @@ class DocumentoController extends Controller
             ], 500);
         }
     }
-
-    /**
-     * Ver el documento
-     */
-
-
 
 }
