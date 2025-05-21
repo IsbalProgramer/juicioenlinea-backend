@@ -19,27 +19,6 @@ class AuthHelper
         return json_decode($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'], true);
     }
 
-    public static function obtenerIdGeneral(Request $request): ?int
-    {
-        $data = self::obtenerUserData($request);
-        return $data['idGeneral'] ?? null;
-    }
-
-    public static function obtenerUsuario(Request $request): ?string
-    {
-        $data = self::obtenerUserData($request);
-        return $data['Usr'] ?? null;
-    }
-
-    public static function tienePerfil(Request $request, string $perfilBuscado): bool
-    {
-        $perfiles = $request->attributes->get('perfilesUsuario') ?? [];
-
-        return collect($perfiles)->contains(function ($perfil) use ($perfilBuscado) {
-            return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === strtolower(trim($perfilBuscado));
-        });
-    }
-
     public static function obtenerNombreUsuarioDesdeApi(string $usuario, string $token): string
     {
         $apiDatos = 'https://api.tribunaloaxaca.gob.mx/permisos/api/Permisos/DatosUsuario';
