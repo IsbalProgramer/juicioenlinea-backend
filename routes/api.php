@@ -63,12 +63,6 @@ Route::prefix('ExpedienteAbogado')->group(
 
 Route::prefix('Documento')->group(
     function () {
-    Route::get('VerDocumento/{id}', [DocumentoController::class, 'verDocumento'])->middleware(VerifyJwtToken::class);
-    
-});
-
-Route::prefix('Expediente')->group(function () {
-    Route::get('Listar', [ExpedienteController::class, 'index'])->middleware(VerifyJwtToken::class);
-    Route::post('Asignar', [ExpedienteController::class, 'store'])->middleware(VerifyJwtToken::class);
-});
-
+    Route::get('VerDocumento/{id}', [DocumentoController::class, 'show'])->middleware(VerifyJwtToken::class);
+    }
+);
