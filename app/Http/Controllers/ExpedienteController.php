@@ -2,155 +2,137 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\AbogadoExpediente;
+use App\Models\Expediente;
+use App\Services\PermisosApiService;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class ExpedienteController extends Controller
 {
-    public function listarExpedientesDistintos(Request $request)
+    /**
+     * Display a listing of the resource.
+     */
+    public function index(Request $request, PermisosApiService $permisosApiService)
     {
-        try {
+        // Obtener el payload del token desde los atributos de la solicitud
+        $jwtPayload = $request->attributes->get('jwt_payload');
+        $datosUsuario = $permisosApiService->obtenerDatosUsuario($jwtPayload);
 
-            // // Obtener el payload del token desde los atributos de la solicitud
-            // $jwtPayload = $request->attributes->get('jwt_payload');
-
-            // // Agregar un registro temporal para inspeccionar el payload
-            // $idGeneral = isset($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'])
-            //     ? json_decode($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'], true)['idGeneral']
-            //     : null;
-
-            // if (!$idGeneral) {
-            //     return response()->json([
-            //         'status' => 400,
-            //         'message' => 'No se pudo obtener el idGeneral del token',
-            //     ], 400);
-            // }
-
-            // $perfiles = $request->attributes->get('perfilesUsuario') ?? [];
-
-            // $tienePerfilSecretario = collect($perfiles)->contains(function ($perfil) {
-            //     return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'secretario';
-            // });
-
-            // if (!$tienePerfilSecretario) {
-            //     return response()->json([
-            //         'status' => 403,
-            //         'message' => 'No tiene permisos.',
-            //     ], 403);
-            // }
-
-            $expediente = AbogadoExpediente::with([
-            ])->select('idExpediente')->distinct()->get();
+        if (!$datosUsuario || !isset($datosUsuario['idGeneral'])) {
             return response()->json([
-                'status' => 200,
-                'message' => "Listado de expedientes",
+                'success' => false,
+                'status' => 400,
+                'message' => 'No se pudo obtener el idGeneral del token',
+            ], 400);
+        }
+
+        $idGeneral = $datosUsuario['idGeneral'];
+
+        // Buscar expedientes cuyo preregistro pertenezca al usuario logueado
+        $expedientes = Expediente::whereHas('preRegistro', function ($query) use ($idGeneral) {
+            $query->where('idGeneral', $idGeneral);
+        })->with(['preRegistro.catMateriaVia.catMateria', 'preRegistro.catMateriaVia.catVia'])->get();
+
+        // Transformar la colección usando transform (modifica la colección original)
+        $expedientes->transform(function ($expediente) {
+            $preRegistro = $expediente->preRegistro;
+            return [
+                'idExpediente'    => $expediente->idExpediente,
+                'NumExpediente'   => $expediente->NumExpediente,
+                'idCatJuzgado'    => $expediente->idCatJuzgado,
+                'fechaResponse'   => $expediente->fechaResponse,
+                'idPreregistro'   => $expediente->idPreregistro,
+                // Campos de preregistro al mismo nivel
+                'folioPreregistro'   => $preRegistro?->folioPreregistro,
+                'idCatMateriaVia'    => $preRegistro?->idCatMateriaVia,
+                'fechaCreada'        => $preRegistro?->fechaCreada,
+                'created_at_pre'     => $preRegistro?->created_at,
+                // Descripciones agregadas
+                'materiaDescripcion' => optional($preRegistro?->catMateriaVia?->catMateria)->descripcion,
+                'viaDescripcion'     => optional($preRegistro?->catMateriaVia?->catVia)->descripcion,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'status' => 200,
+            'data' => $expedientes
+        ], 200);
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'idPreregistro' => 'required|integer|exists:pre_registros,idPreregistro',
+            'NumExpediente' => 'required|string|max:255',
+            'idCatJuzgado' => 'required|integer',
+            'fechaResponse' => 'required|date',
+        ]);
+    
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'status' => 422,
+                'errors' => $validator->messages(),
+            ], 422);
+        }
+    
+        // Verifica si el idPreregistro ya fue asignado a un expediente
+        if (Expediente::where('idPreregistro', $request->idPreregistro)->exists()) {
+            return response()->json([
+                'success' => false,
+                'status' => 409,
+                'message' => 'El idPreregistro ya ha sido asignado a un expediente.',
+            ], 409);
+        }
+    
+        try {
+            $expediente = Expediente::create([
+                'idPreregistro' => $request->idPreregistro,
+                'NumExpediente' => $request->NumExpediente,
+                'idCatJuzgado' => $request->idCatJuzgado,
+                'fechaResponse' => $request->fechaResponse,
+            ]);
+    
+            return response()->json([
+                'success' => true,
+                'status' => 201,
+                'message' => 'Expediente creado correctamente',
                 'data' => $expediente
-            ], 200);
+            ], 201);
         } catch (\Exception $e) {
             return response()->json([
+                'success' => false,
                 'status' => 500,
-                'message' => 'Error al obtener la lista de expediente',
+                'message' => 'Error al crear el expediente',
                 'error' => $e->getMessage(),
             ], 500);
         }
     }
-   
-    public function listarAbogadosPorExpediente($idExpediente, Request $request)
+    /**
+     * Display the specified resource.
+     */
+    public function show(Expediente $expediente)
     {
-        try {
-
-            // // Obtener el payload del token desde los atributos de la solicitud
-            // $jwtPayload = $request->attributes->get('jwt_payload');
-
-            // // Agregar un registro temporal para inspeccionar el payload
-            // $idGeneral = isset($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'])
-            //     ? json_decode($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'], true)['idGeneral']
-            //     : null;
-
-            // if (!$idGeneral) {
-            //     return response()->json([
-            //         'status' => 400,
-            //         'message' => 'No se pudo obtener el idGeneral del token',
-            //     ], 400);
-            // }
-
-            // $perfiles = $request->attributes->get('perfilesUsuario') ?? [];
-
-            // $tienePerfilSecretario = collect($perfiles)->contains(function ($perfil) {
-            //     return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'secretario';
-            // });
-
-            // if (!$tienePerfilSecretario) {
-            //     return response()->json([
-            //         'status' => 403,
-            //         'message' => 'No tiene permisos.',
-            //     ], 403);
-            // }
-
-            $abogados = AbogadoExpediente::select('idAbogado')
-                ->where('abogado_expediente.idExpediente', str_replace('-', '/', $idExpediente))
-                ->distinct()
-                ->get();
-
-            return response()->json([
-                'status' => 200,
-                'message' => "Listado de abogados para el expediente $idExpediente",
-                'data' => $abogados
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 500,
-                'message' => 'Error al obtener la lista de abogados por expediente',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+        //
     }
 
-    public function listarExpedientesGeneralesAbogados(Request $request){
-        try{
-              // Obtener el payload del token desde los atributos de la solicitud
-            $jwtPayload = $request->attributes->get('jwt_payload');
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, Expediente $expediente)
+    {
+        //
+    }
 
-            // Agregar un registro temporal para inspeccionar el payload
-            $idGeneral = isset($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'])
-                ? json_decode($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'], true)['idGeneral']
-                : null;
-
-            if (!$idGeneral) {
-                return response()->json([
-                    'status' => 400,
-                    'message' => 'No se pudo obtener el idGeneral del token',
-                ], 400);
-            }
-
-            // $perfiles = $request->attributes->get('perfilesUsuario') ?? [];
-
-            // $tienePerfilSecretario = collect($perfiles)->contains(function ($perfil) {
-            //     return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'abogado';
-            // });
-
-            // if (!$tienePerfilSecretario) {
-            //     return response()->json([
-            //         'status' => 403,
-            //         'message' => 'No tiene permisos.',
-            //     ], 403);
-            // }
-       $expedientes = AbogadoExpediente::with([
-
-            ])->distinct()
-            ->where('idAbogado', $idGeneral)->get();
-            return response()->json([
-                'status' => 200,
-                'message' => "Listado de expedientes",
-                'data' => $expedientes
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 500,
-                'message' => 'Error al obtener la lista de expediente',
-                'error' => $e->getMessage(),
-            ], 500);
-        } 
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(Expediente $expediente)
+    {
+        //
     }
 }
