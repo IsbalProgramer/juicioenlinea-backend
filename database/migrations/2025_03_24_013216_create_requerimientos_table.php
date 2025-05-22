@@ -15,7 +15,8 @@ return new class extends Migration
             $table->id('idRequerimiento');
             $table->string('descripcion');
             $table->string('descripcionRechazo')->nullable();
-            $table->string('idExpediente');
+            // $table->string('NumExpediente');
+            $table->unsignedBigInteger('idExpediente');
             $table->unsignedBigInteger('idDocumentoAcuerdo');
             $table->unsignedBigInteger('idDocumentoAcuse')->nullable();
             $table->unsignedBigInteger('idDocumentoOficioRequerimiento')->nullable();
@@ -23,7 +24,7 @@ return new class extends Migration
             $table->unsignedBigInteger('usuarioSecretario');
             $table->unsignedBigInteger('idAbogado');
             $table->unsignedBigInteger('usuarioAbogado')->nullable();
-            $table->timestamps();;
+            $table->timestamps();
             $table->dateTime('fechaLimite', 6); // precisión de 6 dígitos = microsegundos
 
             // Claves foráneas

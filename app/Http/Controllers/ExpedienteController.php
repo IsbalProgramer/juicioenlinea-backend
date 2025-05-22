@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\AuthHelper;
 use App\Models\Expediente;
+use App\Models\PreRegistro;
 use App\Services\PermisosApiService;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 
 class ExpedienteController extends Controller
 {
@@ -71,7 +74,7 @@ class ExpedienteController extends Controller
             'idCatJuzgado' => 'required|integer',
             'fechaResponse' => 'required|date',
         ]);
-    
+
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
@@ -79,7 +82,7 @@ class ExpedienteController extends Controller
                 'errors' => $validator->messages(),
             ], 422);
         }
-    
+
         // Verifica si el idPreregistro ya fue asignado a un expediente
         if (Expediente::where('idPreregistro', $request->idPreregistro)->exists()) {
             return response()->json([
@@ -88,7 +91,7 @@ class ExpedienteController extends Controller
                 'message' => 'El idPreregistro ya ha sido asignado a un expediente.',
             ], 409);
         }
-    
+
         try {
             $expediente = Expediente::create([
                 'idPreregistro' => $request->idPreregistro,
@@ -96,7 +99,7 @@ class ExpedienteController extends Controller
                 'idCatJuzgado' => $request->idCatJuzgado,
                 'fechaResponse' => $request->fechaResponse,
             ]);
-    
+
             return response()->json([
                 'success' => true,
                 'status' => 201,
@@ -115,9 +118,23 @@ class ExpedienteController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Expediente $expediente)
+    public function show($idExpediente)
     {
-        //
+        // Buscar el expediente con sus relaciones
+        $expediente = Expediente::with([
+            'preRegistro',
+            'requerimientos',
+            'tramites',
+        ])->findOrFail($idExpediente);
+
+        // Buscar todos los preregistros que tengan el mismo idPreregistro que el expediente encontrado
+        $preregistros = PreRegistro::where('idPreregistro', $expediente->idPreregistro)->get();
+
+        return response()->json([
+            'success' => true,
+            'status' => 200,
+            'expediente' => $expediente,
+        ], 200);
     }
 
     /**
@@ -135,4 +152,131 @@ class ExpedienteController extends Controller
     {
         //
     }
+
+    public function listarExpedientesDistintos(Request $request)
+    {
+        try {
+            $expedientes = Expediente::select('idExpediente', 'NumExpediente')
+                ->distinct()
+                ->get();
+            return response()->json([
+                'status' => 200,
+                'message' => "Listado de expedientes",
+                'data' => $expedientes
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'message' => 'Error al obtener la lista de expediente',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function listarAbogadosPorExpediente($idExpediente, Request $request)
+    {
+        try {
+            // Buscar el expediente y su preregistro
+            $expediente = Expediente::findOrFail($idExpediente);
+            $idPreregistro = $expediente->idPreregistro;
+
+            // Obtener el preregistro relacionado
+            $preregistro = PreRegistro::where('idPreregistro', $idPreregistro)->first();
+
+            if (!$preregistro) {
+                return response()->json([
+                    'status' => 404,
+                    'message' => "No se encontró el preregistro para el expediente $idExpediente",
+                ], 404);
+            }
+
+            // Obtener el idGeneral del preregistro (asumiendo que representa al abogado)
+            $idGeneral = $preregistro->idGeneral ?? null;
+            $usr = $preregistro->usr ?? null;
+
+            if (!$idGeneral) {
+                return response()->json([
+                    'status' => 404,
+                    'message' => "No se encontró el idGeneral del abogado para el expediente $idExpediente",
+                ], 404);
+            }
+            if (!$usr) {
+                return response()->json([
+                    'status' => 404,
+                    'message' => "No se encontró el usuario del abogado para el expediente $idExpediente",
+                ], 404);
+            }
+
+            // Consultar datos del usuario abogado en la API externa
+            $apiDatos = 'https://api.tribunaloaxaca.gob.mx/permisos/api/Permisos/DatosUsuario';
+            $response = Http::withToken($request->bearerToken())
+                ->timeout(60)
+                ->post("$apiDatos?usuario=" . $usr); // Cambia 'Usuario' por 'usuario'
+
+            if ($response->failed()) {
+                return response()->json([
+                    'status' => 500,
+                    'message' => 'Error al consultar los datos del usuario abogado.',
+                    'error' => $response->body(),
+                ], 500);
+            }
+
+            // Ajusta el mapeo según la estructura real de la respuesta de la API
+
+             $token = $request->bearerToken();
+                $nombre = AuthHelper::obtenerNombreUsuarioDesdeApi($usr, $token);
+
+            $abogado = [
+                'idAbogado' => $idGeneral,
+                'nombre' => $nombre,
+            ];
+
+            return response()->json([
+                'status' => 200,
+                'message' => "Listado de abogados para el expediente $idExpediente",
+                'data' => [$abogado]
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'message' => 'Error al obtener la lista de abogados por expediente',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    // public function listarExpedientesGeneralesAbogados(Request $request){
+    //     try{
+
+
+    //         // $perfiles = $request->attributes->get('perfilesUsuario') ?? [];
+
+    //         // $tienePerfilSecretario = collect($perfiles)->contains(function ($perfil) {
+    //         //     return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'abogado';
+    //         // });
+
+    //         // if (!$tienePerfilSecretario) {
+    //         //     return response()->json([
+    //         //         'status' => 403,
+    //         //         'message' => 'No tiene permisos.',
+    //         //     ], 403);
+    //         // }
+    //    $expedientes = AbogadoExpediente::with([
+
+    //         ])->distinct()
+    //         ->where('idAbogado', $idGeneral)->get();
+    //         return response()->json([
+    //             'status' => 200,
+    //             'message' => "Listado de expedientes",
+    //             'data' => $expedientes
+    //         ], 200);
+    //     } catch (\Exception $e) {
+    //         return response()->json([
+    //             'status' => 500,
+    //             'message' => 'Error al obtener la lista de expediente',
+    //             'error' => $e->getMessage(),
+    //         ], 500);
+    //     } 
+    // }
 }

@@ -23,7 +23,8 @@ class PermisosApiService
     {
         $apiUrl = "https://api.tribunaloaxaca.gob.mx/permisos/api/Permisos/AreaSistemaUsuario";
         $response = Http::withToken($token)
-            ->post("$apiUrl?idSistema=$idSistema&idGeneral=$idGeneral");
+        ->timeout(60)   
+        ->post("$apiUrl?idSistema=$idSistema&idGeneral=$idGeneral");
 
         if ($response->failed() || !($response->json()['success'] ?? false)) {
             return null;
