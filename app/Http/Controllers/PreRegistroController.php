@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Catalogos\CatMateriaVia;
 use App\Models\PreRegistro;
 use App\Models\Parte;
+use App\Services\MailerSendService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -227,7 +228,21 @@ class PreRegistroController extends Controller
             $preRegistro->documentos()->createMany($documentos);
 
             DB::commit(); // Confirmar transacción
-
+            $mailerSend = new MailerSendService();
+            $mailerSend->enviarCorreo(
+                "dvirdr2@gmail.com", // destinatario, puedes hacerlo dinámico
+                "Confirmación de preregistro #{$preRegistro->folioPreregistro}",
+                [
+                    'order_number' => $preRegistro->folioPreregistro,
+                    "tracking_number" => $preRegistro->folioPreregistro,
+                    "date" => $preRegistro->fechaCreada,
+                    "delivery" => $preRegistro->catMateriaVia->catVia->descripcion,
+                    "delivery_date" => $preRegistro->observaciones,
+                    "address" => $preRegistro->sintesis,
+                    "support_email" => "dvirdr2@gmail.com"
+                ],
+                "zr6ke4n8p5e4on12" // tu template_id
+            );
             return response()->json([
                 'success' => true,
                 'status' => 200,
@@ -249,7 +264,7 @@ class PreRegistroController extends Controller
     /**
      * Display the specified resource.
      */
-public function show(Request $request, PermisosApiService $permisosApiService, $idPreregistro)
+    public function show(Request $request, PermisosApiService $permisosApiService, $idPreregistro)
     {
         try {
             // Obtener el payload del token desde los atributos de la solicitud
@@ -278,8 +293,8 @@ public function show(Request $request, PermisosApiService $permisosApiService, $
                         ->with('estado:idCatEstadoInicio,descripcion');
                 }
             ])
-            ->where('idGeneral', $idGeneral)
-            ->findOrFail($idPreregistro);
+                ->where('idGeneral', $idGeneral)
+                ->findOrFail($idPreregistro);
 
             // Transformar las partes para incluir solo los datos necesarios
             $preRegistro->partes->transform(function ($parte) {
