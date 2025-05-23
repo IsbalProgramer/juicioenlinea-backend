@@ -53,22 +53,26 @@ Route::prefix('Requerimiento')->group(function () {
     Route::post('DenegarRequerimiento/{requerimiento}', [RequerimientoController::class, 'denegarRequerimiento'])->middleware(VerifyJwtToken::class);
 });
 
-Route::prefix('ExpedienteAbogado')->group(
-    function () {
-        Route::get('Expedientes', [ExpedienteController::class, 'listarExpedientesDistintos']); //->middleware(VerifyJwtToken::class);
-        Route::get('Expedientes/Abogados/{id}', [ExpedienteController::class, 'listarAbogadosPorExpediente']); //->middleware(VerifyJwtToken::class);
-        Route::get('ListarExpedientesGenerales', [ExpedienteController::class, 'listarExpedientesGeneralesAbogados'])->middleware(VerifyJwtToken::class);
-    }
-);
+// Route::prefix('ExpedienteAbogado')->group(
+//     function () {
+//         // Route::get('Expedientes', [ExpedienteController::class, 'listarExpedientesDistintos']); //->middleware(VerifyJwtToken::class);
+//         // Route::get('Expedientes/Abogados/{id}', [ExpedienteController::class, 'listarAbogadosPorExpediente']); //->middleware(VerifyJwtToken::class);
+//         // Route::get('ListarExpedientesGenerales', [ExpedienteController::class, 'listarExpedientesGeneralesAbogados'])->middleware(VerifyJwtToken::class);
+//         // 
+//         Route::post('Asignar', [ExpedienteController::class, 'store'])->middleware(VerifyJwtToken::class);
+//     }
+// );
 
 Route::prefix('Documento')->group(
     function () {
-    Route::get('VerDocumento/{id}', [DocumentoController::class, 'verDocumento'])->middleware(VerifyJwtToken::class);
-    
-});
+    Route::get('VerDocumento/{id}', [DocumentoController::class, 'show'])->middleware(VerifyJwtToken::class);
+    }
+);
 
 Route::prefix('Expediente')->group(function () {
     Route::get('Listar', [ExpedienteController::class, 'index'])->middleware(VerifyJwtToken::class);
     Route::post('Asignar', [ExpedienteController::class, 'store'])->middleware(VerifyJwtToken::class);
+    Route::get('Detalle/{id}', [ExpedienteController::class, 'show'])->middleware(VerifyJwtToken::class)->middleware(VerifyJwtToken::class);
+    Route::get('ListarExpedientesDistintos', [ExpedienteController::class, 'listarExpedientesDistintos']);
+    Route::get('ExpedientesAbogados/{id}', [ExpedienteController::class, 'listarAbogadosPorExpediente'])->middleware(VerifyJwtToken::class);
 });
-

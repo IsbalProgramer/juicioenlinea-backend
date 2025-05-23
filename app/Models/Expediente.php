@@ -30,4 +30,8 @@ class Expediente extends Model
     {
         return $this->belongsTo(PreRegistro::class, 'idPreregistro');
     }
+    public function requerimientos()
+    {
+        return $this->hasMany(Requerimiento::class, 'idExpediente');
+    }
 }

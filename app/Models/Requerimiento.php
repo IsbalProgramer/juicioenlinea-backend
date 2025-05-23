@@ -50,9 +50,12 @@ class Requerimiento extends Model
 
     public function historial()
     {
-        return $this->hasMany(HistorialEstadoRequerimiento::class, 'idRequerimiento')->orderBy('created_at');
+        return $this->hasMany(HistorialEstadoRequerimiento::class, 'idRequerimiento');
     }
-
+    public function expediente()
+    {
+        return $this->belongsTo(Expediente::class, 'idExpediente');
+    }
     public function getFechaLimiteAttribute($value)
     {
         return Carbon::parse($value)->format('Y-m-d\TH:i:s.u\Z');
