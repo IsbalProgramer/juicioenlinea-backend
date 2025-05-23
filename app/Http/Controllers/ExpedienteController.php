@@ -133,9 +133,10 @@ class ExpedienteController extends Controller
         return response()->json([
             'success' => true,
             'status' => 200,
-            'expediente' => $expediente,
+            'datos' => $expediente,
         ], 200);
     }
+
 
     /**
      * Update the specified resource in storage.
@@ -223,8 +224,8 @@ class ExpedienteController extends Controller
 
             // Ajusta el mapeo según la estructura real de la respuesta de la API
 
-             $token = $request->bearerToken();
-                $nombre = AuthHelper::obtenerNombreUsuarioDesdeApi($usr, $token);
+            $token = $request->bearerToken();
+            $nombre = AuthHelper::obtenerNombreUsuarioDesdeApi($usr, $token);
 
             $abogado = [
                 'idAbogado' => $idGeneral,
@@ -236,7 +237,6 @@ class ExpedienteController extends Controller
                 'message' => "Listado de abogados para el expediente $idExpediente",
                 'data' => [$abogado]
             ], 200);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 500,
