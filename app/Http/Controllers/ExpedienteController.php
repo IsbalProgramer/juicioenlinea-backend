@@ -224,8 +224,8 @@ class ExpedienteController extends Controller
 
             // Ajusta el mapeo según la estructura real de la respuesta de la API
 
-            $token = $request->bearerToken();
-            $nombre = AuthHelper::obtenerNombreUsuarioDesdeApi($usr, $token);
+             $token = $request->bearerToken();
+                $nombre = AuthHelper::obtenerNombreUsuarioDesdeApi($usr, $token);
 
             $abogado = [
                 'idAbogado' => $idGeneral,
@@ -245,38 +245,4 @@ class ExpedienteController extends Controller
             ], 500);
         }
     }
-
-    // public function listarExpedientesGeneralesAbogados(Request $request){
-    //     try{
-
-
-    //         // $perfiles = $request->attributes->get('perfilesUsuario') ?? [];
-
-    //         // $tienePerfilSecretario = collect($perfiles)->contains(function ($perfil) {
-    //         //     return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'abogado';
-    //         // });
-
-    //         // if (!$tienePerfilSecretario) {
-    //         //     return response()->json([
-    //         //         'status' => 403,
-    //         //         'message' => 'No tiene permisos.',
-    //         //     ], 403);
-    //         // }
-    //    $expedientes = AbogadoExpediente::with([
-
-    //         ])->distinct()
-    //         ->where('idAbogado', $idGeneral)->get();
-    //         return response()->json([
-    //             'status' => 200,
-    //             'message' => "Listado de expedientes",
-    //             'data' => $expedientes
-    //         ], 200);
-    //     } catch (\Exception $e) {
-    //         return response()->json([
-    //             'status' => 500,
-    //             'message' => 'Error al obtener la lista de expediente',
-    //             'error' => $e->getMessage(),
-    //         ], 500);
-    //     } 
-    // }
 }
