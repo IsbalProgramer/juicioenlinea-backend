@@ -28,7 +28,6 @@ Route::prefix('Inicio')->group(function () {
     Route::get('DetallePreregistro/{idInicio}', [PreRegistroController::class, 'show'])->middleware(VerifyJwtToken::class);
     Route::get('Documento/{idDocumento}', [DocumentoController::class, 'show'])->middleware(VerifyJwtToken::class);
     Route::put('ActualizarPreregistro/{preRegistro}', [PreRegistroController::class, 'update'])->middleware(VerifyJwtToken::class);
-
 });
 
 Route::prefix('Catalogo')->group(function () {
@@ -47,7 +46,7 @@ Route::prefix('Requerimiento')->group(function () {
     Route::get('ListadoRequerimientos', [RequerimientoController::class, 'index'])->middleware(VerifyJwtToken::class);
     Route::get('ListadoRequerimientosAbogados', [RequerimientoController::class, 'listarRequerimientosAbogado'])->middleware(VerifyJwtToken::class);
     Route::get('DetalleRequerimiento/{requerimiento}', [RequerimientoController::class, 'show'])->middleware(VerifyJwtToken::class);
-   Route::post('SubirRequerimiento/{requerimiento}', [RequerimientoController::class, 'subirRequerimiento'])->middleware(VerifyJwtToken::class);
+    Route::post('SubirRequerimiento/{requerimiento}', [RequerimientoController::class, 'subirRequerimiento'])->middleware(VerifyJwtToken::class);
     Route::get('ListarAcuerdo/{requerimiento}', [RequerimientoController::class, 'listarAcuerdo'])->middleware(VerifyJwtToken::class);
     Route::get('ListarAcuse/{requerimiento}', [RequerimientoController::class, 'listarAcuse'])->middleware(VerifyJwtToken::class);
     Route::get('ListarDocumentosRequerimiento/{requerimiento}', [RequerimientoController::class, 'listarDocumentosRequerimiento'])->middleware(VerifyJwtToken::class);
@@ -71,7 +70,7 @@ Route::prefix('Requerimiento')->group(function () {
 
 Route::prefix('Documento')->group(
     function () {
-    Route::get('VerDocumento/{id}', [DocumentoController::class, 'show'])->middleware(VerifyJwtToken::class);
+        Route::get('VerDocumento/{id}', [DocumentoController::class, 'show'])->middleware(VerifyJwtToken::class);
     }
 );
 
@@ -81,4 +80,5 @@ Route::prefix('Expediente')->group(function () {
     Route::get('Detalle/{id}', [ExpedienteController::class, 'show'])->middleware(VerifyJwtToken::class)->middleware(VerifyJwtToken::class);
     Route::get('ListarExpedientesDistintos', [ExpedienteController::class, 'listarExpedientesDistintos']);
     Route::get('ExpedientesAbogados/{id}', [ExpedienteController::class, 'listarAbogadosPorExpediente'])->middleware(VerifyJwtToken::class);
+    Route::get('Contar', [ExpedienteController::class, 'contarExpedientesUsuario'])->middleware(VerifyJwtToken::class);
 });

@@ -23,6 +23,7 @@ return new class extends Migration
             $table->unsignedBigInteger('idCatJuzgado')->nullable();
             $table->string('idExpediente')->nullable();
             $table->dateTime('fechaResponse')->nullable();
+            $table->unsignedBigInteger('idSecretario')->nullable();
 
             $table->timestamps();
 

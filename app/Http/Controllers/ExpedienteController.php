@@ -6,6 +6,7 @@ use App\Helpers\AuthHelper;
 use App\Models\Expediente;
 use App\Models\PreRegistro;
 use App\Services\PermisosApiService;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -15,9 +16,10 @@ class ExpedienteController extends Controller
     /**
      * Display a listing of the resource.
      */
+
     public function index(Request $request, PermisosApiService $permisosApiService)
     {
-        // Obtener el payload del token desde los atributos de la solicitud
+        // Obtener el payload del token
         $jwtPayload = $request->attributes->get('jwt_payload');
         $datosUsuario = $permisosApiService->obtenerDatosUsuario($jwtPayload);
 
@@ -31,26 +33,68 @@ class ExpedienteController extends Controller
 
         $idGeneral = $datosUsuario['idGeneral'];
 
-        // Buscar expedientes cuyo preregistro pertenezca al usuario logueado
-        $expedientes = Expediente::whereHas('preRegistro', function ($query) use ($idGeneral) {
-            $query->where('idGeneral', $idGeneral);
-        })->with(['preRegistro.catMateriaVia.catMateria', 'preRegistro.catMateriaVia.catVia'])->get();
+        // Obtener el sistema y perfiles
+        $idSistema = $permisosApiService->obtenerIdAreaSistemaUsuario($request->bearerToken(), $idGeneral, 4171);
+        if (!$idSistema) {
+            return response()->json([
+                'success' => false,
+                'status' => 400,
+                'message' => 'No se pudo obtener el idAreaSistemaUsuario',
+            ], 400);
+        }
 
-        // Transformar la colección usando transform (modifica la colección original)
+        $perfiles = $permisosApiService->obtenerPerfilesUsuario($request->bearerToken(), $idSistema);
+        if (!$perfiles) {
+            return response()->json([
+                'success' => false,
+                'status' => 400,
+                'message' => 'No se pudo obtener los perfiles del usuario',
+            ], 400);
+        }
+
+        // Determinar si el usuario es abogado o secretario
+        $esAbogado = collect($perfiles)->contains(function ($perfil) {
+            return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'abogado';
+        });
+
+        $esSecretario = collect($perfiles)->contains(function ($perfil) {
+            return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'secretario';
+        });
+
+        // Si no tiene ninguno de los perfiles, rechazar
+        if (!$esAbogado && !$esSecretario) {
+            return response()->json([
+                'success' => false,
+                'status' => 403,
+                'message' => 'No tiene permisos para realizar esta acción.',
+            ], 403);
+        }
+
+        // Consulta condicional
+        $expedientes = Expediente::with(['preRegistro.catMateriaVia.catMateria', 'preRegistro.catMateriaVia.catVia'])
+            ->when($esAbogado, function ($query) use ($idGeneral) {
+                $query->whereHas('preRegistro', function ($subquery) use ($idGeneral) {
+                    $subquery->where('idGeneral', $idGeneral);
+                });
+            })
+            ->when($esSecretario, function ($query) use ($idGeneral) {
+                $query->orWhere('idSecretario', $idGeneral);
+            })
+            ->get();
+
+        // Transformar la colección
         $expedientes->transform(function ($expediente) {
             $preRegistro = $expediente->preRegistro;
             return [
-                'idExpediente'    => $expediente->idExpediente,
-                'NumExpediente'   => $expediente->NumExpediente,
-                'idCatJuzgado'    => $expediente->idCatJuzgado,
-                'fechaResponse'   => $expediente->fechaResponse,
-                'idPreregistro'   => $expediente->idPreregistro,
-                // Campos de preregistro al mismo nivel
+                'idExpediente'       => $expediente->idExpediente,
+                'NumExpediente'      => $expediente->NumExpediente,
+                'idCatJuzgado'       => $expediente->idCatJuzgado,
+                'fechaResponse'      => $expediente->fechaResponse,
+                'idPreregistro'      => $expediente->idPreregistro,
                 'folioPreregistro'   => $preRegistro?->folioPreregistro,
                 'idCatMateriaVia'    => $preRegistro?->idCatMateriaVia,
                 'fechaCreada'        => $preRegistro?->fechaCreada,
                 'created_at_pre'     => $preRegistro?->created_at,
-                // Descripciones agregadas
                 'materiaDescripcion' => optional($preRegistro?->catMateriaVia?->catMateria)->descripcion,
                 'viaDescripcion'     => optional($preRegistro?->catMateriaVia?->catVia)->descripcion,
             ];
@@ -63,6 +107,7 @@ class ExpedienteController extends Controller
         ], 200);
     }
 
+
     /**
      * Store a newly created resource in storage.
      */
@@ -73,6 +118,7 @@ class ExpedienteController extends Controller
             'NumExpediente' => 'required|string|max:255',
             'idCatJuzgado' => 'required|integer',
             'fechaResponse' => 'required|date',
+            'idSecretario' => 'required|integer'
         ]);
 
         if ($validator->fails()) {
@@ -98,6 +144,7 @@ class ExpedienteController extends Controller
                 'NumExpediente' => $request->NumExpediente,
                 'idCatJuzgado' => $request->idCatJuzgado,
                 'fechaResponse' => $request->fechaResponse,
+                'idSecretario' => $request->idSecretario // asignacion del secretario
             ]);
 
             return response()->json([
@@ -120,21 +167,32 @@ class ExpedienteController extends Controller
      */
     public function show($idExpediente)
     {
-        // Buscar el expediente con sus relaciones
-        $expediente = Expediente::with([
-            'preRegistro',
-            'requerimientos',
-            'tramites',
-        ])->findOrFail($idExpediente);
+        try {
+            // Buscar el expediente con sus relaciones
+            $expediente = Expediente::with([
+                'preRegistro.historialEstado',
+                'preRegistro.historialEstado.estado',
+                'requerimientos.documentoAcuerdo',
+                'requerimientos.historial',
+                'requerimientos.historial.catEstadoRequerimiento',
+                'tramites',
+            ])->findOrFail($idExpediente);
 
-        // Buscar todos los preregistros que tengan el mismo idPreregistro que el expediente encontrado
-        $preregistros = PreRegistro::where('idPreregistro', $expediente->idPreregistro)->get();
+            // Buscar todos los preregistros que tengan el mismo idPreregistro que el expediente encontrado
+            $preregistros = PreRegistro::where('idPreregistro', $expediente->idPreregistro)->get();
 
-        return response()->json([
-            'success' => true,
-            'status' => 200,
-            'datos' => $expediente,
-        ], 200);
+            return response()->json([
+                'success' => true,
+                'status' => 200,
+                'datos' => $expediente,
+            ], 200);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'status' => 404,
+                'mensaje' => 'Expediente no encontrado',
+            ], 404);
+        }
     }
 
 
@@ -154,31 +212,19 @@ class ExpedienteController extends Controller
         //
     }
 
-    public function listarExpedientesDistintos(Request $request)
-    {
-        try {
-            $expedientes = Expediente::select('idExpediente', 'NumExpediente')
-                ->distinct()
-                ->get();
-            return response()->json([
-                'status' => 200,
-                'message' => "Listado de expedientes",
-                'data' => $expedientes
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 500,
-                'message' => 'Error al obtener la lista de expediente',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
     public function listarAbogadosPorExpediente($idExpediente, Request $request)
     {
         try {
             // Buscar el expediente y su preregistro
             $expediente = Expediente::findOrFail($idExpediente);
+
+            if (!$expediente) {
+                return response()->json([
+                    'status' => 404,
+                    'message' => "No se encontró el expediente con ID $idExpediente"
+                ], 404);
+            }
+
             $idPreregistro = $expediente->idPreregistro;
 
             // Obtener el preregistro relacionado
@@ -224,8 +270,8 @@ class ExpedienteController extends Controller
 
             // Ajusta el mapeo según la estructura real de la respuesta de la API
 
-             $token = $request->bearerToken();
-                $nombre = AuthHelper::obtenerNombreUsuarioDesdeApi($usr, $token);
+            $token = $request->bearerToken();
+            $nombre = AuthHelper::obtenerNombreUsuarioDesdeApi($usr, $token);
 
             $abogado = [
                 'idAbogado' => $idGeneral,
@@ -244,5 +290,77 @@ class ExpedienteController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    //Api para contar el numero de espedientes que se listan por usuario 
+    public function contarExpedientesUsuario(Request $request, PermisosApiService $permisosApiService)
+    {
+        // Obtener el payload del token
+        $jwtPayload = $request->attributes->get('jwt_payload');
+        $datosUsuario = $permisosApiService->obtenerDatosUsuario($jwtPayload);
+
+        if (!$datosUsuario || !isset($datosUsuario['idGeneral'])) {
+            return response()->json([
+                'success' => false,
+                'status' => 400,
+                'message' => 'No se pudo obtener el idGeneral del token',
+            ], 400);
+        }
+
+        $idGeneral = $datosUsuario['idGeneral'];
+
+        // Obtener el sistema y perfiles
+        $idSistema = $permisosApiService->obtenerIdAreaSistemaUsuario($request->bearerToken(), $idGeneral, 4171);
+        if (!$idSistema) {
+            return response()->json([
+                'success' => false,
+                'status' => 400,
+                'message' => 'No se pudo obtener el idAreaSistemaUsuario',
+            ], 400);
+        }
+
+        $perfiles = $permisosApiService->obtenerPerfilesUsuario($request->bearerToken(), $idSistema);
+        if (!$perfiles) {
+            return response()->json([
+                'success' => false,
+                'status' => 400,
+                'message' => 'No se pudo obtener los perfiles del usuario',
+            ], 400);
+        }
+
+        // Determinar si el usuario es abogado o secretario
+        $esAbogado = collect($perfiles)->contains(function ($perfil) {
+            return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'abogado';
+        });
+
+        $esSecretario = collect($perfiles)->contains(function ($perfil) {
+            return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'secretario';
+        });
+
+        // Si no tiene ninguno de los perfiles, rechazar
+        if (!$esAbogado && !$esSecretario) {
+            return response()->json([
+                'success' => false,
+                'status' => 403,
+                'message' => 'No tiene permisos para realizar esta acción.',
+            ], 403);
+        }
+
+        // Contar expedientes dependiendo del rol
+        $totalExpedientes = Expediente::when($esAbogado, function ($query) use ($idGeneral) {
+            $query->whereHas('preRegistro', function ($subquery) use ($idGeneral) {
+                $subquery->where('idGeneral', $idGeneral);
+            });
+        })
+            ->when($esSecretario, function ($query) use ($idGeneral) {
+                $query->orWhere('idSecretario', $idGeneral);
+            })
+            ->count();
+
+        return response()->json([
+            'success' => true,
+            'status' => 200,
+            'totalExpedientes' => $totalExpedientes
+        ], 200);
     }
 }
