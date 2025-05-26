@@ -14,6 +14,7 @@ class Expediente extends Model
         'NumExpediente',
         'idCatJuzgado',
         'fechaResponse',
+        'idSecretario'
     ];
 
     /**
