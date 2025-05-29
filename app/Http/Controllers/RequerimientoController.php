@@ -684,13 +684,16 @@ class RequerimientoController extends Controller
             $datosUsuarioSecretario = AuthHelper::obtenerNombreUsuarioDesdeApi($requerimiento->usuarioSecretario, $token);
             $datosUsuarioAbogado = AuthHelper::obtenerNombreUsuarioDesdeApi($usr, $token);
 
+             $numExpediente = DB::table('expedientes')
+                ->where('idExpediente', $requerimiento->idExpediente)
+                ->value('NumExpediente');
 
             // Crear HTML del acuse
             //<p><strong>Requerimiento:</strong> {$requerimiento->idRequerimiento}</p>
             $html = "
                     <h2 style='text-align:center;'>ACUSE DE RECIBO</h2>
 
-                    <p><strong>Expediente:</strong> {$requerimiento->idExpediente}</p>
+                    <p><strong>Expediente:</strong> {$numExpediente}</p>
                     <p><strong>Descripcion:</strong> {$requerimiento->descripcion}</p>
                     <p><strong>Secretario:</strong> {$datosUsuarioSecretario}</p>
                     <p><strong>Abogado:</strong> {$datosUsuarioAbogado}</p>
