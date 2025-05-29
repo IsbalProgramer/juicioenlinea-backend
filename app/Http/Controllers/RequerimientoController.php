@@ -80,6 +80,10 @@ class RequerimientoController extends Controller
                 ], 403);
             }
 
+            //Filtros de el estado y fecha Limite inicio y fin
+            $estado = $request->query('estado');
+           
+
             // Verificar y actualizar el estado de los requerimientos expirados
             $requerimientos = Requerimiento::where('idSecretario', $idGeneral)->get();
 
@@ -95,11 +99,31 @@ class RequerimientoController extends Controller
             };
 
             // Listar los requerimientos con sus relaciones
+            // Obtener los requerimientos cuyo último estado sea 3
             $requerimientos = Requerimiento::with([
                 'historial:idHistorialEstadoRequerimientos,idCatEstadoRequerimientos,idRequerimiento',
                 'expediente',
             ])
-             ->where('idSecretario', $idGeneral)->get();
+                ->where('idSecretario', $idGeneral)
+                ->get();
+                // ->filter(function ($requerimiento) use ($estado) {
+                //     $ultimoEstado = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
+
+                //     if (is_null($estado)) {
+                //         // Por defecto, estado 3
+                //         return $ultimoEstado == 3;
+                //     }
+
+                //     if ( $estado === '0' || $estado === 0) {
+                //         // No aplicar filtro
+                //         return true;
+                //     }
+
+                   
+                //     // Filtro por estado específico (ej. 1-5)
+                //     return $ultimoEstado == $estado;
+                // })
+                // ->values();
 
             return response()->json([
                 'status' => 200,
@@ -153,7 +177,7 @@ class RequerimientoController extends Controller
         ]);
 
         //metodo para validar el numero de expediente si existe en la tabla expediente
-       
+
 
         // Si la validación falla, devolver un error 422
         if ($validator->fails()) {
@@ -237,7 +261,7 @@ class RequerimientoController extends Controller
                 ->where('idExpediente', $request->idExpediente)
                 ->value('NumExpediente');
 
-              // Construcción de la ruta
+            // Construcción de la ruta
             $expediente = explode('/', $expediente);
             if (count($expediente) >= 2) {
                 $expedienteRuta = $expediente[1] . '/' . $expediente[0];
@@ -562,11 +586,11 @@ class RequerimientoController extends Controller
             $documentoOficioRequerimiento->storeAs('oficioRequerimiento', $nuevoNombre);
 
             // Construcción de la ruta
-             $expediente = DB::table('expedientes')
+            $expediente = DB::table('expedientes')
                 ->where('idExpediente', $requerimiento->idExpediente)
                 ->value('NumExpediente');
 
-              // Construcción de la ruta
+            // Construcción de la ruta
             $expediente = explode('/', $expediente);
             if (count($expediente) >= 2) {
                 $expedienteRuta = $expediente[1] . '/' . $expediente[0];
@@ -611,14 +635,11 @@ class RequerimientoController extends Controller
 
             //archivos requeridos
             $archivos = $request->file('documentoRequerimiento');
-            // $expediente = explode('/', $requerimiento->idExpediente);
-            // $expedienteRuta = $expediente[1] . '/' . $expediente[0];
-                        // Construcción de la ruta
-             $expediente = DB::table('expedientes')
+            $expediente = DB::table('expedientes')
                 ->where('idExpediente', $requerimiento->idExpediente)
                 ->value('NumExpediente');
 
-              // Construcción de la ruta
+            // Construcción de la ruta
             $expediente = explode('/', $expediente);
             if (count($expediente) >= 2) {
                 $expedienteRuta = $expediente[1] . '/' . $expediente[0];
@@ -684,7 +705,7 @@ class RequerimientoController extends Controller
             $datosUsuarioSecretario = AuthHelper::obtenerNombreUsuarioDesdeApi($requerimiento->usuarioSecretario, $token);
             $datosUsuarioAbogado = AuthHelper::obtenerNombreUsuarioDesdeApi($usr, $token);
 
-             $numExpediente = DB::table('expedientes')
+            $numExpediente = DB::table('expedientes')
                 ->where('idExpediente', $requerimiento->idExpediente)
                 ->value('NumExpediente');
 
@@ -737,12 +758,12 @@ class RequerimientoController extends Controller
             Storage::put("acuses/{$nuevoNombre}", $pdf->output());
 
             // Ruta NAS
-                        // Construcción de la ruta
-             $expediente = DB::table('expedientes')
+            // Construcción de la ruta
+            $expediente = DB::table('expedientes')
                 ->where('idExpediente', $requerimiento->idExpediente)
                 ->value('NumExpediente');
 
-              // Construcción de la ruta
+            // Construcción de la ruta
             $expediente = explode('/', $expediente);
             if (count($expediente) >= 2) {
                 $expedienteRuta = $expediente[1] . '/' . $expediente[0];
@@ -1253,6 +1274,36 @@ class RequerimientoController extends Controller
                 'message' => 'Error al obtener la lista de requerimientos',
                 'error' => $e->getMessage(),
             ], 500);
+        }
+    }
+
+    public function datosUsuario(string $usuario, Request $request)
+    {
+
+        $apiDatos = 'https://api.tribunaloaxaca.gob.mx/permisos/api/Permisos/DatosUsuario';
+
+        try {
+            $response = Http::withToken($request->bearerToken())
+                ->timeout(60)
+                ->post("$apiDatos?Usuario=" . $usuario);
+
+            if ($response->failed()) {
+                Log::error("Error al obtener datos del usuario {$usuario}: " . $response->body());
+                return 'Nombre no disponible';
+            }
+
+            $data = $response->json();
+            $nombre = isset($data['data']['pD_Abogados'][0]['nombre'])
+                ? ucwords(strtolower($data['data']['pD_Abogados'][0]['nombre']))
+                : 'Nombre no disponible';
+            return response()->json([
+                'status' => 200,
+                'message' => "Listado de requerimientos",
+                'data' => $nombre
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error("Excepción al consultar datos del usuario {$usuario}: " . $e->getMessage());
+            return 'Nombre no disponible';
         }
     }
 }

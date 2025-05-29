@@ -363,4 +363,6 @@ class ExpedienteController extends Controller
             'totalExpedientes' => $totalExpedientes
         ], 200);
     }
+
+    
 }
