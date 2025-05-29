@@ -11,9 +11,8 @@ class Parte extends Model
     protected $table = 'partes';
 
     protected $fillable = [
+        'idUsr',
         'nombre',
-        'apellidoPaterno',
-        'apellidoMaterno',
         'idCatSexo',
         'idCatTipoParte',
         'direccion',

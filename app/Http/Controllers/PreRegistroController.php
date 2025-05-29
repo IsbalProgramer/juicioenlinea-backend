@@ -28,7 +28,7 @@ class PreRegistroController extends Controller
         try {
             // Obtener el payload del token desde los atributos de la solicitud
             $jwtPayload = $request->attributes->get('jwt_payload');
-            $datosUsuario = $permisosApiService->obtenerDatosUsuario($jwtPayload);
+            $datosUsuario = $permisosApiService->obtenerDatosUsuarioByToken($jwtPayload);
 
             if (!$datosUsuario || !isset($datosUsuario['idGeneral'])) {
                 return response()->json([
@@ -55,12 +55,14 @@ class PreRegistroController extends Controller
                 ->get();
 
             return response()->json([
+                'success' => true,
                 'status' => 200,
                 'message' => "Listado de preregistros",
                 'data' => $preRegistros
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
+                'success' => false,
                 'status' => 500,
                 'message' => 'Error al obtener la lista de preregistros',
                 'error' => $e->getMessage(),
@@ -79,9 +81,10 @@ class PreRegistroController extends Controller
             'sintesis' => 'nullable|string|max:255',
             'observaciones' => 'nullable|string|max:255',
             'partes' => 'required|array|min:1',
+            'partes.*.idUsr' => 'nullable|integer',
             'partes.*.nombre' => 'required|string|max:255',
-            'partes.*.apellidoPaterno' => 'required|string|max:255',
-            'partes.*.apellidoMaterno' => 'nullable|string|max:255',
+            'partes.*.apellidoPaterno' => 'string|max:255',
+            'partes.*.apellidoMaterno' => 'string|max:255',
             'partes.*.idCatSexo' => 'required|integer',
             'partes.*.idCatTipoParte' => 'required|integer',
             'partes.*.direccion' => 'nullable|string|max:255',
@@ -112,7 +115,7 @@ class PreRegistroController extends Controller
 
             // Obtener el payload del token desde los atributos de la solicitud
             $jwtPayload = $request->attributes->get('jwt_payload');
-            $datosUsuario = $permisosApiService->obtenerDatosUsuario($jwtPayload);
+            $datosUsuario = $permisosApiService->obtenerDatosUsuarioByToken($jwtPayload);
 
             if (!$datosUsuario || !isset($datosUsuario['idGeneral']) || !isset($datosUsuario['Usr'])) {
                 return response()->json([
@@ -196,9 +199,30 @@ class PreRegistroController extends Controller
                 'fechaEstado' => now(),
             ]);
 
-            // Insertar las partes asociadas
-            $preRegistro->partes()->createMany($request->partes);
+            $partesProcesadas = [];
+            foreach ($request->partes as $parte) {
+                // Si idUsr viene con valor, solo almacena el nombre tal cual
+                if (!empty($parte['idUsr'])) {
+                    $nombreFinal = $parte['nombre'];
+                } else {
+                    // Si idUsr es null, concatena nombre + apellidoPaterno + apellidoMaterno
+                    $nombreFinal = trim(
+                        $parte['nombre'] . ' ' .
+                            ($parte['apellidoPaterno'] ?? '') . ' ' .
+                            ($parte['apellidoMaterno'] ?? '')
+                    );
+                }
 
+                $parteProcesada = $parte;
+                $parteProcesada['nombre'] = $nombreFinal;
+
+                // Puedes quitar los apellidos si no quieres guardarlos en la base
+                unset($parteProcesada['apellidoPaterno'], $parteProcesada['apellidoMaterno']);
+
+                $partesProcesadas[] = $parteProcesada;
+            }
+            // Insertar las partes asociadas
+            $preRegistro->partes()->createMany($partesProcesadas);
             // Subir documentos al NAS y preparar datos para la base
             $documentos = [];
             $folioSoloNumero = explode('/', $folioPreregistro)[0];
@@ -269,7 +293,7 @@ class PreRegistroController extends Controller
         try {
             // Obtener el payload del token desde los atributos de la solicitud
             $jwtPayload = $request->attributes->get('jwt_payload');
-            $datosUsuario = $permisosApiService->obtenerDatosUsuario($jwtPayload);
+            $datosUsuario = $permisosApiService->obtenerDatosUsuarioByToken($jwtPayload);
 
             if (!$datosUsuario || !isset($datosUsuario['idGeneral'])) {
                 return response()->json([
@@ -322,12 +346,14 @@ class PreRegistroController extends Controller
             });
 
             return response()->json([
+                'success' => true,
                 'status' => 200,
                 'message' => "Detalle del preregistro",
                 'data' => $preRegistro
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
+                'success' => false,
                 'status' => 500,
                 'message' => "No se encontró el registro",
                 'error' => $e->getMessage()
@@ -350,6 +376,7 @@ class PreRegistroController extends Controller
             return response()->json([
                 'success' => false,
                 'status' => 422,
+                'message' => 'Error de validación',
                 'errors' => $validator->messages(),
             ], 422);
         }

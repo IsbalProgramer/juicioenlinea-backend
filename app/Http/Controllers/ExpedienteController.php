@@ -19,7 +19,7 @@ class ExpedienteController extends Controller
     {
         // Obtener el payload del token desde los atributos de la solicitud
         $jwtPayload = $request->attributes->get('jwt_payload');
-        $datosUsuario = $permisosApiService->obtenerDatosUsuario($jwtPayload);
+        $datosUsuario = $permisosApiService->obtenerDatosUsuarioByToken($jwtPayload);
 
         if (!$datosUsuario || !isset($datosUsuario['idGeneral'])) {
             return response()->json([
