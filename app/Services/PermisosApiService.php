@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Http;
 
 class PermisosApiService
 {
-    public function obtenerDatosUsuario($jwtPayload)
+    public function obtenerDatosUsuarioByToken($jwtPayload)
     {
         if (!isset($jwtPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata'])) {
             return null;
@@ -42,5 +42,26 @@ class PermisosApiService
             return null;
         }
         return $response->json()['data'] ?? null;
+    }
+
+    public function obtenerModulosYPantallasUsuario($token, $idAreaSistemaUsuario, $idPerfilUsuario)
+    {
+        $apiUrl = "https://api.tribunaloaxaca.gob.mx/permisos/api/Permisos/ObtenerModulosPantasUsuario";
+        $response = Http::withToken($token)
+            ->post("$apiUrl?IdAreaSistemaUsuario=$idAreaSistemaUsuario&IdPerfilUsuario=$idPerfilUsuario");
+
+        if ($response->failed() || !($response->json()['success'] ?? false)) {
+            return null;
+        }
+        return $response->json()['data'] ?? null;
+    }
+    
+    public function obtenerDatosUsuarioByApi($token, $idUsr)
+    {
+        $apiUrl = "https://api.tribunaloaxaca.gob.mx/permisos/api/Permisos/DatosUsuario";
+        $response = Http::withToken($token)
+            ->post("$apiUrl?Usuario=$idUsr");
+
+        return $response->json(); // <-- regresa todo el JSON de la respuesta
     }
 }

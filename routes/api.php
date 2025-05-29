@@ -6,20 +6,14 @@ use App\Http\Controllers\Catalogos\CatMateriasController;
 use App\Http\Controllers\Catalogos\CatPartesController;
 use App\Http\Controllers\Catalogos\CatTipoDocumentoController;
 use App\Http\Controllers\Catalogos\CatViasController;
-use App\Http\Controllers\InicioController;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DocumentoController;
 use App\Http\Controllers\ExpedienteController;
+use App\Http\Controllers\ParteController;
+use App\Http\Controllers\PermisosApiController;
 use App\Http\Controllers\PreRegistroController;
 use App\Http\Controllers\RequerimientoController;
-use Illuminate\Routing\RouteGroup;
-use Illuminate\Support\Facades\Auth;
-use App\Models\User;
-use App\Http\Middleware\EnsureTokenIsValid;
 use App\Http\Middleware\VerifyJwtToken;
-use App\Models\Expediente;
-use Illuminate\Routing\Route as RoutingRoute;
 
 
 Route::prefix('Inicio')->group(function () {
@@ -29,6 +23,9 @@ Route::prefix('Inicio')->group(function () {
     Route::get('Documento/{idDocumento}', [DocumentoController::class, 'show'])->middleware(VerifyJwtToken::class);
     Route::put('ActualizarPreregistro/{preRegistro}', [PreRegistroController::class, 'update'])->middleware(VerifyJwtToken::class);
 });
+
+Route::post('Permisos/Datos-usuario/{idUsr}/{idGeneral}', [PermisosApiController::class, 'show'])->middleware(VerifyJwtToken::class);
+Route::get('Permisos/ModulosYPantallas', [PermisosApiController::class, 'index'])->middleware(VerifyJwtToken::class);
 
 Route::prefix('Catalogo')->group(function () {
     Route::get('Vias/{idCatMateria}', [CatViasController::class, 'show']); // Listar vías por idCatMateria
@@ -58,15 +55,6 @@ Route::prefix('Requerimiento')->group(function () {
     Route::post('DenegarRequerimiento/{requerimiento}', [RequerimientoController::class, 'denegarRequerimiento'])->middleware(VerifyJwtToken::class);
 });
 
-// Route::prefix('ExpedienteAbogado')->group(
-//     function () {
-//         // Route::get('Expedientes', [ExpedienteController::class, 'listarExpedientesDistintos']); //->middleware(VerifyJwtToken::class);
-//         // Route::get('Expedientes/Abogados/{id}', [ExpedienteController::class, 'listarAbogadosPorExpediente']); //->middleware(VerifyJwtToken::class);
-//         // Route::get('ListarExpedientesGenerales', [ExpedienteController::class, 'listarExpedientesGeneralesAbogados'])->middleware(VerifyJwtToken::class);
-//         // 
-//         Route::post('Asignar', [ExpedienteController::class, 'store'])->middleware(VerifyJwtToken::class);
-//     }
-// );
 
 Route::prefix('Documento')->group(
     function () {
@@ -80,5 +68,6 @@ Route::prefix('Expediente')->group(function () {
     Route::get('Detalle/{id}', [ExpedienteController::class, 'show'])->middleware(VerifyJwtToken::class)->middleware(VerifyJwtToken::class);
     Route::get('ListarExpedientesDistintos', [ExpedienteController::class, 'listarExpedientesDistintos']);
     Route::get('ExpedientesAbogados/{id}', [ExpedienteController::class, 'listarAbogadosPorExpediente'])->middleware(VerifyJwtToken::class);
+    Route::get('PartesAudiencia/{idExpediente}', [ParteController::class, 'show'])->middleware(VerifyJwtToken::class);
     Route::get('Contar', [ExpedienteController::class, 'contarExpedientesUsuario'])->middleware(VerifyJwtToken::class);
 });

@@ -31,7 +31,7 @@ class RequerimientoController extends Controller
 
             // Obtener el payload del token desde los atributos de la solicitud
             $jwtPayload = $request->attributes->get('jwt_payload');
-            $datosUsuario = $permisosApiService->obtenerDatosUsuario($jwtPayload);
+            $datosUsuario = $permisosApiService->obtenerDatosUsuarioByToken($jwtPayload);
 
             if (!$datosUsuario || !isset($datosUsuario['idGeneral']) || !isset($datosUsuario['Usr'])) {
                 return response()->json([
@@ -170,7 +170,7 @@ class RequerimientoController extends Controller
 
             // Obtener el payload del token desde los atributos de la solicitud
             $jwtPayload = $request->attributes->get('jwt_payload');
-            $datosUsuario = $permisosApiService->obtenerDatosUsuario($jwtPayload);
+            $datosUsuario = $permisosApiService->obtenerDatosUsuarioByToken($jwtPayload);
 
             if (!$datosUsuario || !isset($datosUsuario['idGeneral']) || !isset($datosUsuario['Usr'])) {
                 return response()->json([
@@ -487,7 +487,7 @@ class RequerimientoController extends Controller
 
             // Obtener el payload del token desde los atributos de la solicitud
             $jwtPayload = $request->attributes->get('jwt_payload');
-            $datosUsuario = $permisosApiService->obtenerDatosUsuario($jwtPayload);
+            $datosUsuario = $permisosApiService->obtenerDatosUsuarioByToken($jwtPayload);
 
             if (!$datosUsuario || !isset($datosUsuario['idGeneral']) || !isset($datosUsuario['Usr'])) {
                 return response()->json([
@@ -832,7 +832,7 @@ class RequerimientoController extends Controller
 
             // Obtener el payload del token desde los atributos de la solicitud
             $jwtPayload = $request->attributes->get('jwt_payload');
-            $datosUsuario = $permisosApiService->obtenerDatosUsuario($jwtPayload);
+            $datosUsuario = $permisosApiService->obtenerDatosUsuarioByToken($jwtPayload);
 
             if (!$datosUsuario || !isset($datosUsuario['idGeneral']) || !isset($datosUsuario['Usr'])) {
                 return response()->json([
@@ -923,7 +923,7 @@ class RequerimientoController extends Controller
 
             // Obtener el payload del token desde los atributos de la solicitud
             $jwtPayload = $request->attributes->get('jwt_payload');
-            $datosUsuario = $permisosApiService->obtenerDatosUsuario($jwtPayload);
+            $datosUsuario = $permisosApiService->obtenerDatosUsuarioByToken($jwtPayload);
 
             if (!$datosUsuario || !isset($datosUsuario['idGeneral']) || !isset($datosUsuario['Usr'])) {
                 return response()->json([
@@ -1065,7 +1065,7 @@ class RequerimientoController extends Controller
 
                 // Obtener el payload del token desde los atributos de la solicitud
                 $jwtPayload = $request->attributes->get('jwt_payload');
-                $datosUsuario = $permisosApiService->obtenerDatosUsuario($jwtPayload);
+                $datosUsuario = $permisosApiService->obtenerDatosUsuarioByToken($jwtPayload);
 
                 if (!$datosUsuario || !isset($datosUsuario['idGeneral']) || !isset($datosUsuario['Usr'])) {
                     return response()->json([
@@ -1156,7 +1156,7 @@ class RequerimientoController extends Controller
 
             // Obtener el payload del token desde los atributos de la solicitud
             $jwtPayload = $request->attributes->get('jwt_payload');
-            $datosUsuario = $permisosApiService->obtenerDatosUsuario($jwtPayload);
+            $datosUsuario = $permisosApiService->obtenerDatosUsuarioByToken($jwtPayload);
 
             if (!$datosUsuario || !isset($datosUsuario['idGeneral']) || !isset($datosUsuario['Usr'])) {
                 return response()->json([
