@@ -15,6 +15,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Database\QueryException;
 use App\Services\NasApiService;
 use App\Services\PermisosApiService;
+use Carbon\Carbon;
 
 class PreRegistroController extends Controller
 {
@@ -39,6 +40,30 @@ class PreRegistroController extends Controller
 
             $idGeneral = $datosUsuario['idGeneral'];
 
+            $fechaInicioParam = $request->query('fechaInicio');
+            $fechaFinalParam = $request->query('fechaFinal');
+            $folio = $request->query('folio');
+            $estado = $request->query('estado');
+
+            $fechaInicio = null;
+            $fechaFinal = null;
+
+            // Aplicar filtro de fechas si se mandan
+            $timezone = config('app.timezone', 'America/Mexico_City');
+            if ($fechaInicioParam && $fechaFinalParam) {
+                $fechaInicio = Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
+                $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
+            } elseif ($fechaInicioParam) {
+                $fechaInicio = Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
+                $fechaFinal = Carbon::parse($fechaInicioParam, $timezone)->endOfDay();
+            } elseif ($fechaFinalParam) {
+                $fechaInicio = Carbon::parse($fechaFinalParam, $timezone)->startOfDay();
+                $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
+            } elseif (!$folio) {
+                $fechaInicio = Carbon::now()->subDays(6)->startOfDay();
+                $fechaFinal = Carbon::now()->endOfDay();
+            }
+
             $preRegistros = PreRegistro::with([
                 'partes',
                 'documentos:idPreregistro,nombre',
@@ -52,6 +77,38 @@ class PreRegistroController extends Controller
                 }
             ])
                 ->where('idGeneral', $idGeneral)
+                ->when($folio, function ($query) use ($folio) {
+                    $query->where('folioPreregistro', 'like', "%{$folio}%");
+                })
+                ->when($fechaInicio && $fechaFinal, function ($query) use ($fechaInicio, $fechaFinal) {
+                    $query->whereBetween('created_at', [$fechaInicio, $fechaFinal]);
+                })
+                ->when($estado, function ($query) use ($estado) {
+                    // Filtrar por el estado más reciente en historialEstado
+                    $query->whereHas('historialEstado', function ($q) use ($estado) {
+                        $q->latest('fechaEstado')
+                          ->limit(1)
+                          ->where('idCatEstadoInicio', $estado);
+                    });
+                })
+
+                // ->filter(function ($q) use ($estado) {
+                //    $q->latest('fechaEstado')
+                //           ->limit(1)
+                //           ->where('idCatEstadoInicio', $estado);
+                //     if (is_null($estado)) {
+                //         // Por defecto, estado 3
+                //         return $q == 1;
+                //     }
+
+                //     if ($estado === '0' || $estado === 0) {
+                //         // No aplicar filtro
+                //         return true;
+                //     }
+
+                //     // Filtro por estado específico (ej. 1-5)
+                //     return $q == $estado;
+                // })
                 ->get();
 
             return response()->json([
@@ -336,113 +393,113 @@ class PreRegistroController extends Controller
     // }
 
     public function show(Request $request, PermisosApiService $permisosApiService, $idPreregistro)
-{
-    try {
-        // Obtener el payload del token desde los atributos de la solicitud
-        $jwtPayload = $request->attributes->get('jwt_payload');
-        $datosUsuario = $permisosApiService->obtenerDatosUsuario($jwtPayload);
+    {
+        try {
+            // Obtener el payload del token desde los atributos de la solicitud
+            $jwtPayload = $request->attributes->get('jwt_payload');
+            $datosUsuario = $permisosApiService->obtenerDatosUsuario($jwtPayload);
 
-        if (!$datosUsuario || !isset($datosUsuario['idGeneral'])) {
-            return response()->json([
-                'status' => 400,
-                'message' => 'No se pudo obtener el idGeneral del token',
-            ], 400);
-        }
-
-        $idGeneral = $datosUsuario['idGeneral'];
-
-        // Obtener el sistema y perfiles
-        $idSistema = $permisosApiService->obtenerIdAreaSistemaUsuario($request->bearerToken(), $idGeneral, 4171);
-        if (!$idSistema) {
-            return response()->json([
-                'status' => 400,
-                'message' => 'No se pudo obtener el idAreaSistemaUsuario',
-            ], 400);
-        }
-
-        $perfiles = $permisosApiService->obtenerPerfilesUsuario($request->bearerToken(), $idSistema);
-        if (!$perfiles) {
-            return response()->json([
-                'status' => 400,
-                'message' => 'No se pudo obtener los perfiles del usuario',
-            ], 400);
-        }
-
-        $esAbogado = collect($perfiles)->contains(function ($perfil) {
-            return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'abogado';
-        });
-
-        $esSecretario = collect($perfiles)->contains(function ($perfil) {
-            return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'secretario';
-        });
-
-        if (!$esAbogado && !$esSecretario) {
-            return response()->json([
-                'status' => 403,
-                'message' => 'No tiene permisos para realizar esta acción.',
-            ], 403);
-        }
-
-        // Consulta del preregistro dependiendo del rol
-        $query = PreRegistro::with([
-            'partes.catTipoParte',
-            'partes.catSexo',
-            'documentos.catTipoDocumento',
-            'catMateriaVia.catMateria',
-            'catMateriaVia.catVia',
-            'historialEstado' => function ($query) {
-                $query->latest('fechaEstado')
-                    ->limit(1)
-                    ->select('idPreregistro', 'idCatEstadoInicio', 'fechaEstado')
-                    ->with('estado:idCatEstadoInicio,descripcion');
+            if (!$datosUsuario || !isset($datosUsuario['idGeneral'])) {
+                return response()->json([
+                    'status' => 400,
+                    'message' => 'No se pudo obtener el idGeneral del token',
+                ], 400);
             }
-        ]);
 
-        if ($esAbogado) {
-            $query->where('idGeneral', $idGeneral);
-        } elseif ($esSecretario) {
-            // Los secretarios pueden ver cualquier preregistro, no se limita por idGeneral
-        }
+            $idGeneral = $datosUsuario['idGeneral'];
 
-        $preRegistro = $query->findOrFail($idPreregistro);
-
-        // Transformar las partes
-        $preRegistro->partes->transform(function ($parte) {
-            return [
-                'idParte' => $parte->idParte,
-                'idPreregistro' => $parte->idPreregistro,
-                'nombre' => $parte->nombre,
-                'apellidoPaterno' => $parte->apellidoPaterno,
-                'apellidoMaterno' => $parte->apellidoMaterno,
-                'direccion' => $parte->direccion,
-                'idCatSexo' => $parte->idCatSexo,
-                'sexoDescripcion' => $parte->catSexo->descripcion ?? null,
-                'idCatTipoParte' => $parte->idCatTipoParte,
-                'tipoParteDescripcion' => $parte->catTipoParte->descripcion ?? null,
-            ];
-        });
-
-        // Transformar documentos
-        $preRegistro->documentos->transform(function ($documento) {
-            if (is_null($documento->nombre) && $documento->catTipoDocumento) {
-                $documento->nombre = $documento->catTipoDocumento->nombre;
+            // Obtener el sistema y perfiles
+            $idSistema = $permisosApiService->obtenerIdAreaSistemaUsuario($request->bearerToken(), $idGeneral, 4171);
+            if (!$idSistema) {
+                return response()->json([
+                    'status' => 400,
+                    'message' => 'No se pudo obtener el idAreaSistemaUsuario',
+                ], 400);
             }
-            return $documento;
-        });
 
-        return response()->json([
-            'status' => 200,
-            'message' => "Detalle del preregistro",
-            'data' => $preRegistro
-        ], 200);
-    } catch (\Exception $e) {
-        return response()->json([
-            'status' => 500,
-            'message' => "No se encontró el registro",
-            'error' => $e->getMessage()
-        ], 500);
+            $perfiles = $permisosApiService->obtenerPerfilesUsuario($request->bearerToken(), $idSistema);
+            if (!$perfiles) {
+                return response()->json([
+                    'status' => 400,
+                    'message' => 'No se pudo obtener los perfiles del usuario',
+                ], 400);
+            }
+
+            $esAbogado = collect($perfiles)->contains(function ($perfil) {
+                return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'abogado';
+            });
+
+            $esSecretario = collect($perfiles)->contains(function ($perfil) {
+                return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'secretario';
+            });
+
+            if (!$esAbogado && !$esSecretario) {
+                return response()->json([
+                    'status' => 403,
+                    'message' => 'No tiene permisos para realizar esta acción.',
+                ], 403);
+            }
+
+            // Consulta del preregistro dependiendo del rol
+            $query = PreRegistro::with([
+                'partes.catTipoParte',
+                'partes.catSexo',
+                'documentos.catTipoDocumento',
+                'catMateriaVia.catMateria',
+                'catMateriaVia.catVia',
+                'historialEstado' => function ($query) {
+                    $query->latest('fechaEstado')
+                        ->limit(1)
+                        ->select('idPreregistro', 'idCatEstadoInicio', 'fechaEstado')
+                        ->with('estado:idCatEstadoInicio,descripcion');
+                }
+            ]);
+
+            if ($esAbogado) {
+                $query->where('idGeneral', $idGeneral);
+            } elseif ($esSecretario) {
+                // Los secretarios pueden ver cualquier preregistro, no se limita por idGeneral
+            }
+
+            $preRegistro = $query->findOrFail($idPreregistro);
+
+            // Transformar las partes
+            $preRegistro->partes->transform(function ($parte) {
+                return [
+                    'idParte' => $parte->idParte,
+                    'idPreregistro' => $parte->idPreregistro,
+                    'nombre' => $parte->nombre,
+                    'apellidoPaterno' => $parte->apellidoPaterno,
+                    'apellidoMaterno' => $parte->apellidoMaterno,
+                    'direccion' => $parte->direccion,
+                    'idCatSexo' => $parte->idCatSexo,
+                    'sexoDescripcion' => $parte->catSexo->descripcion ?? null,
+                    'idCatTipoParte' => $parte->idCatTipoParte,
+                    'tipoParteDescripcion' => $parte->catTipoParte->descripcion ?? null,
+                ];
+            });
+
+            // Transformar documentos
+            $preRegistro->documentos->transform(function ($documento) {
+                if (is_null($documento->nombre) && $documento->catTipoDocumento) {
+                    $documento->nombre = $documento->catTipoDocumento->nombre;
+                }
+                return $documento;
+            });
+
+            return response()->json([
+                'status' => 200,
+                'message' => "Detalle del preregistro",
+                'data' => $preRegistro
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'message' => "No se encontró el registro",
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
-}
 
 
     /**

@@ -82,7 +82,7 @@ class RequerimientoController extends Controller
 
             //Filtros de el estado y fecha Limite inicio y fin
             $estado = $request->query('estado');
-           
+
 
             // Verificar y actualizar el estado de los requerimientos expirados
             $requerimientos = Requerimiento::where('idSecretario', $idGeneral)->get();
@@ -100,30 +100,53 @@ class RequerimientoController extends Controller
 
             // Listar los requerimientos con sus relaciones
             // Obtener los requerimientos cuyo último estado sea 3
+            $fechaInicioParam = $request->query('fechaInicio');
+        $fechaFinalParam = $request->query('fechaFinal');
+
+        $fechaInicio = null;
+        $fechaFinal = null;
+
+        // Aplicar filtro de fechas si se mandan
+        $timezone = config('app.timezone', 'America/Mexico_City');
+        if ($fechaInicioParam && $fechaFinalParam) {
+            // Si ambas fechas, usar startOfDay para inicio y endOfDay para final (inclusivo)
+            $fechaInicio = Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
+            $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
+        } elseif ($fechaInicioParam) {
+            // Solo fecha de inicio, filtra solo ese día completo
+            $fechaInicio = Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
+            $fechaFinal = Carbon::parse($fechaInicioParam, $timezone)->endOfDay();
+        } elseif ($fechaFinalParam) {
+            // Solo fecha final, filtra solo ese día completo
+            $fechaInicio = Carbon::parse($fechaFinalParam, $timezone)->startOfDay();
+            $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
+        } 
             $requerimientos = Requerimiento::with([
                 'historial:idHistorialEstadoRequerimientos,idCatEstadoRequerimientos,idRequerimiento',
                 'expediente',
             ])
                 ->where('idSecretario', $idGeneral)
-                ->get();
-                // ->filter(function ($requerimiento) use ($estado) {
-                //     $ultimoEstado = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
+                ->get()
+                ->filter(function ($requerimiento) use ($estado) {
+                    $ultimoEstado = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
 
-                //     if (is_null($estado)) {
-                //         // Por defecto, estado 3
-                //         return $ultimoEstado == 3;
-                //     }
+                    if (is_null($estado)) {
+                        // Por defecto, estado 3
+                        return $ultimoEstado == 3;
+                    }
 
-                //     if ( $estado === '0' || $estado === 0) {
-                //         // No aplicar filtro
-                //         return true;
-                //     }
+                    if ($estado === '0' || $estado === 0) {
+                        // No aplicar filtro
+                        return true;
+                    }
 
-                   
-                //     // Filtro por estado específico (ej. 1-5)
-                //     return $ultimoEstado == $estado;
-                // })
-                // ->values();
+                    // Filtro por estado específico (ej. 1-5)
+                    return $ultimoEstado == $estado;
+                })
+                ->when($fechaInicio && $fechaFinal, function ($query) use ($fechaInicio, $fechaFinal) {
+                $query->whereBetween('created_at', [$fechaInicio, $fechaFinal]);
+            })
+                ->values();
 
             return response()->json([
                 'status' => 200,
@@ -175,9 +198,6 @@ class RequerimientoController extends Controller
 
             'documentoAcuerdo' => 'required|file|mimes:pdf,doc,docx',
         ]);
-
-        //metodo para validar el numero de expediente si existe en la tabla expediente
-
 
         // Si la validación falla, devolver un error 422
         if ($validator->fails()) {
@@ -427,7 +447,6 @@ class RequerimientoController extends Controller
                 unset($documento->catTipoDocumento);
             }
 
-
             return response()->json([
                 'status' => 200,
                 'message' => "Detalle del requerimiento",
@@ -467,15 +486,6 @@ class RequerimientoController extends Controller
 
     public function subirRequerimiento(Requerimiento $requerimiento, Request $request, PermisosApiService $permisosApiService)
     {
-        // $fechaLimite = Carbon::parse($requerimiento->fechaLimite)->endOfDay();
-
-        // if ($fechaLimite->isPast()) {
-        //     return response()->json([
-        //         'status' => 400,
-        //         'message' => 'No se puede subir el requerimiento porque la fecha límite ya ha pasado.',
-        //     ], 400);
-        // }
-
         //Verificar si ya se subió un documento para este requerimiento
         $documentosExistentes = DB::table('documento_requerimiento')
             ->where('idRequerimiento', $requerimiento->idRequerimiento)
@@ -507,7 +517,6 @@ class RequerimientoController extends Controller
 
         try {
             DB::beginTransaction();
-
 
             // Obtener el payload del token desde los atributos de la solicitud
             $jwtPayload = $request->attributes->get('jwt_payload');
@@ -649,7 +658,6 @@ class RequerimientoController extends Controller
             }
             $ruta = "PERICIALES/JUZGADOS/{$expedienteRuta}/REQUERIMIENTOS/TRAMITESRECIBIDOS";
 
-
             foreach ($archivos as $index => $archivo) {
                 $nombreOriginal = pathinfo($archivo->getClientOriginalName(), PATHINFO_FILENAME);
                 $extension = $archivo->getClientOriginalExtension();
@@ -710,7 +718,6 @@ class RequerimientoController extends Controller
                 ->value('NumExpediente');
 
             // Crear HTML del acuse
-            //<p><strong>Requerimiento:</strong> {$requerimiento->idRequerimiento}</p>
             $html = "
                     <h2 style='text-align:center;'>ACUSE DE RECIBO</h2>
 
@@ -745,8 +752,6 @@ class RequerimientoController extends Controller
 
             $html .= "</ul>";
 
-
-
             // Generar PDF del acuse
             $pdf = Pdf::loadHTML($html);
 
@@ -758,7 +763,6 @@ class RequerimientoController extends Controller
             Storage::put("acuses/{$nuevoNombre}", $pdf->output());
 
             // Ruta NAS
-            // Construcción de la ruta
             $expediente = DB::table('expedientes')
                 ->where('idExpediente', $requerimiento->idExpediente)
                 ->value('NumExpediente');
@@ -806,13 +810,12 @@ class RequerimientoController extends Controller
             // Agregar a lista de documentos
             $documentos[] = $acuseDocumento;
 
-
             // Historial general del requerimiento
             $historial = HistorialEstadoRequerimiento::create([
                 'idRequerimiento' => $requerimiento->idRequerimiento,
                 'idExpediente' => $request->idExpediente,
                 'idUsuario' => $idGeneral,
-                'idCatEstadoRequerimientos' => 3, // REQUERIMIENTO SUBIDO Y ENVIADO
+                'idCatEstadoRequerimientos' => 3, // REQUERIMIENTO ENTREGADO
             ]);
 
             $requerimiento->save();
@@ -839,11 +842,6 @@ class RequerimientoController extends Controller
             ], 500);
         }
     }
-
-
-    /**
-     * Descargar un documento almacenado en base64
-     */
 
     // admitir
     public function admitirRequerimiento(Request $request, Requerimiento $requerimiento, PermisosApiService $permisosApiService)
@@ -911,7 +909,6 @@ class RequerimientoController extends Controller
             ]);
 
             DB::commit();
-
             return response()->json([
                 'status' => 200,
                 'message' => 'Requerimiento admitido correctamente.',
@@ -924,8 +921,6 @@ class RequerimientoController extends Controller
             ], 200);
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error al admitir requerimiento: ' . $e->getMessage());
-
             return response()->json([
                 'status' => 500,
                 'message' => 'Error al admitir el requerimiento.',
@@ -1042,7 +1037,6 @@ class RequerimientoController extends Controller
             ], 200);
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error al denegar requerimiento: ' . $e->getMessage());
 
             return response()->json([
                 'status' => 500,
@@ -1053,10 +1047,7 @@ class RequerimientoController extends Controller
     }
 
 
-    //Este metodo se utiliza para verificar si el requerimiento ya paso su
-    // fecha limite e insertar el estado correspondiente
-    //en el historial de requerimiento
-
+    //Este metodo se utiliza para verificar si el requerimiento ya paso su fecha limite 
     public function estadoRequerimientoExpiro(Requerimiento $requerimiento, Request $request, PermisosApiService $permisosApiService)
     {
         if (!$requerimiento) {
@@ -1173,8 +1164,6 @@ class RequerimientoController extends Controller
     public function listarRequerimientosAbogado(Request $request, PermisosApiService $permisosApiService)
     {
         try {
-
-
             // Obtener el payload del token desde los atributos de la solicitud
             $jwtPayload = $request->attributes->get('jwt_payload');
             $datosUsuario = $permisosApiService->obtenerDatosUsuario($jwtPayload);
@@ -1226,37 +1215,62 @@ class RequerimientoController extends Controller
                 ], 403);
             }
 
-
+            //Filtros de el estado y fecha Limite inicio y fin
+            $estado = $request->query('estado');
+            $fechaInicio =$request->query('fechaInicio');
+            $fechaFinal= $request->query('fechaFinal');
+            
             // Verificar y actualizar el estado de los requerimientos expirados
             $requerimientos = Requerimiento::where('idAbogado', $idGeneral)->get();
 
             // foreach ($requerimientos as $requerimiento) {
-            //     $fechaLimite = Carbon::parse($requerimiento->fechaLimite);
+
+            //     $fechaLimite = $requerimiento->fechaLimite;
+            //     $fechaActual = now();
+
+            //     // Obtener el último estado del requerimiento
             //     $estadoFinal = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
 
-            //     if ($fechaLimite->lt(now()) && $estadoFinal == 1) {
-            //         $this->estadoRequerimientoExpiro($requerimiento, $request);
+            //     if (($fechaLimite >= $fechaActual) && $estadoFinal == 1) {
+            //         $this->estadoRequerimientoExpiro($requerimiento, $request, $permisosApiService);
             //     }
             // }
 
-            foreach ($requerimientos as $requerimiento) {
+             foreach ($requerimientos as $requerimiento) {
 
+                $estadoFinal = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
                 $fechaLimite = $requerimiento->fechaLimite;
                 $fechaActual = now();
 
-                // Obtener el último estado del requerimiento
-                $estadoFinal = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
-
-                if (($fechaLimite >= $fechaActual) && $estadoFinal == 1) {
+                if (($fechaLimite < $fechaActual) && $estadoFinal == 1) {
                     $this->estadoRequerimientoExpiro($requerimiento, $request, $permisosApiService);
                 }
-            }
+            };
 
             // Listar los requerimientos con un identificador único para el abogado
             $requerimientos = Requerimiento::with([
                 'historial:idHistorialEstadoRequerimientos,idCatEstadoRequerimientos,idRequerimiento',
                 'expediente'
-            ])->where('idAbogado', $idGeneral)->get();
+            ])
+            ->where('idAbogado', $idGeneral)
+            ->get()
+            ->filter(function ($requerimiento) use ($estado) {
+                    $ultimoEstado = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
+
+                    if (is_null($estado)) {
+                        // Por defecto, estado 3
+                        return $ultimoEstado == 1;
+                    }
+
+                    if ($estado === '0' || $estado === 0) {
+                        // No aplicar filtro
+                        return true;
+                    }
+
+                    // Filtro por estado específico (ej. 1-5)
+                    return $ultimoEstado == $estado;
+                })
+                ->values();
 
             $requerimientos = $requerimientos->map(function ($requerimiento) {
                 $requerimiento->idRequerimientoAbogado = 'ABOG-' . $requerimiento->idRequerimiento;
