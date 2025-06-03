@@ -44,15 +44,10 @@ Route::prefix('Requerimiento')->group(function () {
     Route::get('ListadoRequerimientosAbogados', [RequerimientoController::class, 'listarRequerimientosAbogado'])->middleware(VerifyJwtToken::class);
     Route::get('DetalleRequerimiento/{requerimiento}', [RequerimientoController::class, 'show'])->middleware(VerifyJwtToken::class);
     Route::post('SubirRequerimiento/{requerimiento}', [RequerimientoController::class, 'subirRequerimiento'])->middleware(VerifyJwtToken::class);
-    Route::get('ListarAcuerdo/{requerimiento}', [RequerimientoController::class, 'listarAcuerdo'])->middleware(VerifyJwtToken::class);
-    Route::get('ListarAcuse/{requerimiento}', [RequerimientoController::class, 'listarAcuse'])->middleware(VerifyJwtToken::class);
-    Route::get('ListarDocumentosRequerimiento/{requerimiento}', [RequerimientoController::class, 'listarDocumentosRequerimiento'])->middleware(VerifyJwtToken::class);
-    Route::get('ListarAuto/{requerimiento}', [RequerimientoController::class, 'listarAuto'])->middleware(VerifyJwtToken::class);
-    // Route::post('ActualizarRequerimiento/{requerimiento}',[RequerimientoController::class, 'actualizarDocumento']);
-    // Route::post('EliminarRequerimiento/{requerimiento}',[RequerimientoController::class, 'eliminarDocumento']);
     Route::post('RequerimientoExpirado/{requerimiento}', [RequerimientoController::class, 'estadoRequerimientoExpiro'])->middleware(VerifyJwtToken::class);
     Route::post('AdmitirRequerimiento/{requerimiento}', [RequerimientoController::class, 'admitirRequerimiento'])->middleware(VerifyJwtToken::class);
     Route::post('DenegarRequerimiento/{requerimiento}', [RequerimientoController::class, 'denegarRequerimiento'])->middleware(VerifyJwtToken::class);
+    Route::get('Datos/{usuario}', [RequerimientoController::class, 'datosUsuario'])->middleware(VerifyJwtToken::class);
 });
 
 
@@ -70,4 +65,5 @@ Route::prefix('Expediente')->group(function () {
     Route::get('ExpedientesAbogados/{id}', [ExpedienteController::class, 'listarAbogadosPorExpediente'])->middleware(VerifyJwtToken::class);
     Route::get('PartesAudiencia/{idExpediente}', [ParteController::class, 'show'])->middleware(VerifyJwtToken::class);
     Route::get('Contar', [ExpedienteController::class, 'contarExpedientesUsuario'])->middleware(VerifyJwtToken::class);
+    
 });

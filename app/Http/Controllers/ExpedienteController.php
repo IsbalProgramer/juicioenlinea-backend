@@ -6,6 +6,7 @@ use App\Helpers\AuthHelper;
 use App\Models\Expediente;
 use App\Models\PreRegistro;
 use App\Services\PermisosApiService;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
@@ -19,7 +20,6 @@ class ExpedienteController extends Controller
 
     public function index(Request $request, PermisosApiService $permisosApiService)
     {
-        // Obtener el payload del token
         $jwtPayload = $request->attributes->get('jwt_payload');
         $datosUsuario = $permisosApiService->obtenerDatosUsuarioByToken($jwtPayload);
 
@@ -33,7 +33,6 @@ class ExpedienteController extends Controller
 
         $idGeneral = $datosUsuario['idGeneral'];
 
-        // Obtener el sistema y perfiles
         $idSistema = $permisosApiService->obtenerIdAreaSistemaUsuario($request->bearerToken(), $idGeneral, 4171);
         if (!$idSistema) {
             return response()->json([
@@ -52,16 +51,16 @@ class ExpedienteController extends Controller
             ], 400);
         }
 
-        // Determinar si el usuario es abogado o secretario
-        $esAbogado = collect($perfiles)->contains(function ($perfil) {
-            return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'abogado';
-        });
+        $esAbogado = collect($perfiles)->contains(
+            fn($perfil) =>
+            isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'abogado'
+        );
 
-        $esSecretario = collect($perfiles)->contains(function ($perfil) {
-            return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'secretario';
-        });
+        $esSecretario = collect($perfiles)->contains(
+            fn($perfil) =>
+            isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'secretario'
+        );
 
-        // Si no tiene ninguno de los perfiles, rechazar
         if (!$esAbogado && !$esSecretario) {
             return response()->json([
                 'success' => false,
@@ -70,7 +69,35 @@ class ExpedienteController extends Controller
             ], 403);
         }
 
-        // Consulta condicional
+        // Filtros
+        $expediente = $request->query('expediente');
+        $fechaInicioParam = $request->query('fechaInicio');
+        $fechaFinalParam = $request->query('fechaFinal');
+
+        $fechaInicio = null;
+        $fechaFinal = null;
+
+        // Aplicar filtro de fechas si se mandan
+        $timezone = config('app.timezone', 'America/Mexico_City');
+        if ($fechaInicioParam && $fechaFinalParam) {
+            // Si ambas fechas, usar startOfDay para inicio y endOfDay para final (inclusivo)
+            $fechaInicio = Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
+            $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
+        } elseif ($fechaInicioParam) {
+            // Solo fecha de inicio, filtra solo ese día completo
+            $fechaInicio = Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
+            $fechaFinal = Carbon::parse($fechaInicioParam, $timezone)->endOfDay();
+        } elseif ($fechaFinalParam) {
+            // Solo fecha final, filtra solo ese día completo
+            $fechaInicio = Carbon::parse($fechaFinalParam, $timezone)->startOfDay();
+            $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
+        } elseif (!$expediente) {
+            // Solo si no hay expediente ni fechas, usar los últimos 7 días por defecto
+            $fechaInicio = Carbon::now()->subDays(6)->startOfDay();
+            $fechaFinal = Carbon::now()->endOfDay();
+        }
+
+        // Consulta
         $expedientes = Expediente::with(['preRegistro.catMateriaVia.catMateria', 'preRegistro.catMateriaVia.catVia'])
             ->when($esAbogado, function ($query) use ($idGeneral) {
                 $query->whereHas('preRegistro', function ($subquery) use ($idGeneral) {
@@ -80,9 +107,15 @@ class ExpedienteController extends Controller
             ->when($esSecretario, function ($query) use ($idGeneral) {
                 $query->orWhere('idSecretario', $idGeneral);
             })
+            ->when($expediente, function ($query) use ($expediente) {
+                $query->where('numExpediente', 'like', "%{$expediente}%");
+            })
+            ->when($fechaInicio && $fechaFinal, function ($query) use ($fechaInicio, $fechaFinal) {
+                $query->whereBetween('fechaResponse', [$fechaInicio, $fechaFinal]);
+            })
             ->get();
 
-        // Transformar la colección
+        // Transformar
         $expedientes->transform(function ($expediente) {
             $preRegistro = $expediente->preRegistro;
             return [
@@ -165,36 +198,83 @@ class ExpedienteController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show($idExpediente)
+
+    public function show(Request $request, $idExpediente)
     {
         try {
-            // Buscar el expediente con sus relaciones
+            $fechaInicio = $request->input('fechaInicio');
+            $fechaFin = $request->input('fechaFinal');
+            $tipoFiltro = $request->input('tipo'); // 0: todos, 1: requerimientos, 2: trámites, 3: grabaciones, 4: otros
+            $folio = $request->input('folio');
+
+            // Por defecto: últimos 7 días solo si no se proporcionan fechas
+            if (!$fechaInicio || !$fechaFin) {
+                $fechaFin = now();
+                $fechaInicio = now()->subDays(7);
+            }
+
+            // Buscar expediente con relaciones
             $expediente = Expediente::with([
-                'preRegistro.historialEstado',
-                'preRegistro.historialEstado.estado',
-                'requerimientos.documentoAcuerdo',
-                'requerimientos.historial',
-                'requerimientos.historial.catEstadoRequerimiento',
-                'tramites',
+                // 'preRegistro.historialEstado.estado',
             ])->findOrFail($idExpediente);
 
-            // Buscar todos los preregistros que tengan el mismo idPreregistro que el expediente encontrado
-            $preregistros = PreRegistro::where('idPreregistro', $expediente->idPreregistro)->get();
+            // preregistro (filtrado directo por folio y fecha) con último estado del historialEstado
+            $preRegistro = ($tipoFiltro === null || $tipoFiltro == 0 || $tipoFiltro == 2)
+                ? $expediente->preRegistro()
+                    ->when($folio, function ($q) use ($folio) {
+                        $q->where('folioPreregistro', 'like', '%' . $folio . '%');
+                    })
+                    ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+                    ->with(['historialEstado' => function ($q) {
+                        $q->orderByDesc('created_at')->limit(1);
+                    }, 'historialEstado.estado'])
+                    ->get()
+                : collect();
+
+            // Requerimientos (filtrado por documentoAcuerdo.folio, fecha y estado final 2, 4 o 5)
+            $requerimientos = ($tipoFiltro === null || $tipoFiltro == 0 || $tipoFiltro == 1)
+                ? $expediente->requerimientos()
+                ->with(['documentoAcuerdo', 'historial.catEstadoRequerimiento'])
+                ->whereHas('documentoAcuerdo', function ($q) use ($folio) {
+                    if ($folio) {
+                        $q->where('folio', 'like', '%' . $folio . '%');
+                    }
+                })
+                ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+                ->whereHas('historial', function ($q) {
+                    $q->whereIn('idCatEstadoRequerimientos', [2, 4, 5]);
+                })
+                ->get()
+                : collect();
+
+            // Trámites (filtrado directo por folio y fecha)
+            $tramites = ($tipoFiltro === null || $tipoFiltro == 0 || $tipoFiltro == 2)
+                ? $expediente->tramites()
+                // ->when($folio, function ($q) use ($folio) {
+                //     $q->where('folio', 'like', '%' . $folio . '%');
+                // })
+                ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+                ->get()
+                : collect();
 
             return response()->json([
                 'success' => true,
                 'status' => 200,
-                'datos' => $expediente,
-            ], 200);
+                'datos' => [
+                    'expediente' => $expediente,
+                    'pre_registro' => $preRegistro,
+                    'requerimientos' => $requerimientos,
+                    'tramites' => $tramites,
+                ],
+            ]);
         } catch (ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
                 'status' => 404,
                 'mensaje' => 'Expediente no encontrado',
-            ], 404);
+            ]);
         }
     }
-
 
     /**
      * Update the specified resource in storage.
@@ -292,7 +372,7 @@ class ExpedienteController extends Controller
         }
     }
 
-    //Api para contar el numero de espedientes que se listan por usuario 
+    //Api para contar el numero de expedientes que se listan por usuario 
     public function contarExpedientesUsuario(Request $request, PermisosApiService $permisosApiService)
     {
         // Obtener el payload del token
@@ -356,6 +436,15 @@ class ExpedienteController extends Controller
                 $query->orWhere('idSecretario', $idGeneral);
             })
             ->count();
+
+        if ($totalExpedientes === 0) {
+            return response()->json([
+                'success' => true,
+                'status' => 200,
+                'message' => 'Aún no existe ningún expediente para este usuario.',
+                'totalExpedientes' => 0
+            ], 200);
+        }
 
         return response()->json([
             'success' => true,

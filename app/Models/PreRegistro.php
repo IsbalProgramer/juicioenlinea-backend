@@ -22,7 +22,8 @@ class PreRegistro extends Model
         'usr',
         'idCatJuzgado',
         'idExpediente',
-        'fechaResponse'
+        'fechaResponse',
+        'idSecretario'
     ];
 
     public function catMateriaVia()
