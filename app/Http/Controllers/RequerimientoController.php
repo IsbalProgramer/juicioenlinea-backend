@@ -28,7 +28,6 @@ class RequerimientoController extends Controller
     public function index(Request $request, PermisosApiService $permisosApiService)
     {
         try {
-
             // Obtener el payload del token desde los atributos de la solicitud
             $jwtPayload = $request->attributes->get('jwt_payload');
             $datosUsuario = $permisosApiService->obtenerDatosUsuarioByToken($jwtPayload);
@@ -80,72 +79,63 @@ class RequerimientoController extends Controller
                 ], 403);
             }
 
-            //Filtros de el estado y fecha Limite inicio y fin
+            // Filtros de estado y fechas
             $estado = $request->query('estado');
-
+            $fechaInicioParam = $request->query('fechaInicio');
+            $fechaFinalParam = $request->query('fechaFinal');
+            $timezone = config('app.timezone', 'America/Mexico_City');
 
             // Verificar y actualizar el estado de los requerimientos expirados
-            $requerimientos = Requerimiento::where('idSecretario', $idGeneral)->get();
-
-            foreach ($requerimientos as $requerimiento) {
-
+            $requerimientosExp = Requerimiento::where('idSecretario', $idGeneral)->get();
+            foreach ($requerimientosExp as $requerimiento) {
                 $estadoFinal = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
                 $fechaLimite = $requerimiento->fechaLimite;
                 $fechaActual = now();
-
                 if (($fechaLimite < $fechaActual) && $estadoFinal == 1) {
                     $this->estadoRequerimientoExpiro($requerimiento, $request, $permisosApiService);
                 }
-            };
+            }
 
-            // Listar los requerimientos con sus relaciones
-            // Obtener los requerimientos cuyo último estado sea 3
-            $fechaInicioParam = $request->query('fechaInicio');
-        $fechaFinalParam = $request->query('fechaFinal');
-
-        $fechaInicio = null;
-        $fechaFinal = null;
-
-        // Aplicar filtro de fechas si se mandan
-        $timezone = config('app.timezone', 'America/Mexico_City');
-        if ($fechaInicioParam && $fechaFinalParam) {
-            // Si ambas fechas, usar startOfDay para inicio y endOfDay para final (inclusivo)
-            $fechaInicio = Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
-            $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
-        } elseif ($fechaInicioParam) {
-            // Solo fecha de inicio, filtra solo ese día completo
-            $fechaInicio = Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
-            $fechaFinal = Carbon::parse($fechaInicioParam, $timezone)->endOfDay();
-        } elseif ($fechaFinalParam) {
-            // Solo fecha final, filtra solo ese día completo
-            $fechaInicio = Carbon::parse($fechaFinalParam, $timezone)->startOfDay();
-            $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
-        } 
-            $requerimientos = Requerimiento::with([
+            // Construir la consulta base
+            $query = Requerimiento::with([
                 'historial:idHistorialEstadoRequerimientos,idCatEstadoRequerimientos,idRequerimiento',
                 'expediente',
-            ])
-                ->where('idSecretario', $idGeneral)
-                ->get()
+            ])->where('idSecretario', $idGeneral);
+
+            // Filtro de fechas
+            if ($fechaInicioParam && $fechaFinalParam) {
+                $fechaInicio = Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
+                $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
+                $query->whereBetween('fechaLimite', [$fechaInicio, $fechaFinal]);
+            } elseif ($fechaInicioParam) {
+                $fechaInicio = Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
+                $fechaFinal = Carbon::parse($fechaInicioParam, $timezone)->endOfDay();
+                $query->whereBetween('fechaLimite', [$fechaInicio, $fechaFinal]);
+            } elseif ($fechaFinalParam) {
+                $fechaInicio = Carbon::parse($fechaFinalParam, $timezone)->startOfDay();
+                $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
+                $query->whereBetween('fechaLimite', [$fechaInicio, $fechaFinal]);
+            } elseif (!$estado) {
+                // Si no hay estado ni fechas, mostrar últimos 7 días por defecto
+                $fechaInicio = Carbon::now($timezone)->subDays(6)->startOfDay();
+                $fechaFinal = Carbon::now($timezone)->endOfDay();
+                $query->whereBetween('fechaLimite', [$fechaInicio, $fechaFinal]);
+            }
+
+            $requerimientos = $query->get()
                 ->filter(function ($requerimiento) use ($estado) {
                     $ultimoEstado = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
-
                     if (is_null($estado)) {
                         // Por defecto, estado 3
                         return $ultimoEstado == 3;
                     }
-
                     if ($estado === '0' || $estado === 0) {
                         // No aplicar filtro
                         return true;
                     }
-
                     // Filtro por estado específico (ej. 1-5)
                     return $ultimoEstado == $estado;
                 })
-                ->when($fechaInicio && $fechaFinal, function ($query) use ($fechaInicio, $fechaFinal) {
-                $query->whereBetween('created_at', [$fechaInicio, $fechaFinal]);
-            })
                 ->values();
 
             return response()->json([
@@ -1217,9 +1207,9 @@ class RequerimientoController extends Controller
 
             //Filtros de el estado y fecha Limite inicio y fin
             $estado = $request->query('estado');
-            $fechaInicio =$request->query('fechaInicio');
-            $fechaFinal= $request->query('fechaFinal');
-            
+            $fechaInicio = $request->query('fechaInicio');
+            $fechaFinal = $request->query('fechaFinal');
+
             // Verificar y actualizar el estado de los requerimientos expirados
             $requerimientos = Requerimiento::where('idAbogado', $idGeneral)->get();
 
@@ -1236,7 +1226,7 @@ class RequerimientoController extends Controller
             //     }
             // }
 
-             foreach ($requerimientos as $requerimiento) {
+            foreach ($requerimientos as $requerimiento) {
 
                 $estadoFinal = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
                 $fechaLimite = $requerimiento->fechaLimite;
@@ -1252,9 +1242,9 @@ class RequerimientoController extends Controller
                 'historial:idHistorialEstadoRequerimientos,idCatEstadoRequerimientos,idRequerimiento',
                 'expediente'
             ])
-            ->where('idAbogado', $idGeneral)
-            ->get()
-            ->filter(function ($requerimiento) use ($estado) {
+                ->where('idAbogado', $idGeneral)
+                ->get()
+                ->filter(function ($requerimiento) use ($estado) {
                     $ultimoEstado = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
 
                     if (is_null($estado)) {
