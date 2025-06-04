@@ -35,8 +35,8 @@ class ParteController extends Controller
                 'preRegistro.partes.catSexo'
             ])->findOrFail($idExpediente);
 
-            // Obtener las partes desde el preregistro
-            $partes = $expediente->preRegistro ? $expediente->preRegistro->partes->whereNotNull('idUsr') : collect();
+        // Obtener todas las partes desde el preregistro
+        $partes = $expediente->preRegistro ? $expediente->preRegistro->partes : collect();
 
             // Transformar las partes para agregar descripciones de catálogos
             $partesTransformadas = $partes->map(function ($parte) {
