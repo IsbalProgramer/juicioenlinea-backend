@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Catalogos\CatEstadoAudiencia;
 use App\Models\Catalogos\CatGeneros;
 use App\Models\Catalogos\CatMaterias;
 use App\Models\Catalogos\CatEstadoInicios;
@@ -36,8 +37,14 @@ class DatabaseSeeder extends Seeder
 
         // Crear estados iniciales
         CatEstadoInicios::create(['descripcion' => 'Enviado' ]);
-        CatEstadoInicios::create(['descripcion' => 'En proceso' ]);
         CatEstadoInicios::create(['descripcion' => 'Asignado' ]);
+        CatEstadoInicios::create(['descripcion' => 'Finalizado' ]);
+
+        // Crear estados para aduiencias
+        CatEstadoAudiencia::create(['descripcion' => 'Activa' ]);
+        CatEstadoAudiencia::create(['descripcion' => 'Finalizada' ]);
+        CatEstadoAudiencia::create(['descripcion' => 'Reprogramada' ]);
+        CatEstadoAudiencia::create(['descripcion' => 'Cancelada' ]);
 
         $this->call(TipoViaSeeder::class);
         $this->call(TipoMateriaViaSeeder::class);
