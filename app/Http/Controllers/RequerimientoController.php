@@ -18,6 +18,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use App\Services\PermisosApiService;
+use App\Services\MailerSendService;
 
 class RequerimientoController extends Controller
 {
@@ -28,7 +29,6 @@ class RequerimientoController extends Controller
     public function index(Request $request, PermisosApiService $permisosApiService)
     {
         try {
-
             // Obtener el payload del token desde los atributos de la solicitud
             $jwtPayload = $request->attributes->get('jwt_payload');
             $datosUsuario = $permisosApiService->obtenerDatosUsuarioByToken($jwtPayload);
@@ -80,72 +80,79 @@ class RequerimientoController extends Controller
                 ], 403);
             }
 
-            //Filtros de el estado y fecha Limite inicio y fin
+            // Filtros de estado y fechas
             $estado = $request->query('estado');
-
+            $fechaInicioParam = $request->query('fechaInicio');
+            $fechaFinalParam = $request->query('fechaFinal');
+            $timezone = config('app.timezone', 'America/Mexico_City');
 
             // Verificar y actualizar el estado de los requerimientos expirados
-            $requerimientos = Requerimiento::where('idSecretario', $idGeneral)->get();
-
-            foreach ($requerimientos as $requerimiento) {
-
+            $requerimientosExp = Requerimiento::where('idSecretario', $idGeneral)->get();
+            foreach ($requerimientosExp as $requerimiento) {
                 $estadoFinal = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
                 $fechaLimite = $requerimiento->fechaLimite;
                 $fechaActual = now();
-
                 if (($fechaLimite < $fechaActual) && $estadoFinal == 1) {
                     $this->estadoRequerimientoExpiro($requerimiento, $request, $permisosApiService);
                 }
-            };
+            }
 
-            // Listar los requerimientos con sus relaciones
-            // Obtener los requerimientos cuyo último estado sea 3
-            $fechaInicioParam = $request->query('fechaInicio');
-        $fechaFinalParam = $request->query('fechaFinal');
-
-        $fechaInicio = null;
-        $fechaFinal = null;
-
-        // Aplicar filtro de fechas si se mandan
-        $timezone = config('app.timezone', 'America/Mexico_City');
-        if ($fechaInicioParam && $fechaFinalParam) {
-            // Si ambas fechas, usar startOfDay para inicio y endOfDay para final (inclusivo)
-            $fechaInicio = Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
-            $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
-        } elseif ($fechaInicioParam) {
-            // Solo fecha de inicio, filtra solo ese día completo
-            $fechaInicio = Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
-            $fechaFinal = Carbon::parse($fechaInicioParam, $timezone)->endOfDay();
-        } elseif ($fechaFinalParam) {
-            // Solo fecha final, filtra solo ese día completo
-            $fechaInicio = Carbon::parse($fechaFinalParam, $timezone)->startOfDay();
-            $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
-        } 
-            $requerimientos = Requerimiento::with([
-                'historial:idHistorialEstadoRequerimientos,idCatEstadoRequerimientos,idRequerimiento',
+            // Construir la consulta base
+            $query = Requerimiento::with([
+                'historial:idHistorialEstadoRequerimientos,idCatEstadoRequerimientos,idRequerimiento,created_at',
                 'expediente',
-            ])
-                ->where('idSecretario', $idGeneral)
-                ->get()
+            ])->where('idSecretario', $idGeneral);
+
+            // Filtro de fechas
+            if ($fechaInicioParam && $fechaFinalParam) {
+                $fechaInicio = Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
+                $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
+                $query->whereBetween('fechaLimite', [$fechaInicio, $fechaFinal]);
+            } elseif ($fechaInicioParam) {
+                $fechaInicio = Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
+                $fechaFinal = Carbon::parse($fechaInicioParam, $timezone)->endOfDay();
+                $query->whereBetween('fechaLimite', [$fechaInicio, $fechaFinal]);
+            } elseif ($fechaFinalParam) {
+                $fechaInicio = Carbon::parse($fechaFinalParam, $timezone)->startOfDay();
+                $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
+                $query->whereBetween('fechaLimite', [$fechaInicio, $fechaFinal]);
+            } elseif (!$estado) {
+                // Si no hay estado ni fechas, mostrar últimos 7 días por defecto
+                $fechaInicio = Carbon::now($timezone)->subDays(6)->startOfDay();
+                $fechaFinal = Carbon::now($timezone)->endOfDay();
+
+                // Filtrar requerimientos cuyo último historial sea estado 3 y created_at en rango
+                $query->whereHas('historial', function ($q) use ($fechaInicio, $fechaFinal) {
+                    $q->where('idCatEstadoRequerimientos', 3)
+                        ->whereBetween('created_at', [$fechaInicio, $fechaFinal]);
+                });
+            }
+
+            $requerimientos = $query->get()
                 ->filter(function ($requerimiento) use ($estado) {
                     $ultimoEstado = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
-
                     if (is_null($estado)) {
                         // Por defecto, estado 3
                         return $ultimoEstado == 3;
                     }
-
                     if ($estado === '0' || $estado === 0) {
                         // No aplicar filtro
                         return true;
                     }
-
                     // Filtro por estado específico (ej. 1-5)
                     return $ultimoEstado == $estado;
                 })
-                ->when($fechaInicio && $fechaFinal, function ($query) use ($fechaInicio, $fechaFinal) {
-                $query->whereBetween('created_at', [$fechaInicio, $fechaFinal]);
-            })
+                ->sortByDesc(function ($requerimiento) {
+                    // Ordenar por la fecha de creación del último historial (el más reciente primero)
+                    return optional($requerimiento->historial->last())->created_at;
+                })
+                ->when(is_null($estado), function ($collection) {
+                    // Solo ordenar por defecto (estado 1)
+                    return $collection->sortByDesc(function ($requerimiento) {
+                        // Ordenar por la fecha de creación del último historial (el más reciente primero)
+                        return optional($requerimiento->historial->last())->created_at;
+                    });
+                })
                 ->values();
 
             return response()->json([
@@ -335,6 +342,7 @@ class RequerimientoController extends Controller
                 'fechaLimite' => Carbon::parse($request->fechaLimite)->endOfDay(),
                 'idAbogado' => $request->idAbogado,
 
+
             ]);
 
             // Obtener el ID del requerimiento recién creado
@@ -352,7 +360,67 @@ class RequerimientoController extends Controller
             ]);
 
             DB::commit();
+            $mailerSend = new MailerSendService();
 
+            // Enviar correo al creador del requerimiento
+            $resultadoCreador = $mailerSend->enviarCorreo(
+                "zoemarquez678@gmail.com", // destinatario (creador), puedes hacerlo dinámico
+                "Confirmación de creación de requerimiento #{$requerimiento->idRequerimiento}",
+                [
+                    'order_number' => $documento->folio,
+                    "tracking_number" => $documento->folio,
+                    "date" => $requerimiento->created_at ? $requerimiento->created_at->format('Y-m-d') : null,
+                    "delivery" => $requerimiento->descripcion,
+                    "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d') : null,
+                    "address" => $requerimiento->idExpediente,
+                    "support_email" => "zoemarquez678@gmail.com",
+                    "mensaje" => "Usted ha creado el requerimiento correctamente."
+                ],
+                "z3m5jgrm3po4dpyo" // tu template_id
+            );
+
+            // Enviar correo al asignado (abogado)
+            $resultadoAbogado = $mailerSend->enviarCorreo(
+                "zoemarquez678@gmail.com", // destinatario (asignado), puedes hacerlo dinámico
+                "Nuevo requerimiento asignado #{$documento->folio}",
+                [
+                    'order_number' => $documento->folio,
+                    "tracking_number" => $documento->folio,
+                    "date" => $requerimiento->created_at ? $requerimiento->created_at->format('Y-m-d') : null,
+                    "delivery" => $requerimiento->descripcion,
+                    "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d') : null,
+                    "address" => 'Verifique en plataforma a que expediente pertenece',
+                    "support_email" => "zoemarquez678@gmail.com",
+                    "mensaje" => "Se le ha asignado un nuevo requerimiento."
+                ],
+                "z3m5jgrm3po4dpyo" // tu template_id
+            );
+
+            // Puedes verificar si se enviaron correctamente revisando el valor de retorno
+            // Por ejemplo, si tu método enviarCorreo retorna true/false o una respuesta:
+            if ($resultadoCreador && $resultadoAbogado) {
+                // Ambos correos enviados correctamente
+                // Puedes registrar en logs o realizar alguna acción adicional si lo deseas
+            } else {
+                // Alguno falló, puedes manejar el error aquí
+                Log::warning('Error al enviar uno o ambos correos de requerimiento', [
+                    'creador' => $resultadoCreador,
+                    'abogado' => $resultadoAbogado
+                ]);
+                // Agrega el resultado de los correos en el campo 'data'
+                return response()->json([
+                    'status' => 500,
+                    'message' => 'Documento guardado y requerimiento creado, pero hubo error al enviar uno o ambos correos.',
+                    'data' => [
+                        'requerimiento' => $requerimiento,
+                        'documento_id' => $documentoID,
+                        'historial' => $historial,
+                        'documento' => $documento,
+                        'creador' => $resultadoCreador,
+                        'abogado' => $resultadoAbogado
+                    ]
+                ], 500);
+            }
             return response()->json([
                 'status' => 200,
                 'message' => 'Documento guardado y requerimiento creado con referencia al documento',
@@ -360,7 +428,9 @@ class RequerimientoController extends Controller
                     'requerimiento' => $requerimiento,
                     'documento_id' => $documentoID,
                     'historial' => $historial,
-                    'documento' => $documento
+                    'documento' => $documento,
+                    'creador' => $resultadoCreador,
+                    'abogado' => $resultadoAbogado
                 ]
             ], 200);
         } catch (QueryException $e) {
@@ -568,7 +638,6 @@ class RequerimientoController extends Controller
                     'message' => 'No tiene permisos.',
                 ], 403);
             }
-
 
             $idAbogado = $requerimiento->idAbogado;
 
@@ -1011,10 +1080,8 @@ class RequerimientoController extends Controller
                 ], 422);
             }
 
-
             $requerimiento->descripcionRechazo = $request->descripcionRechazo;
             $requerimiento->save();
-
 
             $historial = HistorialEstadoRequerimiento::create([
                 'idRequerimiento' => $requerimiento->idRequerimiento,
@@ -1161,6 +1228,136 @@ class RequerimientoController extends Controller
     }
 
 
+    // public function listarRequerimientosAbogado(Request $request, PermisosApiService $permisosApiService)
+    // {
+    //     try {
+    //         // Obtener el payload del token desde los atributos de la solicitud
+    //         $jwtPayload = $request->attributes->get('jwt_payload');
+    //         $datosUsuario = $permisosApiService->obtenerDatosUsuarioByToken($jwtPayload);
+
+    //         if (!$datosUsuario || !isset($datosUsuario['idGeneral']) || !isset($datosUsuario['Usr'])) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'status' => 400,
+    //                 'message' => 'No se pudo obtener el idGeneral o Usr del token',
+    //             ], 400);
+    //         }
+
+    //         $idGeneral = $datosUsuario['idGeneral'];
+    //         $usr = $datosUsuario['Usr'];
+
+    //         if (!$idGeneral || !$usr) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'status' => 400,
+    //                 'message' => 'No se pudo obtener el idGeneral del token',
+    //             ], 400);
+    //         }
+
+    //         $idSistema = $permisosApiService->obtenerIdAreaSistemaUsuario($request->bearerToken(), $datosUsuario['idGeneral'], 4171);
+    //         if (!$idSistema) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'status' => 400,
+    //                 'message' => 'No se pudo obtener el idAreaSistemaUsuario del token',
+    //             ], 400);
+    //         }
+    //         $perfiles = $permisosApiService->obtenerPerfilesUsuario($request->bearerToken(), $idSistema);
+    //         if (!$perfiles) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'status' => 400,
+    //                 'message' => 'No se pudo obtener los perfiles del usuario',
+    //             ], 400);
+    //         }
+
+    //         $tienePerfilAbogado = collect($perfiles)->contains(function ($perfil) {
+    //             return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === strtolower(trim('abogado'));
+    //         });
+
+    //         if (!$tienePerfilAbogado) {
+    //             return response()->json([
+    //                 'status' => 403,
+    //                 'message' => 'No tiene permisos.',
+    //             ], 403);
+    //         }
+
+    //         //Filtros de el estado y fecha Limite inicio y fin
+    //         $estado = $request->query('estado');
+    //         $fechaInicio = $request->query('fechaInicio');
+    //         $fechaFinal = $request->query('fechaFinal');
+
+    //         // Verificar y actualizar el estado de los requerimientos expirados
+    //         $requerimientos = Requerimiento::where('idAbogado', $idGeneral)->get();
+
+    //         // foreach ($requerimientos as $requerimiento) {
+
+    //         //     $fechaLimite = $requerimiento->fechaLimite;
+    //         //     $fechaActual = now();
+
+    //         //     // Obtener el último estado del requerimiento
+    //         //     $estadoFinal = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
+
+    //         //     if (($fechaLimite >= $fechaActual) && $estadoFinal == 1) {
+    //         //         $this->estadoRequerimientoExpiro($requerimiento, $request, $permisosApiService);
+    //         //     }
+    //         // }
+
+    //         foreach ($requerimientos as $requerimiento) {
+
+    //             $estadoFinal = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
+    //             $fechaLimite = $requerimiento->fechaLimite;
+    //             $fechaActual = now();
+
+    //             if (($fechaLimite < $fechaActual) && $estadoFinal == 1) {
+    //                 $this->estadoRequerimientoExpiro($requerimiento, $request, $permisosApiService);
+    //             }
+    //         };
+
+    //         // Listar los requerimientos con un identificador único para el abogado
+    //         $requerimientos = Requerimiento::with([
+    //             'historial:idHistorialEstadoRequerimientos,idCatEstadoRequerimientos,idRequerimiento',
+    //             'expediente'
+    //         ])
+    //             ->where('idAbogado', $idGeneral)
+    //             ->get()
+    //             ->filter(function ($requerimiento) use ($estado) {
+    //                 $ultimoEstado = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
+
+    //                 if (is_null($estado)) {
+    //                     // Por defecto, estado 3
+    //                     return $ultimoEstado == 1;
+    //                 }
+
+    //                 if ($estado === '0' || $estado === 0) {
+    //                     // No aplicar filtro
+    //                     return true;
+    //                 }
+
+    //                 // Filtro por estado específico (ej. 1-5)
+    //                 return $ultimoEstado == $estado;
+    //             })
+    //             ->values();
+
+    //         $requerimientos = $requerimientos->map(function ($requerimiento) {
+    //             $requerimiento->idRequerimientoAbogado = 'ABOG-' . $requerimiento->idRequerimiento;
+    //             return $requerimiento;
+    //         });
+
+    //         return response()->json([
+    //             'status' => 200,
+    //             'message' => "Listado de requerimientos",
+    //             'data' => $requerimientos
+    //         ], 200);
+    //     } catch (\Exception $e) {
+    //         return response()->json([
+    //             'status' => 500,
+    //             'message' => 'Error al obtener la lista de requerimientos',
+    //             'error' => $e->getMessage(),
+    //         ], 500);
+    //     }
+    // }
+
     public function listarRequerimientosAbogado(Request $request, PermisosApiService $permisosApiService)
     {
         try {
@@ -1211,71 +1408,84 @@ class RequerimientoController extends Controller
             if (!$tienePerfilAbogado) {
                 return response()->json([
                     'status' => 403,
-                    'message' => 'No tiene permisos.',
+                    'message' => 'No tiene permisos para realizar esta acción.',
                 ], 403);
             }
 
-            //Filtros de el estado y fecha Limite inicio y fin
+            // Filtros de estado y fechas
             $estado = $request->query('estado');
-            $fechaInicio =$request->query('fechaInicio');
-            $fechaFinal= $request->query('fechaFinal');
-            
+            $fechaInicioParam = $request->query('fechaInicio');
+            $fechaFinalParam = $request->query('fechaFinal');
+            $timezone = config('app.timezone', 'America/Mexico_City');
+
             // Verificar y actualizar el estado de los requerimientos expirados
-            $requerimientos = Requerimiento::where('idAbogado', $idGeneral)->get();
-
-            // foreach ($requerimientos as $requerimiento) {
-
-            //     $fechaLimite = $requerimiento->fechaLimite;
-            //     $fechaActual = now();
-
-            //     // Obtener el último estado del requerimiento
-            //     $estadoFinal = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
-
-            //     if (($fechaLimite >= $fechaActual) && $estadoFinal == 1) {
-            //         $this->estadoRequerimientoExpiro($requerimiento, $request, $permisosApiService);
-            //     }
-            // }
-
-             foreach ($requerimientos as $requerimiento) {
-
+            $requerimientosExp = Requerimiento::where('idSecretario', $idGeneral)->get();
+            foreach ($requerimientosExp as $requerimiento) {
                 $estadoFinal = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
                 $fechaLimite = $requerimiento->fechaLimite;
                 $fechaActual = now();
-
                 if (($fechaLimite < $fechaActual) && $estadoFinal == 1) {
                     $this->estadoRequerimientoExpiro($requerimiento, $request, $permisosApiService);
                 }
-            };
+            }
 
-            // Listar los requerimientos con un identificador único para el abogado
-            $requerimientos = Requerimiento::with([
-                'historial:idHistorialEstadoRequerimientos,idCatEstadoRequerimientos,idRequerimiento',
-                'expediente'
-            ])
-            ->where('idAbogado', $idGeneral)
-            ->get()
-            ->filter(function ($requerimiento) use ($estado) {
+            // Construir la consulta base
+            $query = Requerimiento::with([
+                'historial:idHistorialEstadoRequerimientos,idCatEstadoRequerimientos,idRequerimiento,created_at',
+                'expediente',
+            ])->where('idAbogado', $idGeneral);
+
+            // Filtro de fechas
+            if ($fechaInicioParam && $fechaFinalParam) {
+                $fechaInicio = Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
+                $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
+                $query->whereBetween('fechaLimite', [$fechaInicio, $fechaFinal]);
+            } elseif ($fechaInicioParam) {
+                $fechaInicio = Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
+                $fechaFinal = Carbon::parse($fechaInicioParam, $timezone)->endOfDay();
+                $query->whereBetween('fechaLimite', [$fechaInicio, $fechaFinal]);
+            } elseif ($fechaFinalParam) {
+                $fechaInicio = Carbon::parse($fechaFinalParam, $timezone)->startOfDay();
+                $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
+                $query->whereBetween('fechaLimite', [$fechaInicio, $fechaFinal]);
+            } elseif (!$estado) {
+                // Si no hay estado ni fechas, mostrar últimos 7 días por defecto
+                $fechaInicio = Carbon::now($timezone)->subDays(6)->startOfDay();
+                $fechaFinal = Carbon::now($timezone)->endOfDay();
+
+                // Filtrar requerimientos cuyo último historial sea estado 3 y created_at en rango
+                $query->whereHas('historial', function ($q) use ($fechaInicio, $fechaFinal) {
+                    $q->where('idCatEstadoRequerimientos', 1)
+                        ->whereBetween('created_at', [$fechaInicio, $fechaFinal]);
+                });
+            }
+
+            $requerimientos = $query->get()
+                ->filter(function ($requerimiento) use ($estado) {
                     $ultimoEstado = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
-
                     if (is_null($estado)) {
-                        // Por defecto, estado 3
+                        // Por defecto, estado 1
                         return $ultimoEstado == 1;
                     }
-
                     if ($estado === '0' || $estado === 0) {
                         // No aplicar filtro
                         return true;
                     }
-
                     // Filtro por estado específico (ej. 1-5)
                     return $ultimoEstado == $estado;
                 })
+                ->sortByDesc(function ($requerimiento) {
+                    // Ordenar por la fecha de creación del último historial (el más reciente primero)
+                    return optional($requerimiento->historial->last())->created_at;
+                })
+                ->when(is_null($estado), function ($collection) {
+                    // Solo ordenar por defecto (estado 1)
+                    return $collection->sortByDesc(function ($requerimiento) {
+                        // Ordenar por la fecha de creación del último historial (el más reciente primero)
+                        return optional($requerimiento->historial->last())->created_at;
+                    });
+                })
                 ->values();
-
-            $requerimientos = $requerimientos->map(function ($requerimiento) {
-                $requerimiento->idRequerimientoAbogado = 'ABOG-' . $requerimiento->idRequerimiento;
-                return $requerimiento;
-            });
 
             return response()->json([
                 'status' => 200,
