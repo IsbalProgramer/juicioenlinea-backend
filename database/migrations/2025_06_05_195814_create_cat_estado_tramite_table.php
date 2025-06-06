@@ -11,11 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('abogado_expediente', function (Blueprint $table) {
-            $table->id('idAbogadoExpediente');
-            $table->unsignedBigInteger('idAbogado');
-            $table->string('idExpediente');
-            $table->unsignedBigInteger('Activo')->default(1);
+        Schema::create('cat_estado_tramite', function (Blueprint $table) {
+            $table->id('idCatEstadoTramite');
+            $table->string('nombre');
+            $table->boolean('activo')->default(true);
             $table->timestamps();
         });
     }
@@ -25,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('abogado_expediente');
+        Schema::dropIfExists('cat_estado_tramite');
     }
 };

@@ -7,6 +7,7 @@ use App\Models\Expediente;
 use App\Models\PreRegistro;
 use App\Services\PermisosApiService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
@@ -221,14 +222,14 @@ class ExpedienteController extends Controller
             // preregistro (filtrado directo por folio y fecha) con último estado del historialEstado
             $preRegistro = ($tipoFiltro === null || $tipoFiltro == 0 || $tipoFiltro == 2)
                 ? $expediente->preRegistro()
-                    ->when($folio, function ($q) use ($folio) {
-                        $q->where('folioPreregistro', 'like', '%' . $folio . '%');
-                    })
-                    ->whereBetween('created_at', [$fechaInicio, $fechaFin])
-                    ->with(['historialEstado' => function ($q) {
-                        $q->orderByDesc('created_at')->limit(1);
-                    }, 'historialEstado.estado'])
-                    ->get()
+                ->when($folio, function ($q) use ($folio) {
+                    $q->where('folioPreregistro', 'like', '%' . $folio . '%');
+                })
+                ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+                ->with(['historialEstado' => function ($q) {
+                    $q->orderByDesc('created_at')->limit(1);
+                }, 'historialEstado.estado'])
+                ->get()
                 : collect();
 
             // Requerimientos (filtrado por documentoAcuerdo.folio, fecha y estado final 2, 4 o 5)
@@ -451,5 +452,51 @@ class ExpedienteController extends Controller
             'status' => 200,
             'totalExpedientes' => $totalExpedientes
         ], 200);
+    }
+
+    // Obtener el detalle del expediente por el número de expediente en formato 0000/0000
+    public function busquedaExpedienteDetalles(Request $request)
+    {
+
+        // Validar el request
+        $validator = Validator::make($request->all(), [
+            'numExpediente' => 'required|string',
+            'juzgado' => 'required|integer',
+            'folioPreregistro' => 'required|string'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        // Buscar el preregistro por folio
+        $preregistro = DB::table('pre_registros')
+            ->where('folioPreregistro', $request->folioPreregistro)
+            ->value('idPreregistro');
+
+        if (!$preregistro) {
+            return response()->json([
+                'message' => 'No se encontró un preregistro con ese folio.'
+            ], 404);
+        }
+        // Buscar el expediente que coincida con todos los datos
+        $expediente = DB::table('expedientes')
+            ->where('NumExpediente', $request->numExpediente)
+            ->where('idCatJuzgado', $request->juzgado)
+            ->where('idPreregistro', $preregistro)
+            ->first();
+
+        if (!$expediente) {
+            return response()->json([
+                'message' => 'No se encontró un expediente con los datos proporcionados.'
+            ], 404);
+        }
+
+
+
+        return response()->json([
+            'message' => 'Expediente encontrado correctamente.',
+            'data' => $expediente
+        ]);
     }
 }
