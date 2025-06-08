@@ -27,13 +27,13 @@ class TramiteController extends Controller
 {
     $validator = Validator::make($request->all(), [
         'idCatTramite'     => 'required|exists:cat_tramites,idCatTramite',
-        'idGeneral'        => 'required|integer',
+        // 'idGeneral'        => 'required|integer',  logeo 
         'tramiteOrigen'    => 'required|string|max:255',
-        'folioOficio'      => 'required|string|max:255',
+        // 'folioOficio'      => 'required|string|max:255',
         'folioPreregistro' => 'required|string|max:255',
         'sintesis'         => 'required|string',
-        'observaciones'    => 'nullable|string',
-        'fechaRecepcion'   => 'nullable|date',
+        'observaciones'    => 'required|string',
+        // 'fechaRecepcion'   => 'required|date',
         'idExpediente'     => 'required|exists:expedientes,idExpediente',
         'documentoTramite' => 'required|file|mimes:pdf,doc,docx',
     ]);
@@ -91,32 +91,40 @@ class TramiteController extends Controller
 
         // Guardar documento en BD
         $documento = Documento::create([
-            'idCatTipoDocumento' => 130, // Asume que ya tienes un ID para tipo trámite
+            'idCatTipoDocumento' => -1, // Asume que ya tienes un ID para tipo trámite
+            'nombre' => 'TRAMITE',
             'idExpediente' => $request->idExpediente,
-            'folio' => FolioHelper::generarFolio($request->idExpediente),
+            // 'folio' => FolioHelper::generarFolio($request->idExpediente),
             'documento' => $ruta . '/' . $nuevoNombre,
         ]);
+
+         $ultimoFolio = Tramite::latest('idTramite')->value('folioOficio');
+            $numeroConsecutivo = $ultimoFolio ? intval(explode('/', $ultimoFolio)[0]) + 1 : 1;
+            $anio = now()->year;
+            $folioTramite = str_pad($numeroConsecutivo, 4, '0', STR_PAD_LEFT) . '/' . $anio;
 
         // Crear trámite
         $tramite = Tramite::create([
             'idCatTramite' => $request->idCatTramite,
             'idGeneral' => $idGeneral,
             'tramiteOrigen' => $request->tramiteOrigen,
-            'folioOficio' => $request->folioOficio,
+            // 'folioOficio' => $request->folioOficio,
+            'folioOficio' =>$folioTramite,
             'folioPreregistro' => $request->folioPreregistro,
             'sintesis' => $request->sintesis,
             'observaciones' => $request->observaciones,
-            'fechaRecepcion' => $request->fechaRecepcion,
+            // 'fechaRecepcion' => $request->fechaRecepcion,
             'idExpediente' => $request->idExpediente,
         ]);
+
+
 
         // Crear historial de trámite
         $historial = HistoriaEstadoTramite::create([
             'idTramite' => $tramite->idTramite,
             'idUsuario' => $idGeneral,
-            'descripcion' => 'Trámite creado por el usuario.',
-            'idCatHistorialTramite' => 1, // Asegúrate de tener este ID en tu catálogo
-            'fecha' => now(),
+            // 'descripcion' => 'Trámite creado por el usuario.',
+            'idCatHistorialTramite' => 1,
         ]);
 
         DB::commit();
@@ -154,7 +162,29 @@ class TramiteController extends Controller
      */
     public function update(Request $request, Tramite $tramite)
     {
-        //
+        $validator = Validator::make($request->all(), [
+            'idCatTramite' => 'required|exists:cat_tramites,idCatTramite',
+            'notificado'   => 'required|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            $errors = $validator->messages()->all();
+            $errorMessage = implode(', ', $errors);
+            return response()->json([
+                'status' => 422,
+                'message' => $errorMessage,
+            ], 422);
+        }
+
+        // Solo actualiza el campo 'notificado'
+        $tramite->notificado = $request->notificado;
+        $tramite->save();
+
+        return response()->json([
+            'status' => 200,
+            'message' => 'El campo notificado ha sido actualizado correctamente.',
+            'data' => $tramite
+        ]);
     }
 
     /**

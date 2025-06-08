@@ -51,7 +51,8 @@ class DatabaseSeeder extends Seeder
         $this->call(TipoParteSeeder::class);
         $this->call(TipoDocumentoSeeder::class);
         $this->call(RequerimientosSeeder::class);
-
+        $this->call(TipoTramiteSeeder::class);
+        $this->call(TipoEstadoTramiteSeeder::class);
     }
 }
 

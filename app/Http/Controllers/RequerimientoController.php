@@ -320,7 +320,8 @@ class RequerimientoController extends Controller
 
             // Guardar el documento 
             $documento = new Documento();
-            $documento->idCatTipoDocumento = 129;
+            $documento->idCatTipoDocumento = -1;
+            $documento->nombre = 'ACUERDO DE REQUERIMIENTO';
             $documento->idExpediente = $request->idExpediente;
             $documento->folio = FolioHelper::generarFolio($request->idExpediente);
             $documento->documento = $ruta . '/' . $nuevoNombre;
@@ -689,7 +690,8 @@ class RequerimientoController extends Controller
 
             // Guardar el documento en la base de datos
             $documentoR = new Documento();
-            $documentoR->idCatTipoDocumento = 130;
+            $documentoR->idCatTipoDocumento = -1;
+            $documentoR->nombre = 'OFICIO DE REQUERIMIENTO';
             $documentoR->idExpediente = $requerimiento->idExpediente;
             $documentoR->folio = FolioHelper::generarFolio($requerimiento->idExpediente);
             $documentoR->documento = $ruta . '/' . $nuevoNombre;
@@ -856,7 +858,8 @@ class RequerimientoController extends Controller
 
             // Guardar en base de datos
             $acuseDocumento = new Documento();
-            $acuseDocumento->idCatTipoDocumento = 131;
+            $acuseDocumento->idCatTipoDocumento = -1;
+            $acuseDocumento->nombre = 'ACUSE DE REQUERIMIENTO';
             $acuseDocumento->documento = $ruta . '/' . $nuevoNombre;
             $acuseDocumento->save();
 
@@ -1166,7 +1169,7 @@ class RequerimientoController extends Controller
 
             // Validar el archivo
             $validator = Validator::make($request->all(), [
-                'descripcionRechazo' => 'required|string',
+                'rechazo' => 'required|string',
             ]);
 
             if ($validator->fails()) {
@@ -1177,7 +1180,9 @@ class RequerimientoController extends Controller
                 ], 422);
             }
 
-            $requerimiento->descripcionRechazo = $request->descripcionRechazo;
+            $requerimiento->descripcionRechazo = $request->rechazo;
+            // $requerimiento->descripcionRechazo = $request->input('rechazo');
+
             $requerimiento->save();
 
             $historial = HistorialEstadoRequerimiento::create([

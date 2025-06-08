@@ -15,6 +15,7 @@ return new class extends Migration
            $table->id('idHistorialEstadoInicio');
             $table->unsignedBigInteger('idPreregistro');
             $table->unsignedBigInteger('idCatEstadoTramite');
+            $table->unsignedBigInteger('idUsuario');
             $table->foreign('idPreregistro')->references('idPreregistro')->on('pre_registros');
             $table->foreign('idCatEstadoTramite')->references('idCatEstadoTramite')->on('cat_estado_tramite');
             $table->timestamps();

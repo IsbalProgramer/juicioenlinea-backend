@@ -159,10 +159,10 @@ class TipoDocumentoSeeder extends Seeder
             ['IdCatTipoDocumento' => 127, 'Descripcion' => 'PAGARE CON COPIA SIMPLE ', 'RequiereEscaneo' => 1 ],
             ['IdCatTipoDocumento' => 128, 'Descripcion' => 'IMPRESION ELECTRONICA DE CEDULA PROFESIONAL', 'RequiereEscaneo' => 1 ],
             
-            //Documentos de requerimiento que no estan 
-            ['IdCatTipoDocumento' => 129, 'Descripcion' => 'ACUERDO DE REQUERIMIENTO', 'RequiereEscaneo' => 1 ],
-            ['IdCatTipoDocumento' => 130, 'Descripcion' => 'OFICIO DE REQUERIMIENTO', 'RequiereEscaneo' => 1 ],
-            ['IdCatTipoDocumento' => 131, 'Descripcion' => 'ACUSE DE REQUERIMIENTO', 'RequiereEscaneo' => 1 ],
+            // //Documentos de requerimiento que no estan 
+            // ['IdCatTipoDocumento' => 129, 'Descripcion' => 'ACUERDO DE REQUERIMIENTO', 'RequiereEscaneo' => 1 ],
+            // ['IdCatTipoDocumento' => 130, 'Descripcion' => 'OFICIO DE REQUERIMIENTO', 'RequiereEscaneo' => 1 ],
+            // ['IdCatTipoDocumento' => 131, 'Descripcion' => 'ACUSE DE REQUERIMIENTO', 'RequiereEscaneo' => 1 ],
             
                 ];
         foreach ($anexos as $anexo) {
