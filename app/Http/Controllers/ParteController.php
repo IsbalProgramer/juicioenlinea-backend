@@ -45,6 +45,7 @@ class ParteController extends Controller
                     'idPreregistro' => $parte->idPreregistro,
                     'idUsr' => $parte->idUsr,
                     'nombre' => $parte->nombre,
+                    'correo' => $parte->correo,
                     'idCatSexo' => $parte->idCatSexo,
                     'sexoDescripcion' => $parte->catSexo->descripcion ?? null,
                     'idCatTipoParte' => $parte->idCatTipoParte,

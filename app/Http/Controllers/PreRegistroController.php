@@ -4,15 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Catalogos\CatMateriaVia;
 use App\Models\PreRegistro;
-use App\Models\Parte;
 use App\Services\MailerSendService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Foundation\Validation\ValidatesRequests;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Database\QueryException;
 use App\Services\NasApiService;
 use App\Services\PermisosApiService;
 use Carbon\Carbon;
@@ -91,24 +88,6 @@ class PreRegistroController extends Controller
                           ->where('idCatEstadoInicio', $estado);
                     });
                 })
-
-                // ->filter(function ($q) use ($estado) {
-                //    $q->latest('fechaEstado')
-                //           ->limit(1)
-                //           ->where('idCatEstadoInicio', $estado);
-                //     if (is_null($estado)) {
-                //         // Por defecto, estado 3
-                //         return $q == 1;
-                //     }
-
-                //     if ($estado === '0' || $estado === 0) {
-                //         // No aplicar filtro
-                //         return true;
-                //     }
-
-                //     // Filtro por estado específico (ej. 1-5)
-                //     return $q == $estado;
-                // })
                 ->get();
 
             return response()->json([
@@ -144,7 +123,7 @@ class PreRegistroController extends Controller
             'partes.*.apellidoMaterno' => 'string|max:255',
             'partes.*.idCatSexo' => 'required|integer',
             'partes.*.idCatTipoParte' => 'required|integer',
-            'partes.*.direccion' => 'nullable|string|max:255',
+            'partes.*.correo' => 'required|email|max:255',            'partes.*.direccion' => 'nullable|string|max:255',
             'documentos.*.idCatTipoDocumento' => 'required|integer',
             'documentos.*.nombre' => 'nullable|string',
             'documentos.*.documento' => 'required|file',
@@ -345,77 +324,6 @@ class PreRegistroController extends Controller
     /**
      * Display the specified resource.
      */
-    // public function show(Request $request, PermisosApiService $permisosApiService, $idPreregistro)
-    // {
-    //     try {
-    //         // Obtener el payload del token desde los atributos de la solicitud
-    //         $jwtPayload = $request->attributes->get('jwt_payload');
-    //         $datosUsuario = $permisosApiService->obtenerDatosUsuario($jwtPayload);
-
-    //         if (!$datosUsuario || !isset($datosUsuario['idGeneral'])) {
-    //             return response()->json([
-    //                 'status' => 400,
-    //                 'message' => 'No se pudo obtener el idGeneral del token',
-    //             ], 400);
-    //         }
-
-    //         $idGeneral = $datosUsuario['idGeneral'];
-
-    //         $preRegistro = PreRegistro::with([
-    //             'partes.catTipoParte',
-    //             'partes.catSexo',
-    //             'documentos.catTipoDocumento',
-    //             'catMateriaVia.catMateria',
-    //             'catMateriaVia.catVia',
-    //             'historialEstado' => function ($query) {
-    //                 $query->latest('fechaEstado')
-    //                     ->limit(1)
-    //                     ->select('idPreregistro', 'idCatEstadoInicio', 'fechaEstado')
-    //                     ->with('estado:idCatEstadoInicio,descripcion');
-    //             }
-    //         ])
-    //             ->where('idGeneral', $idGeneral)
-    //             ->findOrFail($idPreregistro);
-
-    //         // Transformar las partes para incluir solo los datos necesarios
-    //         $preRegistro->partes->transform(function ($parte) {
-    //             return [
-    //                 'idParte' => $parte->idParte,
-    //                 'idPreregistro' => $parte->idPreregistro,
-    //                 'nombre' => $parte->nombre,
-    //                 'apellidoPaterno' => $parte->apellidoPaterno,
-    //                 'apellidoMaterno' => $parte->apellidoMaterno,
-    //                 'direccion' => $parte->direccion,
-    //                 'idCatSexo' => $parte->idCatSexo,
-    //                 'sexoDescripcion' => $parte->catSexo->descripcion ?? null, // Solo la descripción del catálogo
-    //                 'idCatTipoParte' => $parte->idCatTipoParte,
-    //                 'tipoParteDescripcion' => $parte->catTipoParte->descripcion ?? null, // Solo la descripción del catálogo
-    //             ];
-    //         });
-
-    //         // Modificar los documentos para asignar el nombre desde el catálogo si es null
-    //         $preRegistro->documentos->transform(function ($documento) {
-    //             // Si el nombre es null y hay un idCatTipoDocumento, asignar el nombre desde el catálogo
-    //             if (is_null($documento->nombre) && $documento->catTipoDocumento) {
-    //                 $documento->nombre = $documento->catTipoDocumento->nombre; // Asignar el nombre desde el catálogo
-    //             }
-    //             return $documento;
-    //         });
-
-    //         return response()->json([
-    //             'status' => 200,
-    //             'message' => "Detalle del preregistro",
-    //             'data' => $preRegistro
-    //         ], 200);
-    //     } catch (\Exception $e) {
-    //         return response()->json([
-    //             'status' => 500,
-    //             'message' => "No se encontró el registro",
-    //             'error' => $e->getMessage()
-    //         ], 500);
-    //     }
-    // }
-
     public function show(Request $request, PermisosApiService $permisosApiService, $idPreregistro)
     {
         try {
@@ -496,6 +404,7 @@ class PreRegistroController extends Controller
                     'apellidoPaterno' => $parte->apellidoPaterno,
                     'apellidoMaterno' => $parte->apellidoMaterno,
                     'direccion' => $parte->direccion,
+                    'correo' => $parte->correo,
                     'idCatSexo' => $parte->idCatSexo,
                     'sexoDescripcion' => $parte->catSexo->descripcion ?? null,
                     'idCatTipoParte' => $parte->idCatTipoParte,
