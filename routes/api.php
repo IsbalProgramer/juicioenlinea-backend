@@ -66,11 +66,14 @@ Route::prefix('Expediente')->group(function () {
     Route::get('ExpedientesAbogados/{id}', [ExpedienteController::class, 'listarAbogadosPorExpediente'])->middleware(VerifyJwtToken::class);
     Route::get('PartesAudiencia/{idExpediente}', [ParteController::class, 'show'])->middleware(VerifyJwtToken::class);
     Route::get('Contar', [ExpedienteController::class, 'contarExpedientesUsuario'])->middleware(VerifyJwtToken::class);
-    
 });
 
 
 Route::prefix('Audiencia')->group(function () {
     Route::get('Listar', [AudienciaController::class, 'index']);
     Route::post('Crear', [AudienciaController::class, 'store']);
+    Route::get('Disponibilidad', [AudienciaController::class, 'disponibilidad']);
+    Route::get('rango-maximo', [AudienciaController::class, 'rangoMaximoDisponible']);
+
+    Route::put('Editar/{idAudiencia}', [AudienciaController::class, 'update']);
 });

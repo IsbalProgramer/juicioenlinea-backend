@@ -146,6 +146,7 @@ class PermisosApiController extends Controller
                         'data' => [
                             'idUsr' => $idUsr,
                             'nombre' => $abogado['nombre'] ?? '',
+                            'correo' => $abogado['correo'] ?? '',
                             'direccion' => $ext,
                         ],
                     ], 200);

@@ -19,7 +19,7 @@ class MeetingService
     {
         // Valores por defecto
         $defaults = [
-            'enabledAutoRecordMeeting' => true, 
+            'enabledAutoRecordMeeting' => true,
             'allowAnyUserToBeCoHost' => false,
             'enabledVisualWatermark' => true, //marca de agua video
             'visualWatermarkOpacity' => 20,
@@ -67,6 +67,39 @@ class MeetingService
             'success' => false,
             'status' => $response->status(),
             'message' => $response->json()['message'] ?? 'Error al crear la reunión',
+            'errors' => $response->json()['errors'] ?? null,
+        ];
+    }
+
+    public function actualizarReunion(string $token, string $meetingId, array $data)
+    {
+        // Solo los campos permitidos por la API de Webex
+        $payload = [
+            'title' => $data['title'] ?? null,
+            'agenda' => $data['agenda'] ?? null,
+            'start' => $data['start'] ?? null,
+            'end' => $data['end'] ?? null,
+        ];
+
+        // Eliminar valores nulos
+        $payload = array_filter($payload, function ($v) {
+            return !is_null($v);
+        });
+
+        $url = $this->baseUrl . '/' . $meetingId;
+
+        $response = Http::withToken($token)
+            ->acceptJson()
+            ->patch($url, $payload);
+
+        if ($response->successful()) {
+            return $response->json();
+        }
+
+        return [
+            'success' => false,
+            'status' => $response->status(),
+            'message' => $response->json()['message'] ?? 'Error al actualizar la reunión',
             'errors' => $response->json()['errors'] ?? null,
         ];
     }
