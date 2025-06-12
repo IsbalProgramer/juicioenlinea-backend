@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('nombre');
             // $table->string('apellidoMaterno');
             // $table->string('apellidoPaterno');
+            $table->string('correo');
             $table->string('direccion');
             $table->unsignedBigInteger('idCatSexo');
             $table->unsignedBigInteger('idCatTipoParte');
