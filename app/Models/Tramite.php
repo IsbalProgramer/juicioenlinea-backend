@@ -13,13 +13,12 @@ class Tramite extends Model
     protected $fillable = [
         'idCatTramite',
         'idGeneral',
-        'tramiteOrigen',
         'folioOficio',
-        'folioPreregistro',
         'sintesis',
         'observaciones',
-        'fechaRecepcion',
         'idExpediente',
+        'usr',
+        'idDocumentoTramite',
     ];
 
     // Relación con la tabla cat_tramites
@@ -33,4 +32,15 @@ class Tramite extends Model
     {
         return $this->belongsTo(Expediente::class, 'idExpediente');
     }
+
+    public function historial()
+    {
+        return $this->hasMany(HistorialEstadoTramite::class, 'idTramite');
+    }
+
+    public function documento()
+    {
+        return $this->belongsTo(Documento::class, 'idDocumentoTramite');
+    }
+
 }
