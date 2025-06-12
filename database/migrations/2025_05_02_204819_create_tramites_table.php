@@ -16,13 +16,14 @@ return new class extends Migration
             $table->unsignedBigInteger('idCatTramite');
             $table->integer('idGeneral');
             $table->integer('usr');
-            $table->string('tramiteOrigen');
+            // $table->string('tramiteOrigen');
             $table->string('folioOficio');
-            $table->string('folioPreregistro');
+            // $table->string('folioPreregistro');
             $table->string('sintesis');
             $table->string('observaciones')->nullable();
             $table->unsignedBigInteger('idExpediente');
             $table->boolean('notificado')->default(false);
+            $table->integer('idDocumentoTramite');
 
             $table->foreign('idCatTramite')->references('idCatTramite')->on('cat_tramites');
             // $table->foreign('idExpediente')->references('idExpediente')->on('expedientes')->onUpdate('cascade')->onDelete('cascade');

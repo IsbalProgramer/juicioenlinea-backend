@@ -3,6 +3,7 @@
 namespace App\Helpers;
 
 use App\Models\Documento;
+use App\Models\Tramite;
 
 class FolioHelper
 {

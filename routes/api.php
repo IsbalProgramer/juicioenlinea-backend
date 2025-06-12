@@ -3,6 +3,7 @@
 use App\Http\Controllers\AudienciaController;
 use App\Http\Controllers\Catalogos\CatEstadoInicioController;
 use App\Http\Controllers\Catalogos\CatGenerosController;
+use App\Http\Controllers\Catalogos\CatJuzgados;
 use App\Http\Controllers\Catalogos\CatMateriasController;
 use App\Http\Controllers\Catalogos\CatPartesController;
 use App\Http\Controllers\Catalogos\CatTipoDocumentoController;
@@ -14,6 +15,7 @@ use App\Http\Controllers\ParteController;
 use App\Http\Controllers\PermisosApiController;
 use App\Http\Controllers\PreRegistroController;
 use App\Http\Controllers\RequerimientoController;
+use App\Http\Controllers\TramiteController;
 use App\Http\Middleware\VerifyJwtToken;
 
 
@@ -71,4 +73,18 @@ Route::prefix('Expediente')->group(function () {
 Route::prefix('Audiencia')->group(function () {
     Route::get('Listar', [AudienciaController::class, 'index']);
     Route::post('Crear', [AudienciaController::class, 'store']);
+});
+
+Route::prefix('Tramites')->group(function () {
+    Route::post('CrearTramite', [TramiteController::class, 'store'])->middleware(VerifyJwtToken::class);
+    Route::get('Listar', [TramiteController::class, 'index'])->middleware(VerifyJwtToken::class);
+    Route::get('Detalle/{id}', [TramiteController::class, 'show'])->middleware(VerifyJwtToken::class);
+    Route::put('/Actualizar/{id}', [TramiteController::class, 'update'])->middleware(VerifyJwtToken::class);
+    Route::get('ListarJuzgado', [TramiteController::class, 'listarJuzgado']);
+
+});
+
+Route::prefix('Juzgados')->group(function () {
+    Route::get('Listar', [CatJuzgados::class, 'index']);
+
 });

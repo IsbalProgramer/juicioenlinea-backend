@@ -99,12 +99,35 @@ class ExpedienteController extends Controller
         }
 
         // Consulta
-        $expedientes = Expediente::with(['preRegistro.catMateriaVia.catMateria', 'preRegistro.catMateriaVia.catVia'])
+        // $expedientes = Expediente::with(['preRegistro.catMateriaVia.catMateria', 'preRegistro.catMateriaVia.catVia'])
+        //     ->when($esAbogado, function ($query) use ($idGeneral) {
+        //         $query->whereHas('preRegistro', function ($subquery) use ($idGeneral) {
+        //             $subquery->where('idGeneral', $idGeneral);
+        //         });
+        //     })
+        //     ->when($esSecretario, function ($query) use ($idGeneral) {
+        //         $query->orWhere('idSecretario', $idGeneral);
+        //     })
+        //     ->when($expediente, function ($query) use ($expediente) {
+        //         $query->where('numExpediente', 'like', "%{$expediente}%");
+        //     })
+        //     ->when($fechaInicio && $fechaFinal, function ($query) use ($fechaInicio, $fechaFinal) {
+        //         $query->whereBetween('fechaResponse', [$fechaInicio, $fechaFinal]);
+        //     })
+        //     ->get();
+
+
+        $expedientes = Expediente::with(['preRegistro.catMateriaVia.catMateria', 'preRegistro.catMateriaVia.catVia', 'tramites' ])
             ->when($esAbogado, function ($query) use ($idGeneral) {
                 $query->whereHas('preRegistro', function ($subquery) use ($idGeneral) {
                     $subquery->where('idGeneral', $idGeneral);
                 });
             })
+            // ->when($esAbogado, function ($query) use ($idGeneral) {
+            //     $query->whereHas('tramites', function ($subquery) use ($idGeneral) {
+            //         $subquery->where('idGeneral', $idGeneral);
+            //     });
+            // })
             ->when($esSecretario, function ($query) use ($idGeneral) {
                 $query->orWhere('idSecretario', $idGeneral);
             })
@@ -216,7 +239,8 @@ class ExpedienteController extends Controller
 
             // Buscar expediente con relaciones
             $expediente = Expediente::with([
-                // 'preRegistro.historialEstado.estado',
+                // 'preRegistro',
+                'juzgado'
             ])->findOrFail($idExpediente);
 
             // preregistro (filtrado directo por folio y fecha) con último estado del historialEstado
@@ -229,6 +253,7 @@ class ExpedienteController extends Controller
                 ->with(['historialEstado' => function ($q) {
                     $q->orderByDesc('created_at')->limit(1);
                 }, 'historialEstado.estado'])
+                ->with(['partes.catTipoParte', 'catMateriaVia.catMateria', 'catMateriaVia.catVia'])
                 ->get()
                 : collect();
 
@@ -251,12 +276,19 @@ class ExpedienteController extends Controller
             // Trámites (filtrado directo por folio y fecha)
             $tramites = ($tipoFiltro === null || $tipoFiltro == 0 || $tipoFiltro == 2)
                 ? $expediente->tramites()
-                // ->when($folio, function ($q) use ($folio) {
-                //     $q->where('folio', 'like', '%' . $folio . '%');
-                // })
+                ->with(['historial.catEstadoTramite']) // Asegúrate de traer la relación también
+                ->with(['catTramite']) // Asegúrate de traer la relación también
+                ->when($folio, function ($q) use ($folio) {
+                    $q->where('folioOficio', 'like', '%' . $folio . '%');
+                })
+                ->where('notificado', 1)
                 ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+                ->whereHas('historial', function ($q) {
+                    $q->whereIn('idCatEstadoTramite', [2]); // Aquí defines los estados válidos
+                })
                 ->get()
                 : collect();
+
 
             return response()->json([
                 'success' => true,
@@ -307,7 +339,7 @@ class ExpedienteController extends Controller
             }
 
             $idPreregistro = $expediente->idPreregistro;
-
+            
             // Obtener el preregistro relacionado
             $preregistro = PreRegistro::where('idPreregistro', $idPreregistro)->first();
 
@@ -460,9 +492,9 @@ class ExpedienteController extends Controller
 
         // Validar el request
         $validator = Validator::make($request->all(), [
-            'numExpediente' => 'required|string',
+            'expediente' => 'required|string',
             'juzgado' => 'required|integer',
-            'folioPreregistro' => 'required|string'
+            'folio' => 'required|string'
         ]);
 
         if ($validator->fails()) {
@@ -471,7 +503,7 @@ class ExpedienteController extends Controller
 
         // Buscar el preregistro por folio
         $preregistro = DB::table('pre_registros')
-            ->where('folioPreregistro', $request->folioPreregistro)
+            ->where('folioPreregistro', $request->folio)
             ->value('idPreregistro');
 
         if (!$preregistro) {
@@ -481,7 +513,7 @@ class ExpedienteController extends Controller
         }
         // Buscar el expediente que coincida con todos los datos
         $expediente = DB::table('expedientes')
-            ->where('NumExpediente', $request->numExpediente)
+            ->where('NumExpediente', $request->expediente)
             ->where('idCatJuzgado', $request->juzgado)
             ->where('idPreregistro', $preregistro)
             ->first();

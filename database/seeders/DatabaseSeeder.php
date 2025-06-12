@@ -53,6 +53,7 @@ class DatabaseSeeder extends Seeder
         $this->call(RequerimientosSeeder::class);
         $this->call(TipoTramiteSeeder::class);
         $this->call(TipoEstadoTramiteSeeder::class);
+        $this->call(TipoJuzgadoSeeder::class);
     }
 }
 

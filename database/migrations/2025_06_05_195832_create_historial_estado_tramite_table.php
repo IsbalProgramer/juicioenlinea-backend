@@ -12,11 +12,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('historial_estado_tramite', function (Blueprint $table) {
-           $table->id('idHistorialEstadoInicio');
-            $table->unsignedBigInteger('idPreregistro');
+           $table->id('idHistorialEstadoTramite');
+            $table->unsignedBigInteger('idTramite');
             $table->unsignedBigInteger('idCatEstadoTramite');
-            $table->unsignedBigInteger('idUsuario');
-            $table->foreign('idPreregistro')->references('idPreregistro')->on('pre_registros');
+
+            $table->foreign('idTramite')->references('idTramite')->on('tramites');
             $table->foreign('idCatEstadoTramite')->references('idCatEstadoTramite')->on('cat_estado_tramite');
             $table->timestamps();
         });
