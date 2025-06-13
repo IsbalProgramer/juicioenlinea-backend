@@ -320,7 +320,8 @@ class RequerimientoController extends Controller
 
             // Guardar el documento 
             $documento = new Documento();
-            $documento->idCatTipoDocumento = 129;
+            $documento->idCatTipoDocumento = -1;
+            $documento->nombre = 'ACUERDO DE REQUERIMIENTO';
             $documento->idExpediente = $request->idExpediente;
             $documento->folio = FolioHelper::generarFolio($request->idExpediente);
             $documento->documento = $ruta . '/' . $nuevoNombre;
@@ -361,6 +362,9 @@ class RequerimientoController extends Controller
 
             DB::commit();
             $mailerSend = new MailerSendService();
+            $numExpediente = DB::table('expedientes')
+                ->where('idExpediente', $requerimiento->idExpediente)
+                ->value('NumExpediente');
 
             // Enviar correo al creador del requerimiento
             $resultadoCreador = $mailerSend->enviarCorreo(
@@ -372,7 +376,7 @@ class RequerimientoController extends Controller
                     "date" => $requerimiento->created_at ? $requerimiento->created_at->format('Y-m-d') : null,
                     "delivery" => $requerimiento->descripcion,
                     "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d') : null,
-                    "address" => $requerimiento->idExpediente,
+                    "address" => $numExpediente ,
                     "support_email" => "zoemarquez678@gmail.com",
                     "mensaje" => "Usted ha creado el requerimiento correctamente."
                 ],
@@ -397,29 +401,15 @@ class RequerimientoController extends Controller
             );
 
             // Puedes verificar si se enviaron correctamente revisando el valor de retorno
-            // Por ejemplo, si tu método enviarCorreo retorna true/false o una respuesta:
+            // Mostrar si se enviaron los correos correctamente
             if ($resultadoCreador && $resultadoAbogado) {
-                // Ambos correos enviados correctamente
-                // Puedes registrar en logs o realizar alguna acción adicional si lo deseas
+                Log::info('Ambos correos enviados correctamente.');
             } else {
                 // Alguno falló, puedes manejar el error aquí
                 Log::warning('Error al enviar uno o ambos correos de requerimiento', [
-                    'creador' => $resultadoCreador,
-                    'abogado' => $resultadoAbogado
+                    'creador' => is_null($resultadoCreador) ? 'No se recibió respuesta al intentar enviar el correo al creador.' : $resultadoCreador,
+                    'abogado' => is_null($resultadoAbogado) ? 'No se recibió respuesta al intentar enviar el correo al abogado.' : $resultadoAbogado
                 ]);
-                // Agrega el resultado de los correos en el campo 'data'
-                return response()->json([
-                    'status' => 500,
-                    'message' => 'Documento guardado y requerimiento creado, pero hubo error al enviar uno o ambos correos.',
-                    'data' => [
-                        'requerimiento' => $requerimiento,
-                        'documento_id' => $documentoID,
-                        'historial' => $historial,
-                        'documento' => $documento,
-                        'creador' => $resultadoCreador,
-                        'abogado' => $resultadoAbogado
-                    ]
-                ], 500);
             }
             return response()->json([
                 'status' => 200,
@@ -700,7 +690,8 @@ class RequerimientoController extends Controller
 
             // Guardar el documento en la base de datos
             $documentoR = new Documento();
-            $documentoR->idCatTipoDocumento = 130;
+            $documentoR->idCatTipoDocumento = -1;
+            $documentoR->nombre = 'OFICIO DE REQUERIMIENTO';
             $documentoR->idExpediente = $requerimiento->idExpediente;
             $documentoR->folio = FolioHelper::generarFolio($requerimiento->idExpediente);
             $documentoR->documento = $ruta . '/' . $nuevoNombre;
@@ -867,7 +858,8 @@ class RequerimientoController extends Controller
 
             // Guardar en base de datos
             $acuseDocumento = new Documento();
-            $acuseDocumento->idCatTipoDocumento = 131;
+            $acuseDocumento->idCatTipoDocumento = -1;
+            $acuseDocumento->nombre = 'ACUSE DE REQUERIMIENTO';
             $acuseDocumento->documento = $ruta . '/' . $nuevoNombre;
             $acuseDocumento->save();
 
@@ -889,6 +881,67 @@ class RequerimientoController extends Controller
 
             $requerimiento->save();
             DB::commit();
+
+            $mailerSend = new MailerSendService();
+
+            $numExpediente = DB::table('expedientes')
+                ->where('idExpediente', $requerimiento->idExpediente)
+                ->value('NumExpediente');
+
+            // Enviar correo al creador del requerimiento
+            $resultadoCreador = $mailerSend->enviarCorreo(
+                "zoemarquez678@gmail.com",
+                "Sea completado el requerimiento #{$requerimiento->idRequerimiento}",
+                [
+                    'order_number' => $documentoR->folio,
+                    "tracking_number" => $documentoR->folio,
+                    // Tomar la fecha del último historial (el más reciente)
+                    "date" => $requerimiento->historial && $requerimiento->historial->last() && $requerimiento->historial->last()->created_at
+                        ? $requerimiento->historial->last()->created_at->format('Y-m-d')
+                        : null,
+                    "delivery" => $requerimiento->descripcion,
+                    "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d') : null,
+                    "address" =>  $numExpediente,
+                    "support_email" => "zoemarquez678@gmail.com",
+                    "mensaje" => "El abogado a completado exitosamente el requerimiento solicitado."
+                ],
+                "z3m5jgrm3po4dpyo" // tu template_id
+            );
+
+            // Enviar correo al asignado (abogado)
+            $resultadoAbogado = $mailerSend->enviarCorreo(
+                "zoemarquez678@gmail.com", // destinatario (asignado), puedes hacerlo dinámico
+                "Confirmación de envio de requerimiento   #{$requerimiento->documentoAcuerdo->folio}",
+                [
+                    'order_number' => $documentoR->folio,
+                    "tracking_number" => $documentoR->folio,
+                    // Tomar la fecha del último historial (el más reciente)
+                    "date" => $requerimiento->historial && $requerimiento->historial->last() && $requerimiento->historial->last()->created_at
+                        ? $requerimiento->historial->last()->created_at->format('Y-m-d')
+                        : null,
+                    "delivery" => $requerimiento->descripcion,
+                    "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d') : null,
+                    "address" => $numExpediente,
+                    "support_email" => "zoemarquez678@gmail.com",
+                    "mensaje" => "Usted ha completado el requerimiento solicitado."
+                ],
+                "z3m5jgrm3po4dpyo" // tu template_id
+            );
+
+            // Puedes verificar si se enviaron correctamente revisando el valor de retorno
+            // Mostrar si se enviaron los correos correctamente
+            $correoCreadorEnviado = $resultadoCreador && isset($resultadoCreador['success']) ? $resultadoCreador['success'] : false;
+            $correoAbogadoEnviado = $resultadoAbogado && isset($resultadoAbogado['success']) ? $resultadoAbogado['success'] : false;
+
+            if ($correoCreadorEnviado && $correoAbogadoEnviado) {
+                Log::info('Ambos correos enviados correctamente.');
+            } else {
+                // Alguno falló, puedes manejar el error aquí
+                Log::warning('Error al enviar uno o ambos correos de requerimiento', [
+                    'creador' => is_null($resultadoCreador) ? 'No se recibió respuesta al intentar enviar el correo al creador.' : $resultadoCreador,
+                    'abogado' => is_null($resultadoAbogado) ? 'No se recibió respuesta al intentar enviar el correo al abogado.' : $resultadoAbogado
+                ]);
+            }
 
             return response()->json([
                 'status' => 200,
@@ -978,6 +1031,53 @@ class RequerimientoController extends Controller
             ]);
 
             DB::commit();
+
+            $mailerSend = new MailerSendService();
+
+            $numExpediente = DB::table('expedientes')
+                ->where('idExpediente', $requerimiento->idExpediente)
+                ->value('NumExpediente');
+
+            // Enviar correo al creador del requerimiento
+            $resultadoCreador = $mailerSend->enviarCorreo(
+                "zoemarquez678@gmail.com", // destinatario (creador), puedes hacerlo dinámico
+                "Confirmación de aceptado de requerimiento  #{$requerimiento->idRequerimiento} correctamente",
+                [
+                    'order_number' => $requerimiento->documentoAcuerdo ? $requerimiento->documentoAcuerdo->folio : null,
+                    "tracking_number" => $requerimiento->documentoAcuerdo ? $requerimiento->documentoAcuerdo->folio : null,
+                    // Tomar la fecha del último historial (el más reciente)
+                    "date" => $requerimiento->historial && $requerimiento->historial->last() && $requerimiento->historial->last()->created_at
+                        ? $requerimiento->historial->last()->created_at->format('Y-m-d')
+                        : null,
+                    "delivery" => $requerimiento->descripcion,
+                    "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d') : null,
+                    "address" => $numExpediente,
+                    "support_email" => "zoemarquez678@gmail.com",
+                    "mensaje" => "Ha aceptado correctamente el requerimiento."
+                ],
+                "z3m5jgrm3po4dpyo" // tu template_id
+            );
+
+            // Enviar correo al asignado (abogado)
+            $resultadoAbogado = $mailerSend->enviarCorreo(
+                "zoemarquez678@gmail.com", // destinatario (asignado), puedes hacerlo dinámico
+                "Hay una actualizacion del requerimiento  #{$requerimiento->documentoAcuerdo->folio}",
+                [
+                    'order_number' => $requerimiento->documentoAcuerdo ? $requerimiento->documentoAcuerdo->folio : null,
+                    "tracking_number" =>  $requerimiento->documentoAcuerdo ? $requerimiento->documentoAcuerdo->folio : null,
+                    // Tomar la fecha del último historial (el más reciente)
+                    "date" => $requerimiento->historial && $requerimiento->historial->last() && $requerimiento->historial->last()->created_at
+                        ? $requerimiento->historial->last()->created_at->format('Y-m-d')
+                        : null,
+                    "delivery" => $requerimiento->descripcion,
+                    "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d') : null,
+                    "address" =>  $numExpediente,
+                    "support_email" => "zoemarquez678@gmail.com",
+                    "mensaje" => "Estado actualizado para el requerimiento verifique en plataforma"
+                ],
+                "z3m5jgrm3po4dpyo" // tu template_id
+            );
+
             return response()->json([
                 'status' => 200,
                 'message' => 'Requerimiento admitido correctamente.',
@@ -1069,7 +1169,7 @@ class RequerimientoController extends Controller
 
             // Validar el archivo
             $validator = Validator::make($request->all(), [
-                'descripcionRechazo' => 'required|string',
+                'rechazo' => 'required|string',
             ]);
 
             if ($validator->fails()) {
@@ -1080,7 +1180,9 @@ class RequerimientoController extends Controller
                 ], 422);
             }
 
-            $requerimiento->descripcionRechazo = $request->descripcionRechazo;
+            $requerimiento->descripcionRechazo = $request->rechazo;
+            // $requerimiento->descripcionRechazo = $request->input('rechazo');
+
             $requerimiento->save();
 
             $historial = HistorialEstadoRequerimiento::create([
@@ -1091,6 +1193,52 @@ class RequerimientoController extends Controller
             ]);
 
             DB::commit();
+
+            $mailerSend = new MailerSendService();
+
+            $numExpediente = DB::table('expedientes')
+                ->where('idExpediente', $requerimiento->idExpediente)
+                ->value('NumExpediente');
+
+            // Enviar correo al creador del requerimiento
+            $resultadoCreador = $mailerSend->enviarCorreo(
+                "zoemarquez678@gmail.com", // destinatario (creador), puedes hacerlo dinámico
+                "Confirmación de rechazado de requerimiento  #{$requerimiento->idRequerimiento} correctamente",
+                [
+                    'order_number' => $requerimiento->documentoAcuerdo ? $requerimiento->documentoAcuerdo->folio : null,
+                    "tracking_number" => $requerimiento->documentoAcuerdo ? $requerimiento->documentoAcuerdo->folio : null,
+                    // Tomar la fecha del último historial (el más reciente)
+                    "date" => $requerimiento->historial && $requerimiento->historial->last() && $requerimiento->historial->last()->created_at
+                        ? $requerimiento->historial->last()->created_at->format('Y-m-d')
+                        : null,
+                    "delivery" => $requerimiento->descripcion,
+                    "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d') : null,
+                    "address" => $numExpediente,
+                    "support_email" => "zoemarquez678@gmail.com",
+                    "mensaje" => "Ha rechazado correctamente el requerimiento."
+                ],
+                "z3m5jgrm3po4dpyo" // tu template_id
+            );
+
+            // Enviar correo al asignado (abogado)
+            $resultadoAbogado = $mailerSend->enviarCorreo(
+                "zoemarquez678@gmail.com", // destinatario (asignado), puedes hacerlo dinámico
+                "Hay una actualizacion del requerimiento #{$requerimiento->documentoAcuerdo->folio}",
+                [
+                    'order_number' => $requerimiento->documentoAcuerdo ? $requerimiento->documentoAcuerdo->folio : null,
+                    "tracking_number" =>  $requerimiento->documentoAcuerdo ? $requerimiento->documentoAcuerdo->folio : null,
+                    // Tomar la fecha del último historial (el más reciente)
+                    "date" => $requerimiento->historial && $requerimiento->historial->last() && $requerimiento->historial->last()->created_at
+                        ? $requerimiento->historial->last()->created_at->format('Y-m-d')
+                        : null,
+                    "delivery" => $requerimiento->descripcion,
+                    "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d') : null,
+                    "address" => $numExpediente,
+                    "support_email" => "zoemarquez678@gmail.com",
+                    "mensaje" => "Estado actualizado para el requerimiento verifique en plataforma"
+                ],
+                "z3m5jgrm3po4dpyo" // tu template_id
+            );
 
             return response()->json([
                 'status' => 200,
@@ -1203,6 +1351,52 @@ class RequerimientoController extends Controller
 
                 DB::commit();
 
+                $mailerSend = new MailerSendService();
+
+                $numExpediente = DB::table('expedientes')
+                ->where('idExpediente', $requerimiento->idExpediente)
+                ->value('NumExpediente');
+
+                // Enviar correo al creador del requerimiento
+                $resultadoCreador = $mailerSend->enviarCorreo(
+                    "zoemarquez678@gmail.com", // destinatario (creador), puedes hacerlo dinámico
+                    "Sea completado un requerimiento #{$requerimiento->idRequerimiento}",
+                    [
+                        'order_number' => $requerimiento->documentoAcuerdo ? $requerimiento->documentoAcuerdo->folio : null,
+                        "tracking_number" => $requerimiento->documentoAcuerdo ? $requerimiento->documentoAcuerdo->folio : null,
+                        // Tomar la fecha del último historial (el más reciente)
+                        "date" => $requerimiento->historial && $requerimiento->historial->last() && $requerimiento->historial->last()->created_at
+                            ? $requerimiento->historial->last()->created_at->format('Y-m-d')
+                            : null,
+                        "delivery" => $requerimiento->descripcion,
+                        "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d') : null,
+                        "address" =>  $numExpediente,
+                        "support_email" => "zoemarquez678@gmail.com",
+                        "mensaje" => "El abogado a completado exitosamente el requerimiento solicitado."
+                    ],
+                    "z3m5jgrm3po4dpyo" // tu template_id
+                );
+
+                // Enviar correo al asignado (abogado)
+                $resultadoAbogado = $mailerSend->enviarCorreo(
+                    "zoemarquez678@gmail.com", // destinatario (asignado), puedes hacerlo dinámico
+                    "A completado exitosamente el requerimiento  #{$requerimiento->documentoAcuerdo->folio}",
+                    [
+                        'order_number' => $requerimiento->documentoAcuerdo ? $requerimiento->documentoAcuerdo->folio : null,
+                        "tracking_number" =>  $requerimiento->documentoAcuerdo ? $requerimiento->documentoAcuerdo->folio : null,
+                        // Tomar la fecha del último historial (el más reciente)
+                        "date" => $requerimiento->historial && $requerimiento->historial->last() && $requerimiento->historial->last()->created_at
+                            ? $requerimiento->historial->last()->created_at->format('Y-m-d')
+                            : null,
+                        "delivery" => $requerimiento->descripcion,
+                        "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d') : null,
+                        "address" =>  $numExpediente,
+                        "support_email" => "zoemarquez678@gmail.com",
+                        "mensaje" => "Usted ha completado el requerimiento solicitado."
+                    ],
+                    "z3m5jgrm3po4dpyo" // tu template_id
+                );
+
                 return response()->json([
                     'status' => 200,
                     'message' => 'El requerimiento ha expirado y se ha registrado en el historial.',
@@ -1228,135 +1422,7 @@ class RequerimientoController extends Controller
     }
 
 
-    // public function listarRequerimientosAbogado(Request $request, PermisosApiService $permisosApiService)
-    // {
-    //     try {
-    //         // Obtener el payload del token desde los atributos de la solicitud
-    //         $jwtPayload = $request->attributes->get('jwt_payload');
-    //         $datosUsuario = $permisosApiService->obtenerDatosUsuarioByToken($jwtPayload);
 
-    //         if (!$datosUsuario || !isset($datosUsuario['idGeneral']) || !isset($datosUsuario['Usr'])) {
-    //             return response()->json([
-    //                 'success' => false,
-    //                 'status' => 400,
-    //                 'message' => 'No se pudo obtener el idGeneral o Usr del token',
-    //             ], 400);
-    //         }
-
-    //         $idGeneral = $datosUsuario['idGeneral'];
-    //         $usr = $datosUsuario['Usr'];
-
-    //         if (!$idGeneral || !$usr) {
-    //             return response()->json([
-    //                 'success' => false,
-    //                 'status' => 400,
-    //                 'message' => 'No se pudo obtener el idGeneral del token',
-    //             ], 400);
-    //         }
-
-    //         $idSistema = $permisosApiService->obtenerIdAreaSistemaUsuario($request->bearerToken(), $datosUsuario['idGeneral'], 4171);
-    //         if (!$idSistema) {
-    //             return response()->json([
-    //                 'success' => false,
-    //                 'status' => 400,
-    //                 'message' => 'No se pudo obtener el idAreaSistemaUsuario del token',
-    //             ], 400);
-    //         }
-    //         $perfiles = $permisosApiService->obtenerPerfilesUsuario($request->bearerToken(), $idSistema);
-    //         if (!$perfiles) {
-    //             return response()->json([
-    //                 'success' => false,
-    //                 'status' => 400,
-    //                 'message' => 'No se pudo obtener los perfiles del usuario',
-    //             ], 400);
-    //         }
-
-    //         $tienePerfilAbogado = collect($perfiles)->contains(function ($perfil) {
-    //             return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === strtolower(trim('abogado'));
-    //         });
-
-    //         if (!$tienePerfilAbogado) {
-    //             return response()->json([
-    //                 'status' => 403,
-    //                 'message' => 'No tiene permisos.',
-    //             ], 403);
-    //         }
-
-    //         //Filtros de el estado y fecha Limite inicio y fin
-    //         $estado = $request->query('estado');
-    //         $fechaInicio = $request->query('fechaInicio');
-    //         $fechaFinal = $request->query('fechaFinal');
-
-    //         // Verificar y actualizar el estado de los requerimientos expirados
-    //         $requerimientos = Requerimiento::where('idAbogado', $idGeneral)->get();
-
-    //         // foreach ($requerimientos as $requerimiento) {
-
-    //         //     $fechaLimite = $requerimiento->fechaLimite;
-    //         //     $fechaActual = now();
-
-    //         //     // Obtener el último estado del requerimiento
-    //         //     $estadoFinal = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
-
-    //         //     if (($fechaLimite >= $fechaActual) && $estadoFinal == 1) {
-    //         //         $this->estadoRequerimientoExpiro($requerimiento, $request, $permisosApiService);
-    //         //     }
-    //         // }
-
-    //         foreach ($requerimientos as $requerimiento) {
-
-    //             $estadoFinal = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
-    //             $fechaLimite = $requerimiento->fechaLimite;
-    //             $fechaActual = now();
-
-    //             if (($fechaLimite < $fechaActual) && $estadoFinal == 1) {
-    //                 $this->estadoRequerimientoExpiro($requerimiento, $request, $permisosApiService);
-    //             }
-    //         };
-
-    //         // Listar los requerimientos con un identificador único para el abogado
-    //         $requerimientos = Requerimiento::with([
-    //             'historial:idHistorialEstadoRequerimientos,idCatEstadoRequerimientos,idRequerimiento',
-    //             'expediente'
-    //         ])
-    //             ->where('idAbogado', $idGeneral)
-    //             ->get()
-    //             ->filter(function ($requerimiento) use ($estado) {
-    //                 $ultimoEstado = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
-
-    //                 if (is_null($estado)) {
-    //                     // Por defecto, estado 3
-    //                     return $ultimoEstado == 1;
-    //                 }
-
-    //                 if ($estado === '0' || $estado === 0) {
-    //                     // No aplicar filtro
-    //                     return true;
-    //                 }
-
-    //                 // Filtro por estado específico (ej. 1-5)
-    //                 return $ultimoEstado == $estado;
-    //             })
-    //             ->values();
-
-    //         $requerimientos = $requerimientos->map(function ($requerimiento) {
-    //             $requerimiento->idRequerimientoAbogado = 'ABOG-' . $requerimiento->idRequerimiento;
-    //             return $requerimiento;
-    //         });
-
-    //         return response()->json([
-    //             'status' => 200,
-    //             'message' => "Listado de requerimientos",
-    //             'data' => $requerimientos
-    //         ], 200);
-    //     } catch (\Exception $e) {
-    //         return response()->json([
-    //             'status' => 500,
-    //             'message' => 'Error al obtener la lista de requerimientos',
-    //             'error' => $e->getMessage(),
-    //         ], 500);
-    //     }
-    // }
 
     public function listarRequerimientosAbogado(Request $request, PermisosApiService $permisosApiService)
     {

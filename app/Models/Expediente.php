@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Catalogos\CatJuzgados;
 use Illuminate\Database\Eloquent\Model;
 
 class Expediente extends Model
@@ -34,5 +35,9 @@ class Expediente extends Model
     public function requerimientos()
     {
         return $this->hasMany(Requerimiento::class, 'idExpediente');
+    }
+
+    public function juzgado(){
+         return $this->belongsTo(CatJuzgados::class, 'idCatJuzgado');
     }
 }

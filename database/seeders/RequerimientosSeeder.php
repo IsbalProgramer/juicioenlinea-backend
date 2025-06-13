@@ -19,59 +19,29 @@ class RequerimientosSeeder extends Seeder
     {
         //Catalogo de requerimientos
         CatEstadoRequerimiento::create([
-            'nombre' => 'Requerimiento Creado',
-            'activo' => 1,
-        ]);
-        CatEstadoRequerimiento::create([
-            'nombre' => 'Requerimiento Expirado',
-            'activo' => 1,
-        ]);
-        CatEstadoRequerimiento::create([
-            'nombre' => 'Requerimiento Entregado',
+            'nombre' => 'Pendiente',
             'activo' => 1,
         ]);
 
         CatEstadoRequerimiento::create([
-            'nombre' => 'Requerimiento Admitido',
+            'nombre' => 'Expirado',
             'activo' => 1,
         ]);
+
         CatEstadoRequerimiento::create([
-            'nombre' => 'Requerimiento Descartado',
+            'nombre' => 'Entregado',
             'activo' => 1,
         ]);
 
-        AbogadoExpediente::create([
-            'idExpediente' => '0001/2020',
-            'idAbogado' => 30057,
+        CatEstadoRequerimiento::create([
+            'nombre' => 'Aceptado',
             'activo' => 1,
         ]);
 
-        AbogadoExpediente::create([
-            'idExpediente' => '0001/2020',
-            'idAbogado' => 30058,
+        CatEstadoRequerimiento::create([
+            'nombre' => 'Rechazado',
             'activo' => 1,
         ]);
-        
-        AbogadoExpediente::create([
-            'idExpediente' => '0001/2020',
-            'idAbogado' => 30059,
-            'activo' => 1,
-        ]);
-        AbogadoExpediente::create([
-            'idExpediente' => '0002/2020',
-            'idAbogado' => 30060,
-            'activo' => 1,
-        ]);
-
-        AbogadoExpediente::create([
-            'idExpediente' => '0003/2020',
-            'idAbogado' => 30057,
-            'activo' => 1,
-        ]);
-        AbogadoExpediente::create([
-            'idExpediente' => '0002/2020',
-            'idAbogado' => 30059,
-            'activo' => 1,
-        ]);
+       
     }
 }
