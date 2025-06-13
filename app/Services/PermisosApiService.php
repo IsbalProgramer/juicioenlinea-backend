@@ -16,6 +16,7 @@ class PermisosApiService
             'idGeneral' => $userData['idGeneral'] ?? null,
             'Usr' => $userData['Usr'] ?? null,
             'nombre' => $userData['nombre'] ?? null,
+            
         ];
     }
 

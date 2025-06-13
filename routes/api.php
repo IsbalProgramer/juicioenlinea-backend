@@ -64,16 +64,17 @@ Route::prefix('Expediente')->group(function () {
     Route::get('Detalle/{id}', [ExpedienteController::class, 'show'])->middleware(VerifyJwtToken::class)->middleware(VerifyJwtToken::class);
     Route::get('ListarExpedientesDistintos', [ExpedienteController::class, 'listarExpedientesDistintos']);
     Route::get('ExpedientesAbogados/{id}', [ExpedienteController::class, 'listarAbogadosPorExpediente'])->middleware(VerifyJwtToken::class);
-    Route::get('PartesAudiencia/{idExpediente}', [ParteController::class, 'show'])->middleware(VerifyJwtToken::class);
+    Route::get('PartesAudiencia/{idExpediente}', [ParteController::class, 'show']);
     Route::get('Contar', [ExpedienteController::class, 'contarExpedientesUsuario'])->middleware(VerifyJwtToken::class);
 });
 
 
 Route::prefix('Audiencia')->group(function () {
     Route::get('Listar', [AudienciaController::class, 'index']);
+    Route::get('Detalle/{idAudiencia}', [AudienciaController::class, 'show']);
     Route::post('Crear', [AudienciaController::class, 'store']);
     Route::get('Disponibilidad', [AudienciaController::class, 'disponibilidad']);
     Route::get('rango-maximo', [AudienciaController::class, 'rangoMaximoDisponible']);
-
     Route::put('Editar/{idAudiencia}', [AudienciaController::class, 'update']);
+
 });

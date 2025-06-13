@@ -13,13 +13,20 @@ return new class extends Migration
     {
         Schema::create('invitados', function (Blueprint $table) {
             $table->id('idInvitado');
+            $table->integer('idUsr')->nullable(); 
             $table->unsignedBigInteger('idAudiencia');
-            $table->string('email');
-            $table->string('displayName');
-            $table->string('coHost')->default('false'); // 'true' or 'false' as string
+            $table->string('correo');
+            $table->string('correoAlterno')->nullable();
+            $table->string('nombre');
+            $table->string('coHost')->default('false'); 
+            $table->unsignedBigInteger('idCatSexo');
+            $table->unsignedBigInteger('idCatTipoParte');
+            $table->string('direccion');
             $table->timestamps();
-
             $table->foreign('idAudiencia')->references('idAudiencia')->on('audiencias')->onDelete('cascade');
+            $table->foreign('idCatSexo')->references('idCatSexo')->on('cat_sexos')->onDelete('cascade');
+            $table->foreign('idCatTipoParte')->references('idCatTipoParte')->on('cat_tipo_partes')->onDelete('cascade');
+
         });
     }
 
