@@ -104,61 +104,74 @@ class PermisosApiController extends Controller
      */
     public function show(string $idUsr, string $idGeneral)
     {
-        $token = request()->bearerToken();
-        $servicio = new PermisosApiService();
-        $respuesta = $servicio->obtenerDatosUsuarioByApi($token, $idUsr);
+        try {
+            $token = request()->bearerToken();
+            $servicio = new PermisosApiService();
+            $respuesta = $servicio->obtenerDatosUsuarioByApi($token, $idUsr);
 
-        // Buscar en pD_Abogados
-        if (!empty($respuesta['data']['pD_Abogados'])) {
-            foreach ($respuesta['data']['pD_Abogados'] as $abogado) {
-                if (isset($abogado['idGeneral']) && $abogado['idGeneral'] == $idGeneral) {
-                    $partes = [];
+            // Buscar en pD_Abogados
+            if (!empty($respuesta['data']['pD_Abogados'])) {
+                foreach ($respuesta['data']['pD_Abogados'] as $abogado) {
+                    if (isset($abogado['idGeneral']) && $abogado['idGeneral'] == $idGeneral) {
+                        $partes = [];
 
-                    if (!empty($abogado['direccionPart'])) {
-                        $partes[] = trim($abogado['direccionPart']);
-                    }
-                    if (!empty($abogado['direccionPartNoExt'])) {
-                        $partes[] = 'Ext: ' . trim($abogado['direccionPartNoExt']);
-                    }
-                    // Solo incluir Int si tiene valor
-                    if (!empty($abogado['direccionPartNoInt'])) {
-                        $partes[] = 'Int: ' . trim($abogado['direccionPartNoInt']);
-                    }
-                    if (!empty($abogado['direccionPartColonia'])) {
-                        $partes[] = trim($abogado['direccionPartColonia']);
-                    }
-                    if (!empty($abogado['direccionPartMunicipio'])) {
-                        $partes[] = trim($abogado['direccionPartMunicipio']);
-                    }
-                    if (!empty($abogado['direccionPartEstado'])) {
-                        $partes[] = trim($abogado['direccionPartEstado']);
-                    }
-                    if (!empty($abogado['direccionPartCP'])) {
-                        $partes[] = trim($abogado['direccionPartCP']);
-                    }
+                        if (!empty($abogado['direccionPart'])) {
+                            $partes[] = trim($abogado['direccionPart']);
+                        }
+                        if (!empty($abogado['direccionPartNoExt'])) {
+                            $partes[] = 'Ext: ' . trim($abogado['direccionPartNoExt']);
+                        }
+                        if (!empty($abogado['direccionPartNoInt'])) {
+                            $partes[] = 'Int: ' . trim($abogado['direccionPartNoInt']);
+                        }
+                        if (!empty($abogado['direccionPartColonia'])) {
+                            $partes[] = trim($abogado['direccionPartColonia']);
+                        }
+                        if (!empty($abogado['direccionPartMunicipio'])) {
+                            $partes[] = trim($abogado['direccionPartMunicipio']);
+                        }
+                        if (!empty($abogado['direccionPartEstado'])) {
+                            $partes[] = trim($abogado['direccionPartEstado']);
+                        }
+                        if (!empty($abogado['direccionPartCP'])) {
+                            $partes[] = trim($abogado['direccionPartCP']);
+                        }
 
-                    $ext = implode(', ', $partes);
+                        $ext = implode(', ', $partes);
 
-                    return response()->json([
-                        'success' => true,
-                        'status' => 200,
-                        'message' => 'Consulta exitosa',
-                        'data' => [
-                            'idUsr' => $idUsr,
-                            'nombre' => $abogado['nombre'] ?? '',
-                            'correo' => $abogado['correo'] ?? '',
-                            'direccion' => $ext,
-                        ],
-                    ], 200);
+                        return response()->json([
+                            'success' => true,
+                            'status' => 200,
+                            'message' => 'Consulta exitosa',
+                            'data' => [
+                                'idUsr' => $idUsr,
+                                'nombre' => $abogado['nombre'] ?? '',
+                                'correo' => $abogado['correo'] ?? '',
+                                'correoAlterno' => $abogado['correoAlterno'] ?? '',
+                                'direccion' => $ext,
+                            ],
+                        ], 200);
+                    }
                 }
             }
-        }
 
-        return response()->json([
-            'success' => false,
-            'message' => 'No hay coincidencias para los datos proporcionado.',
-            'data' => null
-        ], 404);
+            // No hay coincidencias
+            return response()->json([
+                'success' => false,
+                'status' => 404,
+                'message' => 'No hay coincidencias para los datos proporcionados.',
+                'data' => null
+            ], 404);
+
+        } catch (\Throwable $e) {
+            // Error fatal, timeout o conexión
+            return response()->json([
+                'success' => false,
+                'status' => 500,
+                'message' => 'Ocurrió un error al consultar el servicio. Por favor revise su conexión o intente más tarde.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**

@@ -15,6 +15,7 @@ class HistorialEstadoAudiencia extends Model
         'idCatalogoEstadoAudiencia',
         'fechaHora',
         'observaciones',
+        'idDocumento'
     ];
 
     public $timestamps = false;
@@ -27,6 +28,10 @@ class HistorialEstadoAudiencia extends Model
     public function catalogoEstadoAudiencia()
     {
         return $this->belongsTo(CatEstadoAudiencia::class, 'idCatalogoEstadoAudiencia', 'idCatalogoEstadoAudiencia');
+    }
+    public function documento()
+    {
+        return $this->belongsTo(Documento::class, 'idDocumento', 'idDocumento');
     }
 
 }

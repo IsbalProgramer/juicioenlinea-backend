@@ -84,8 +84,8 @@ class PreRegistroController extends Controller
                     // Filtrar por el estado más reciente en historialEstado
                     $query->whereHas('historialEstado', function ($q) use ($estado) {
                         $q->latest('fechaEstado')
-                          ->limit(1)
-                          ->where('idCatEstadoInicio', $estado);
+                            ->limit(1)
+                            ->where('idCatEstadoInicio', $estado);
                     });
                 })
                 ->get();
@@ -123,7 +123,9 @@ class PreRegistroController extends Controller
             'partes.*.apellidoMaterno' => 'string|max:255',
             'partes.*.idCatSexo' => 'required|integer',
             'partes.*.idCatTipoParte' => 'required|integer',
-            'partes.*.correo' => 'required|email|max:255',            'partes.*.direccion' => 'nullable|string|max:255',
+            'partes.*.correo' => 'required|email|max:255',
+            'partes.*.correoAlterno' => 'nullable|email|max:255',
+            'partes.*.direccion' => 'nullable|string|max:255',
             'documentos.*.idCatTipoDocumento' => 'required|integer',
             'documentos.*.nombre' => 'nullable|string',
             'documentos.*.documento' => 'required|file',
@@ -295,7 +297,7 @@ class PreRegistroController extends Controller
                 [
                     'order_number' => $preRegistro->folioPreregistro,
                     "tracking_number" => $preRegistro->folioPreregistro,
-                    "date" => $preRegistro->fechaCreada,
+                    "date" => Carbon::parse($preRegistro->fechaCreada)->format('d/m/Y H:i'),
                     "delivery" => $preRegistro->catMateriaVia->catVia->descripcion,
                     "delivery_date" => $preRegistro->observaciones,
                     "address" => $preRegistro->sintesis,
@@ -400,11 +402,13 @@ class PreRegistroController extends Controller
                 return [
                     'idParte' => $parte->idParte,
                     'idPreregistro' => $parte->idPreregistro,
+                    'idUsr' => $parte->idUsr,
                     'nombre' => $parte->nombre,
                     'apellidoPaterno' => $parte->apellidoPaterno,
                     'apellidoMaterno' => $parte->apellidoMaterno,
                     'direccion' => $parte->direccion,
                     'correo' => $parte->correo,
+                    'correoAlterno' => $parte->correoAlterno ?? null,
                     'idCatSexo' => $parte->idCatSexo,
                     'sexoDescripcion' => $parte->catSexo->descripcion ?? null,
                     'idCatTipoParte' => $parte->idCatTipoParte,
@@ -486,5 +490,4 @@ class PreRegistroController extends Controller
     {
         //
     }
-
 }

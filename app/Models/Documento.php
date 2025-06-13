@@ -59,4 +59,5 @@ class Documento extends Model
     {
         return $this->belongsTo(CatTipoDocumento::class, 'idCatTipoDocumento');
     }
+    
 }
