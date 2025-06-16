@@ -65,13 +65,9 @@ Route::prefix('Expediente')->group(function () {
     Route::post('Asignar', [ExpedienteController::class, 'store'])->middleware(VerifyJwtToken::class);
     Route::get('Detalle/{id}', [ExpedienteController::class, 'show'])->middleware(VerifyJwtToken::class)->middleware(VerifyJwtToken::class);
     Route::get('ExpedientesAbogados/{id}', [ExpedienteController::class, 'listarAbogadosPorExpediente'])->middleware(VerifyJwtToken::class);
-
     Route::get('PartesAudiencia/{idExpediente}', [ParteController::class, 'show'])->middleware(VerifyJwtToken::class);
-
     Route::post('DetalleBusquedaExpediente', [ExpedienteController::class, 'busquedaExpedienteDetalles'])->middleware(VerifyJwtToken::class);
-
     Route::get('Contar', [ExpedienteController::class, 'contarExpedientesUsuario'])->middleware(VerifyJwtToken::class);
-
 });
 
 
@@ -79,10 +75,10 @@ Route::prefix('Audiencia')->group(function () {
     Route::get('Listar', [AudienciaController::class, 'index']);
     Route::get('Detalle/{idAudiencia}', [AudienciaController::class, 'show']);
     Route::post('Crear', [AudienciaController::class, 'store']);
-  Route::get('Disponibilidad', [AudienciaController::class, 'disponibilidad']);
+    Route::get('Disponibilidad', [AudienciaController::class, 'disponibilidad']);
     Route::get('rango-maximo', [AudienciaController::class, 'rangoMaximoDisponible']);
     Route::put('Editar/{idAudiencia}', [AudienciaController::class, 'update']);
-
+    Route::post('Cancelar/{idAudiencia}', [AudienciaController::class, 'cancelarAudiencia'])->middleware(VerifyJwtToken::class);
 });
 
 Route::prefix('Tramites')->group(function () {
@@ -91,7 +87,6 @@ Route::prefix('Tramites')->group(function () {
     Route::get('Detalle/{id}', [TramiteController::class, 'show'])->middleware(VerifyJwtToken::class);
     Route::put('/Actualizar/{id}', [TramiteController::class, 'update'])->middleware(VerifyJwtToken::class);
     Route::get('ListarJuzgado', [TramiteController::class, 'listarJuzgado']);
-
 });
 
 Route::prefix('Juzgados')->group(function () {

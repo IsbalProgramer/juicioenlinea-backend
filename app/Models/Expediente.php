@@ -24,7 +24,7 @@ class Expediente extends Model
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
 
-        public function tramites()
+    public function tramites()
     {
         return $this->hasMany(Tramite::class, 'idExpediente');
     }
@@ -36,8 +36,12 @@ class Expediente extends Model
     {
         return $this->hasMany(Requerimiento::class, 'idExpediente');
     }
-
-    public function juzgado(){
-         return $this->belongsTo(CatJuzgados::class, 'idCatJuzgado');
+    public function juzgado()
+    {
+        return $this->belongsTo(CatJuzgados::class, 'idCatJuzgado');
+    }
+    public function abogados()
+    {
+        return $this->belongsToMany(Abogado::class, 'expediente_abogado', 'idExpediente', 'idAbogado');
     }
 }
