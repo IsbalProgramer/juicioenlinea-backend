@@ -41,7 +41,7 @@ class DatabaseSeeder extends Seeder
         CatEstadoInicios::create(['descripcion' => 'Finalizado' ]);
 
         // Crear estados para aduiencias
-        CatEstadoAudiencia::create(['descripcion' => 'Activa' ]);
+        CatEstadoAudiencia::create(['descripcion' => 'Programada' ]);
         CatEstadoAudiencia::create(['descripcion' => 'Finalizada' ]);
         CatEstadoAudiencia::create(['descripcion' => 'Reprogramada' ]);
         CatEstadoAudiencia::create(['descripcion' => 'Cancelada' ]);

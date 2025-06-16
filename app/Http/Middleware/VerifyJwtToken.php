@@ -50,7 +50,12 @@ class VerifyJwtToken
         // Verifica si el token tiene un campo 'exp' (expiración) y si ya expiró
         if (isset($payload['exp']) && $payload['exp'] < time()) {
             // Retorna un error si el token está expirado
-            return response()->json(['error' => 'Token expirado'], 401);
+            return response()->json([
+                'success' => false,
+                'status' => 401,
+                'message' => 'Token expirado',
+                'error' => 'El token ha expirado 0.o'
+            ], 401);
         }
 
         // Si todo está bien, almacena el payload decodificado en los atributos de la solicitud

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Abogado;
 use App\Models\Catalogos\CatMateriaVia;
 use App\Models\PreRegistro;
 use App\Services\MailerSendService;
@@ -189,25 +190,46 @@ class PreRegistroController extends Controller
             // Obtener perfiles del usuario
             $perfiles = $permisosApiService->obtenerPerfilesUsuario($token, $idAreaSistemaUsuario);
 
-            // Validar que tenga el perfil "Abogado"
-            // $tienePerfilAbogado = false;
-            // if (is_array($perfiles)) {
-            //     foreach ($perfiles as $perfil) {
-            //         if (isset($perfil['descripcion']) && strtolower($perfil['descripcion']) === 'abogado') {
-            //             $tienePerfilAbogado = true;
-            //             break;
-            //         }
-            //     }
-            // }
+            //Validar que tenga el perfil "Abogado"
+            $tienePerfilAbogado = false;
+            if (is_array($perfiles)) {
+                foreach ($perfiles as $perfil) {
+                    if (isset($perfil['descripcion']) && strtolower($perfil['descripcion']) === 'abogado') {
+                        $tienePerfilAbogado = true;
+                        break;
+                    }
+                }
+            }
 
-            // if (!$tienePerfilAbogado) {
-            //     return response()->json([
-            //         'success' => false,
-            //         'status' => 403,
-            //         'message' => 'No tienes permisos para realizar esta acción.',
-            //     ], 403);
-            // }
+            if (!$tienePerfilAbogado) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 403,
+                    'message' => 'No tienes permisos para realizar esta acción.',
+                ], 403);
+            }
 
+            $respuesta = $permisosApiService->obtenerDatosUsuarioByApi($token, $usr);
+
+            if (!empty($respuesta['data']['pD_Abogados']) && is_array($respuesta['data']['pD_Abogados'])) {
+                // Tomar el primer abogado que coincida con el idGeneral
+                foreach ($respuesta['data']['pD_Abogados'] as $abogadoData) {
+                    if (isset($abogadoData['idGeneral']) && $abogadoData['idGeneral'] == $idGeneral) {
+                        Abogado::firstOrCreate(
+                            [
+                                'idUsr' => $usr,
+                                'idGeneral' => $idGeneral,
+                            ],
+                            [
+                                'nombre' => mb_strtoupper($abogadoData['nombre'] ?? ''),
+                                'correo' => mb_strtoupper($abogadoData['correo'] ?? ''),
+                                'correoAlterno' => mb_strtoupper($abogadoData['correoAlterno'] ?? ''),
+                            ]
+                        );
+                        break;
+                    }
+                }
+            }
             // Crear el folio consecutivo
             $ultimoFolio = PreRegistro::latest('idPreregistro')->value('folioPreregistro');
             $numeroConsecutivo = $ultimoFolio ? intval(explode('/', $ultimoFolio)[0]) + 1 : 1;

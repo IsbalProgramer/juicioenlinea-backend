@@ -203,6 +203,7 @@ class AudienciaController extends Controller
                     'idCatTipoParte' => $invitado->idCatTipoParte,
                     'tipoParteDescripcion' => $invitado->catTipoParte->descripcion ?? null,
                     'direccion' => $invitado->direccion,
+                    'esAbogado' => $invitado->esAbogado ? true : false,
 
                 ];
             });
@@ -275,7 +276,46 @@ class AudienciaController extends Controller
         $validated = $validator->validated();
 
         // Buscar la audiencia
-        $audiencia = Audiencia::findOrFail($idAudiencia);
+        $audiencia = Audiencia::with('ultimoEstado')->findOrFail($idAudiencia);
+
+        // 1. No permitir si ya está cancelada
+        if ($audiencia->ultimoEstado && $audiencia->ultimoEstado->idCatalogoEstadoAudiencia == 4) {
+            return response()->json([
+                'success' => false,
+                'status' => 400,
+                'message' => 'No se puede actualizar una audiencia cancelada.',
+            ]);
+        }
+
+        // 2. No permitir si la audiencia ya está en progreso o terminó
+        $ahora = now();
+        $inicio = Carbon::parse($audiencia->start);
+        $fin = Carbon::parse($audiencia->end);
+        if ($ahora->between($inicio, $fin) || $ahora->gt($fin)) {
+            return response()->json([
+                'success' => false,
+                'status' => 400,
+                'message' => 'No se puede actualizar una audiencia que ya está en progreso o finalizó.',
+            ]);
+        }
+
+        // 3. No permitir si los valores enviados son iguales a los actuales
+        $startDb = Carbon::parse($audiencia->start)->format('Y-m-d H:i:s');
+        $endDb = Carbon::parse($audiencia->end)->format('Y-m-d H:i:s');
+        $startRequest = Carbon::parse($validated['start'])->format('Y-m-d H:i:s');
+        $endRequest = Carbon::parse($validated['end'])->format('Y-m-d H:i:s');
+
+        $sinCambios =
+            $startDb === $startRequest &&
+            $endDb === $endRequest;
+
+        if ($sinCambios) {
+            return response()->json([
+                'success' => false,
+                'status' => 400,
+                'message' => 'No se detectaron cambios en los datos de la audiencia.',
+            ]);
+        }
 
         // El meetingId de Webex está en el campo 'id'
         $meetingId = $audiencia->id;
@@ -332,7 +372,7 @@ class AudienciaController extends Controller
         ], 200);
     }
 
-    public function actualizarEstado(Request $request, $idAudiencia, NasApiService $nasApiService)
+    public function cancelarAudiencia(Request $request, $idAudiencia, NasApiService $nasApiService)
     {
         $validator = Validator::make($request->all(), [
             'idCatTipoDocumento' => 'required|integer',
@@ -349,14 +389,49 @@ class AudienciaController extends Controller
             ], 422);
         }
 
+        // Buscar la audiencia con su último estado
+        $audiencia = Audiencia::with('ultimoEstado')->findOrFail($idAudiencia);
+
+        // 1. No permitir si ya está cancelada
+        if ($audiencia->ultimoEstado && $audiencia->ultimoEstado->idCatalogoEstadoAudiencia == 4) {
+            return response()->json([
+                'success' => false,
+                'status' => 400,
+                'message' => 'No se puede cancelar una audiencia que ya está cancelada.',
+            ], 400);
+        }
+
+        // 2. No permitir si la audiencia ya está en progreso o terminó
+        $ahora = now();
+        $inicio = Carbon::parse($audiencia->start);
+        $fin = Carbon::parse($audiencia->end);
+        if ($ahora->between($inicio, $fin) || $ahora->gt($fin)) {
+            return response()->json([
+                'success' => false,
+                'status' => 400,
+                'message' => 'No se puede cancelar una audiencia que ya está en progreso o finalizó.',
+            ], 400);
+        }
+
         try {
-            $audiencia = Audiencia::findOrFail($idAudiencia);
+            $audiencia = Audiencia::with('expediente')->findOrFail($idAudiencia);
 
             // Subir documento al NAS
             $file = $request->file('documento');
             $idCatTipoDocumento = $request->input('idCatTipoDocumento');
             // Extraer año y número del expediente
-            list($numeroExpediente, $anioExpediente) = explode('/', $audiencia->idExpediente);
+            $numExpediente = $audiencia->expediente->NumExpediente ?? null;
+
+            if (!$numExpediente || strpos($numExpediente, '/') === false) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 500,
+                    'message' => 'El expediente relacionado no tiene el formato esperado (numero/año).',
+                    'error' => $numExpediente,
+                ], 500);
+            }
+
+            list($numeroExpediente, $anioExpediente) = explode('/', $numExpediente);
 
             $ruta = "PERICIALES/AUDIENCIAS/{$anioExpediente}/{$numeroExpediente}";
             $timestamp = now()->format('Y_m_d_His');
@@ -373,12 +448,22 @@ class AudienciaController extends Controller
                 'idExpediente' => $audiencia->idExpediente,
             ]);
 
-            // Observación personalizada
-            $observacion = $request->input('observaciones', 'Estado de la audiencia actualizado a 2');
+            $fechaCancelacion = now();
+            $fechaFormateada = $fechaCancelacion->translatedFormat('j \d\e F \d\e Y');
+            $horaFormateada = $fechaCancelacion->format('H:i');
+
+            $observacionInput = $request->input('observaciones');
+            $observacionBase = "Audiencia cancelada el {$fechaFormateada} a las {$horaFormateada} h.";
+
+            if ($observacionInput) {
+                $observacion = "{$observacionInput}. {$observacionBase}";
+            } else {
+                $observacion = $observacionBase;
+            }
 
             // Crear historial de estado con idDocumento
             $audiencia->historialEstados()->create([
-                'idCatalogoEstadoAudiencia' => 2,
+                'idCatalogoEstadoAudiencia' => 4,
                 'fechaHora' => now(),
                 'observaciones' => $observacion,
                 'idDocumento' => $documento->idDocumento,

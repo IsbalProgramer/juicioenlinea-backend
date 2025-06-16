@@ -19,9 +19,10 @@ return new class extends Migration
             $table->string('correoAlterno')->nullable();
             $table->string('nombre');
             $table->string('coHost')->default('false'); 
-            $table->unsignedBigInteger('idCatSexo');
-            $table->unsignedBigInteger('idCatTipoParte');
-            $table->string('direccion');
+            $table->unsignedBigInteger('idCatSexo')->nullable();
+            $table->unsignedBigInteger('idCatTipoParte')->nullable();
+            $table->string('direccion')->nullable();
+            $table->boolean('esAbogado')->default(false);
             $table->timestamps();
             $table->foreign('idAudiencia')->references('idAudiencia')->on('audiencias')->onDelete('cascade');
             $table->foreign('idCatSexo')->references('idCatSexo')->on('cat_sexos')->onDelete('cascade');

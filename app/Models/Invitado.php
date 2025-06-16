@@ -21,6 +21,7 @@ class Invitado extends Model
         'nombre',
         'coHost',
         'direccion',
+        'esAbogado'
     ];
     public $timestamps = true;
 

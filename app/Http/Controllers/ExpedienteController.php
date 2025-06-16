@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\AuthHelper;
+use App\Models\Abogado;
 use App\Models\Expediente;
+use App\Models\ExpedienteAbogado;
 use App\Models\PreRegistro;
 use App\Services\PermisosApiService;
 use Carbon\Carbon;
@@ -117,7 +119,7 @@ class ExpedienteController extends Controller
         //     ->get();
 
 
-        $expedientes = Expediente::with(['preRegistro.catMateriaVia.catMateria', 'preRegistro.catMateriaVia.catVia', 'tramites' ])
+        $expedientes = Expediente::with(['preRegistro.catMateriaVia.catMateria', 'preRegistro.catMateriaVia.catVia', 'tramites'])
             ->when($esAbogado, function ($query) use ($idGeneral) {
                 $query->whereHas('preRegistro', function ($subquery) use ($idGeneral) {
                     $subquery->where('idGeneral', $idGeneral);
@@ -203,6 +205,18 @@ class ExpedienteController extends Controller
                 'fechaResponse' => $request->fechaResponse,
                 'idSecretario' => $request->idSecretario // asignacion del secretario
             ]);
+            
+            // Relacionar al abogado con el expediente
+            $preregistro = PreRegistro::find($request->idPreregistro);
+            if ($preregistro && $preregistro->idGeneral) {
+                $abogado = Abogado::where('idGeneral', $preregistro->idGeneral)->first();
+                if ($abogado) {
+                    ExpedienteAbogado::firstOrCreate([
+                        'idExpediente' => $expediente->idExpediente,
+                        'idAbogado' => $abogado->idAbogado,
+                    ]);
+                }
+            }
 
             return response()->json([
                 'success' => true,
@@ -339,7 +353,7 @@ class ExpedienteController extends Controller
             }
 
             $idPreregistro = $expediente->idPreregistro;
-            
+
             // Obtener el preregistro relacionado
             $preregistro = PreRegistro::where('idPreregistro', $idPreregistro)->first();
 
