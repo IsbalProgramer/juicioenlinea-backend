@@ -16,9 +16,14 @@ class MeetingService
      * @return array|null
      */
     public function crearReunion(string $token, array $data)
-    {
+    {          
         // Valores por defecto
         $defaults = [
+            'timezone' => 'America/Mexico_City',
+            'excludePassword' => true, // Excluir contraseña de la reunión
+            'reminderTime' => 30, // Recordatorio en minutos
+            'sendEmail' => true, // Enviar correo electrónico de invitación
+            'hostEmail' => 'unidad.informatica.dpi@gmail.com',
             'enabledAutoRecordMeeting' => true,
             'allowAnyUserToBeCoHost' => false,
             'enabledVisualWatermark' => true, //marca de agua video
@@ -40,7 +45,6 @@ class MeetingService
             'allowAnyUserToBeCoHost' => $payload['allowAnyUserToBeCoHost'],
             'excludePassword' => $payload['excludePassword'],
             'reminderTime' => $payload['reminderTime'],
-            'unlockedMeetingJoinSecurity' => $payload['unlockedMeetingJoinSecurity'],
             'sendEmail' => $payload['sendEmail'],
             'hostEmail' => $payload['hostEmail'],
             'enabledVisualWatermark' => $payload['enabledVisualWatermark'],
@@ -100,6 +104,31 @@ class MeetingService
             'success' => false,
             'status' => $response->status(),
             'message' => $response->json()['message'] ?? 'Error al actualizar la reunión',
+            'errors' => $response->json()['errors'] ?? null,
+        ];
+    }
+    
+    public function eliminarReunion(string $token, string $meetingId)
+    {
+        $url = $this->baseUrl . '/' . $meetingId;
+    
+        $response = Http::withToken($token)
+            ->acceptJson()
+            ->delete($url);
+    
+        if ($response->successful()) {
+            return [
+                'success' => true,
+                'status' => $response->status(),
+                'message' => 'Reunión eliminada correctamente',
+                'data' => $response->json(),
+            ];
+        }
+    
+        return [
+            'success' => false,
+            'status' => $response->status(),
+            'message' => $response->json()['message'] ?? 'Error al eliminar la reunión',
             'errors' => $response->json()['errors'] ?? null,
         ];
     }

@@ -17,6 +17,7 @@ class Parte extends Model
         'idCatTipoParte',
         'direccion',
         'correo',
+        'correoAlterno',
         'idPreregistro' // Llave foránea 
     ];
 
