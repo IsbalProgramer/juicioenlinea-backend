@@ -190,23 +190,23 @@ class PreRegistroController extends Controller
             $perfiles = $permisosApiService->obtenerPerfilesUsuario($token, $idAreaSistemaUsuario);
 
             // Validar que tenga el perfil "Abogado"
-            // $tienePerfilAbogado = false;
-            // if (is_array($perfiles)) {
-            //     foreach ($perfiles as $perfil) {
-            //         if (isset($perfil['descripcion']) && strtolower($perfil['descripcion']) === 'abogado') {
-            //             $tienePerfilAbogado = true;
-            //             break;
-            //         }
-            //     }
-            // }
+            $tienePerfilAbogado = false;
+            if (is_array($perfiles)) {
+                foreach ($perfiles as $perfil) {
+                    if (isset($perfil['descripcion']) && strtolower($perfil['descripcion']) === 'abogado') {
+                        $tienePerfilAbogado = true;
+                        break;
+                    }
+                }
+            }
 
-            // if (!$tienePerfilAbogado) {
-            //     return response()->json([
-            //         'success' => false,
-            //         'status' => 403,
-            //         'message' => 'No tienes permisos para realizar esta acción.',
-            //     ], 403);
-            // }
+            if (!$tienePerfilAbogado) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 403,
+                    'message' => 'No tienes permisos para realizar esta acción.',
+                ], 403);
+            }
 
             // Crear el folio consecutivo
             $ultimoFolio = PreRegistro::latest('idPreregistro')->value('folioPreregistro');
