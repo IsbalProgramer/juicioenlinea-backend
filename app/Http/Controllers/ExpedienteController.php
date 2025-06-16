@@ -101,43 +101,35 @@ class ExpedienteController extends Controller
         }
 
         // Consulta
-        // $expedientes = Expediente::with(['preRegistro.catMateriaVia.catMateria', 'preRegistro.catMateriaVia.catVia'])
-        //     ->when($esAbogado, function ($query) use ($idGeneral) {
-        //         $query->whereHas('preRegistro', function ($subquery) use ($idGeneral) {
-        //             $subquery->where('idGeneral', $idGeneral);
-        //         });
-        //     })
-        //     ->when($esSecretario, function ($query) use ($idGeneral) {
-        //         $query->orWhere('idSecretario', $idGeneral);
-        //     })
-        //     ->when($expediente, function ($query) use ($expediente) {
-        //         $query->where('numExpediente', 'like', "%{$expediente}%");
-        //     })
-        //     ->when($fechaInicio && $fechaFinal, function ($query) use ($fechaInicio, $fechaFinal) {
-        //         $query->whereBetween('fechaResponse', [$fechaInicio, $fechaFinal]);
-        //     })
-        //     ->get();
 
 
         $expedientes = Expediente::with(['preRegistro.catMateriaVia.catMateria', 'preRegistro.catMateriaVia.catVia', 'tramites'])
             ->when($esAbogado, function ($query) use ($idGeneral) {
-                $query->whereHas('preRegistro', function ($subquery) use ($idGeneral) {
-                    $subquery->where('idGeneral', $idGeneral);
+            $query->where(function ($q) use ($idGeneral) {
+                // Expedientes donde el preregistro es suyo
+                $q->whereHas('preRegistro', function ($subquery) use ($idGeneral) {
+                $subquery->where('idGeneral', $idGeneral);
+                })
+                // O expedientes donde haya hecho algún trámite (aunque no sea el preregistro)
+                ->orWhereHas('tramites', function ($subquery) use ($idGeneral) {
+                $subquery->where('idGeneral', $idGeneral);
                 });
+            });
             })
-            // ->when($esAbogado, function ($query) use ($idGeneral) {
-            //     $query->whereHas('tramites', function ($subquery) use ($idGeneral) {
-            //         $subquery->where('idGeneral', $idGeneral);
-            //     });
-            // })
             ->when($esSecretario, function ($query) use ($idGeneral) {
-                $query->orWhere('idSecretario', $idGeneral);
+            // Solo los que es secretario O donde haya hecho un trámite (prueba)
+            $query->orWhere(function ($q) use ($idGeneral) {
+                $q->where('idSecretario', $idGeneral)
+                  ->orWhereHas('tramites', function ($subquery) use ($idGeneral) {
+                  $subquery->where('idGeneral', $idGeneral);
+                  });
+            });
             })
             ->when($expediente, function ($query) use ($expediente) {
-                $query->where('numExpediente', 'like', "%{$expediente}%");
+            $query->where('numExpediente', 'like', "%{$expediente}%");
             })
             ->when($fechaInicio && $fechaFinal, function ($query) use ($fechaInicio, $fechaFinal) {
-                $query->whereBetween('fechaResponse', [$fechaInicio, $fechaFinal]);
+            $query->whereBetween('fechaResponse', [$fechaInicio, $fechaFinal]);
             })
             ->get();
 
@@ -342,74 +334,60 @@ class ExpedienteController extends Controller
     public function listarAbogadosPorExpediente($idExpediente, Request $request)
     {
         try {
-            // Buscar el expediente y su preregistro
+            // Buscar el expediente
             $expediente = Expediente::findOrFail($idExpediente);
 
-            if (!$expediente) {
-                return response()->json([
-                    'status' => 404,
-                    'message' => "No se encontró el expediente con ID $idExpediente"
-                ], 404);
-            }
-
+            // Obtener el idGeneral del preregistro (si existe)
             $idPreregistro = $expediente->idPreregistro;
 
-            // Obtener el preregistro relacionado
             $preregistro = PreRegistro::where('idPreregistro', $idPreregistro)->first();
+            $idGeneralPreregistro = $preregistro?->idGeneral;
+            $usrPreregistro = $preregistro?->usr;
 
-            if (!$preregistro) {
-                return response()->json([
-                    'status' => 404,
-                    'message' => "No se encontró el preregistro para el expediente $idExpediente",
-                ], 404);
-            }
+            // Obtener todos los idGeneral de trámites (distintos) para este expediente
+            $tramitesAbogadosIds = $expediente->tramites()
+                ->whereNotNull('idGeneral')
+                ->pluck('idGeneral')
+                ->unique()
+                ->toArray();
 
-            // Obtener el idGeneral del preregistro (asumiendo que representa al abogado)
-            $idGeneral = $preregistro->idGeneral ?? null;
-            $usr = $preregistro->usr ?? null;
+            // Obtener los usuarios (usr) de los trámites
+            $tramitesAbogadosUsr = $expediente->tramites()
+                ->whereIn('idGeneral', $tramitesAbogadosIds)
+                ->pluck('usr', 'idGeneral')
+                ->toArray();
 
-            if (!$idGeneral) {
-                return response()->json([
-                    'status' => 404,
-                    'message' => "No se encontró el idGeneral del abogado para el expediente $idExpediente",
-                ], 404);
-            }
-            if (!$usr) {
-                return response()->json([
-                    'status' => 404,
-                    'message' => "No se encontró el usuario del abogado para el expediente $idExpediente",
-                ], 404);
-            }
-
-            // Consultar datos del usuario abogado en la API externa
-            $apiDatos = 'https://api.tribunaloaxaca.gob.mx/permisos/api/Permisos/DatosUsuario';
-            $response = Http::withToken($request->bearerToken())
-                ->timeout(60)
-                ->post("$apiDatos?usuario=" . $usr); // Cambia 'Usuario' por 'usuario'
-
-            if ($response->failed()) {
-                return response()->json([
-                    'status' => 500,
-                    'message' => 'Error al consultar los datos del usuario abogado.',
-                    'error' => $response->body(),
-                ], 500);
-            }
-
-            // Ajusta el mapeo según la estructura real de la respuesta de la API
-
+            $abogados = [];
             $token = $request->bearerToken();
-            $nombre = AuthHelper::obtenerNombreUsuarioDesdeApi($usr, $token);
 
-            $abogado = [
-                'idAbogado' => $idGeneral,
-                'nombre' => $nombre,
-            ];
+            // Agregar abogado del preregistro si existe
+            if ($idGeneralPreregistro && $usrPreregistro) {
+                $nombre = AuthHelper::obtenerNombreUsuarioDesdeApi($usrPreregistro, $token);
+                $abogados[$idGeneralPreregistro] = [
+                    'idAbogado' => $idGeneralPreregistro,
+                    'nombre' => $nombre,
+                    'tipo' => 'preregistro'
+                ];
+            }
+
+            // Agregar abogados de trámites (evitar duplicados)
+            foreach ($tramitesAbogadosUsr as $idGeneral => $usr) {
+                if ($usr && (!isset($abogados[$idGeneral]))) {
+                    $nombre = AuthHelper::obtenerNombreUsuarioDesdeApi($usr, $token);
+                    $abogados[$idGeneral] = [
+                        'idAbogado' => $idGeneral,
+                        'nombre' => $nombre,
+                        'tipo' => 'tramite'
+                    ];
+                }
+            }
 
             return response()->json([
                 'status' => 200,
-                'message' => "Listado de abogados para el expediente $idExpediente",
-                'data' => [$abogado]
+                'message' => "Listado de abogados (preregistro y trámites) para el expediente $idExpediente",
+                'data' => array_values($abogados)
             ], 200);
+
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 500,
