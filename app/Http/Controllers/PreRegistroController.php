@@ -84,8 +84,8 @@ class PreRegistroController extends Controller
                     // Filtrar por el estado más reciente en historialEstado
                     $query->whereHas('historialEstado', function ($q) use ($estado) {
                         $q->latest('fechaEstado')
-                          ->limit(1)
-                          ->where('idCatEstadoInicio', $estado);
+                            ->limit(1)
+                            ->where('idCatEstadoInicio', $estado);
                     });
                 })
                 ->get();
@@ -123,7 +123,8 @@ class PreRegistroController extends Controller
             'partes.*.apellidoMaterno' => 'string|max:255',
             'partes.*.idCatSexo' => 'required|integer',
             'partes.*.idCatTipoParte' => 'required|integer',
-            'partes.*.correo' => 'required|email|max:255',            'partes.*.direccion' => 'nullable|string|max:255',
+            'partes.*.correo' => 'required|email|max:255',
+            'partes.*.direccion' => 'nullable|string|max:255',
             'documentos.*.idCatTipoDocumento' => 'required|integer',
             'documentos.*.nombre' => 'nullable|string',
             'documentos.*.documento' => 'required|file',
@@ -188,23 +189,23 @@ class PreRegistroController extends Controller
             $perfiles = $permisosApiService->obtenerPerfilesUsuario($token, $idAreaSistemaUsuario);
 
             // Validar que tenga el perfil "Abogado"
-            // $tienePerfilAbogado = false;
-            // if (is_array($perfiles)) {
-            //     foreach ($perfiles as $perfil) {
-            //         if (isset($perfil['descripcion']) && strtolower($perfil['descripcion']) === 'abogado') {
-            //             $tienePerfilAbogado = true;
-            //             break;
-            //         }
-            //     }
-            // }
+            $tienePerfilAbogado = false;
+            if (is_array($perfiles)) {
+                foreach ($perfiles as $perfil) {
+                    if (isset($perfil['descripcion']) && strtolower($perfil['descripcion']) === 'abogado') {
+                        $tienePerfilAbogado = true;
+                        break;
+                    }
+                }
+            }
 
-            // if (!$tienePerfilAbogado) {
-            //     return response()->json([
-            //         'success' => false,
-            //         'status' => 403,
-            //         'message' => 'No tienes permisos para realizar esta acción.',
-            //     ], 403);
-            // }
+            if (!$tienePerfilAbogado) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 403,
+                    'message' => 'No tienes permisos para realizar esta acción.',
+                ], 403);
+            }
 
             // Crear el folio consecutivo
             $ultimoFolio = PreRegistro::latest('idPreregistro')->value('folioPreregistro');
@@ -486,5 +487,4 @@ class PreRegistroController extends Controller
     {
         //
     }
-
 }

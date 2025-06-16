@@ -43,4 +43,9 @@ class Tramite extends Model
         return $this->belongsTo(Documento::class, 'idDocumentoTramite');
     }
 
+     public function partesTramite()
+    {
+        return $this->hasMany(PartesTramite::class, 'idTramite');
+    }
+
 }
