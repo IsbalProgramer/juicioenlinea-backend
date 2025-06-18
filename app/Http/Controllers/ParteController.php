@@ -32,11 +32,12 @@ class ParteController extends Controller
             // Cargar preregistro, partes y catálogos relacionados
             $expediente = Expediente::with([
                 'preRegistro.partes.catTipoParte',
-                'preRegistro.partes.catSexo'
+                'preRegistro.partes.catSexo',
+                'abogados'
             ])->findOrFail($idExpediente);
 
-        // Obtener todas las partes desde el preregistro
-        $partes = $expediente->preRegistro ? $expediente->preRegistro->partes : collect();
+            // Obtener todas las partes desde el preregistro
+            $partes = $expediente->preRegistro ? $expediente->preRegistro->partes : collect();
 
             // Transformar las partes para agregar descripciones de catálogos
             $partesTransformadas = $partes->map(function ($parte) {
@@ -52,15 +53,36 @@ class ParteController extends Controller
                     'idCatTipoParte' => $parte->idCatTipoParte,
                     'tipoParteDescripcion' => $parte->catTipoParte->descripcion ?? null,
                     'direccion' => $parte->direccion,
-                    // 'correo' => $parte->correo ?? null,
+                    'esAbogado' => $parte->esAbogado ? true : false,
                 ];
             })->values();
+
+            // Transformar abogados
+            $abogadosTransformados = $expediente->abogados->map(function ($abogado) {
+                return [
+                    'idParte' => null,
+                    'idPreregistro' => null,
+                    'idUsr' => $abogado->idUsr,
+                    'nombre' => $abogado->nombre,
+                    'correo' => $abogado->correo,
+                    'correoAlterno' => $abogado->correoAlterno,
+                    'idCatSexo' => null,
+                    'sexoDescripcion' => null,
+                    'idCatTipoParte' => null,
+                    'tipoParteDescripcion' => null,
+                    'direccion' => null,
+                    'esAbogado' => true ,
+                ];
+            })->values();
+
+            // Fusionar ambos arreglos
+            $partesYAbogados = $partesTransformadas->merge($abogadosTransformados)->values();
 
             return response()->json([
                 'success' => true,
                 'status' => 200,
                 'message' => 'Partes del expediente cargadas correctamente',
-                'data' => $partesTransformadas
+                'data' => $partesYAbogados
             ], 200);
         } catch (\Exception $e) {
             return response()->json([

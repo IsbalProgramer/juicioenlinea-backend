@@ -18,8 +18,6 @@ class HistorialEstadoAudiencia extends Model
         'idDocumento'
     ];
 
-    public $timestamps = false;
-
     public function audiencia()
     {
         return $this->belongsTo(Audiencia::class, 'idAudiencia', 'idAudiencia');

@@ -17,9 +17,7 @@ return new class extends Migration
             $table->unsignedBigInteger('idCatalogoEstadoAudiencia');
             $table->dateTime('fechaHora');
             $table->string('observaciones')->nullable();
-            $table->unsignedBigInteger('idDocumento')->nullable();
             $table->timestamps();
-
             $table->foreign('idAudiencia')->references('idAudiencia')->on ('audiencias');
             $table->foreign('idCatalogoEstadoAudiencia')->references('idCatalogoEstadoAudiencia')->on ('cat_estado_audiencias');
             $table->foreign('idDocumento')->references('idDocumento')->on ('documentos');
