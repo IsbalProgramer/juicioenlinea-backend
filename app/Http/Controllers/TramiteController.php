@@ -126,7 +126,7 @@ class TramiteController extends Controller
     public function store(Request $request, PermisosApiService $permisosApiService)
     {
         $validator = Validator::make($request->all(), [
-            'idExpediente'     => 'required|exists:expedientes,idExpediente',
+            'idExpediente'     => 'required|',
             'idCatTramite'     => 'required|exists:cat_tramites,idCatTramite',
             'sintesis'         => 'required|string',
             'observaciones'    => 'required|string',
@@ -140,7 +140,10 @@ class TramiteController extends Controller
             'partes.*.idCatTipoParte' => 'required|integer',
             'partes.*.correo' => 'required|email|max:255',
             'partes.*.direccion' => 'nullable|string|max:255',
+            'idCatRemitente' => 'required|exists:cat_remitentes,idCatRemitente',
         ]);
+
+        // dd($request->all());
 
         if ($validator->fails()) {
             $errors = $validator->messages()->all();
@@ -218,6 +221,7 @@ class TramiteController extends Controller
                 'observaciones' => $request->observaciones,
                 'idExpediente' => $request->idExpediente,
                 'idDocumentoTramite' => $documento->idDocumento, // Aquí se asigna el ID del documento
+                'idCatRemitente' => $request->idCatRemitente, // Permite nulo si no viene en la request
             ]);
 
             // $partesProcesadas = [];

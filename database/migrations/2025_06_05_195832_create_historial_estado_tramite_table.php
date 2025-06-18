@@ -15,7 +15,6 @@ return new class extends Migration
            $table->id('idHistorialEstadoTramite');
             $table->unsignedBigInteger('idTramite');
             $table->unsignedBigInteger('idCatEstadoTramite');
-
             $table->foreign('idTramite')->references('idTramite')->on('tramites');
             $table->foreign('idCatEstadoTramite')->references('idCatEstadoTramite')->on('cat_estado_tramite');
             $table->timestamps();

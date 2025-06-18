@@ -19,6 +19,7 @@ class Tramite extends Model
         'idExpediente',
         'usr',
         'idDocumentoTramite',
+        'idCatRemitente'
     ];
 
     // Relación con la tabla cat_tramites

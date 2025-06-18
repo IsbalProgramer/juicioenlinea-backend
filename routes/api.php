@@ -3,7 +3,7 @@
 use App\Http\Controllers\AudienciaController;
 use App\Http\Controllers\Catalogos\CatEstadoInicioController;
 use App\Http\Controllers\Catalogos\CatGenerosController;
-use App\Http\Controllers\Catalogos\CatJuzgados;
+use App\Http\Controllers\Catalogos\CatJuzgadosController;
 use App\Http\Controllers\Catalogos\CatMateriasController;
 use App\Http\Controllers\Catalogos\CatPartesController;
 use App\Http\Controllers\Catalogos\CatTipoDocumentoController;
@@ -14,6 +14,7 @@ use App\Http\Controllers\ExpedienteController;
 use App\Http\Controllers\ParteController;
 use App\Http\Controllers\PermisosApiController;
 use App\Http\Controllers\PreRegistroController;
+use App\Http\Controllers\RemitenteController;
 use App\Http\Controllers\RequerimientoController;
 use App\Http\Controllers\TramiteController;
 use App\Http\Middleware\VerifyJwtToken;
@@ -90,5 +91,9 @@ Route::prefix('Tramites')->group(function () {
 });
 
 Route::prefix('Juzgados')->group(function () {
-    Route::get('Listar', [CatJuzgados::class, 'index']);
+    Route::get('Listar', [CatJuzgadosController::class, 'index']);
+});
+
+Route::prefix('Remitentes')->group(function () {
+    Route::get('Listar', [RemitenteController::class, 'index'])->middleware(VerifyJwtToken::class);
 });
