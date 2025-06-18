@@ -15,4 +15,14 @@ class CatJuzgados extends Model
         'lugar',
         'activo',
     ];
+
+    public function remitentes()
+    {
+        return $this->belongsToMany(
+            CatRemitente::class,
+            'cat_remitente_juzgados',
+            'idCatJuzgado',
+            'idCatRemitente'
+        );
+    }
 }

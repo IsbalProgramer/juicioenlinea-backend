@@ -24,8 +24,10 @@ return new class extends Migration
             $table->unsignedBigInteger('idExpediente');
             $table->boolean('notificado')->default(false);
             $table->integer('idDocumentoTramite');
+            $table->unsignedBigInteger('idCatRemitente')->nullable();
 
             $table->foreign('idCatTramite')->references('idCatTramite')->on('cat_tramites');
+            $table->foreign('idCatRemitente')->references('idCatRemitente')->on('cat_remitentes');
             // $table->foreign('idExpediente')->references('idExpediente')->on('expedientes')->onUpdate('cascade')->onDelete('cascade');
 
             $table->timestamps();

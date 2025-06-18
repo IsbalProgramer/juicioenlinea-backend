@@ -7,7 +7,7 @@ use App\Models\Catalogos\CatJuzgados as CatalogosCatJuzgados;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-class CatJuzgados extends Controller
+class CatJuzgadosController extends Controller
 {
       public function index()
 {
