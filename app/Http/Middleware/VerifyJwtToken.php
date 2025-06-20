@@ -8,6 +8,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 
+use function Illuminate\Log\log;
 
 class VerifyJwtToken
 {
@@ -62,6 +63,7 @@ class VerifyJwtToken
         // Esto permite que otros componentes accedan a los datos del token
         $request->attributes->set('jwt_payload', $payload);
 
+        log::info('Token JWT verificado correctamente', $payload);
         return $next($request);
     }
 }

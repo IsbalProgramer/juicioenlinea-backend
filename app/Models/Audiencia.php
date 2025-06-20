@@ -40,4 +40,8 @@ class Audiencia extends Model
         return $this->hasOne(HistorialEstadoAudiencia::class, 'idAudiencia', 'idAudiencia')
             ->latestOfMany('fechaHora');
     }
+    public function grabaciones()
+    {
+        return $this->hasMany(Grabaciones::class, 'idAudiencia', 'idAudiencia');
+    }
 }

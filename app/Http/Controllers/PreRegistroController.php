@@ -291,7 +291,7 @@ class PreRegistroController extends Controller
                 $idCatTipoDocumento = $documento['idCatTipoDocumento'] ?? -1;
                 $nombreDocumento = $documento['nombre'] ?? 'documento';
 
-                $ruta = "PERICIALES/PREREGISTROS/{$anio}/{$folioSoloNumero}";
+                $ruta = "SitiosWeb/JuicioLinea/PREREGISTROS/{$anio}/{$folioSoloNumero}";
 
                 // año_mes_dia_segundos_idTipoDocumento_nombreDocumento.ext
                 $timestamp = now()->format('Y_m_d_His');
