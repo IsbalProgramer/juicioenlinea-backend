@@ -19,26 +19,26 @@ class DatabaseSeeder extends Seeder
     {
         // Crear materias
         $materias = [
-            ['descripcion' => 'CIVIL', 'claveMateria' => 'C', 'activo' => 1 ],
-            ['descripcion' => 'FAMILIAR', 'claveMateria' => 'F', 'activo' => 1 ],
-            ['descripcion' => 'MERCANTIL', 'claveMateria' => 'M', 'activo' => 0 ],
-            ['descripcion' => 'MERCANTIL ORAL', 'claveMateria' => 'O', 'activo' => 0 ],
-            ['descripcion' => 'LABORAL', 'claveMateria' => 'L', 'activo' => 0 ],
-            ['descripcion' => 'FAMILIAR PATERNIDAD', 'claveMateria' => 'PT', 'activo' => 1 ],
+            ['descripcion' => 'CIVIL', 'claveMateria' => 'C', 'activo' => 1],
+            ['descripcion' => 'FAMILIAR', 'claveMateria' => 'F', 'activo' => 1],
+            ['descripcion' => 'MERCANTIL', 'claveMateria' => 'M', 'activo' => 0],
+            ['descripcion' => 'MERCANTIL ORAL', 'claveMateria' => 'O', 'activo' => 0],
+            ['descripcion' => 'LABORAL', 'claveMateria' => 'L', 'activo' => 0],
+            ['descripcion' => 'FAMILIAR PATERNIDAD', 'claveMateria' => 'PT', 'activo' => 1],
         ];
         foreach ($materias as $materia) {
             CatMaterias::create($materia);
         }
 
         // Crear géneros
-        CatSexos::create(['descripcion' => 'HOMBRE' ]);
-        CatSexos::create(['descripcion' => 'MUJER' ]);
-        CatSexos::create(['descripcion' => 'OTRO' ]);
+        CatSexos::create(['descripcion' => 'HOMBRE']);
+        CatSexos::create(['descripcion' => 'MUJER']);
+        CatSexos::create(['descripcion' => 'OTRO']);
 
         // Crear estados iniciales
-        CatEstadoInicios::create(['descripcion' => 'Enviado' ]);
-        CatEstadoInicios::create(['descripcion' => 'Asignado' ]);
-        CatEstadoInicios::create(['descripcion' => 'Finalizado' ]);
+        CatEstadoInicios::create(['descripcion' => 'Enviado']);
+        CatEstadoInicios::create(['descripcion' => 'Asignado']);
+        CatEstadoInicios::create(['descripcion' => 'Finalizado']);
 
         // Crear estados para aduiencias
         CatEstadoAudiencia::create(['descripcion' => 'Programada' ]);
@@ -54,6 +54,8 @@ class DatabaseSeeder extends Seeder
         $this->call(TipoTramiteSeeder::class);
         $this->call(TipoEstadoTramiteSeeder::class);
         $this->call(TipoJuzgadoSeeder::class);
+        $this->call(TipoRemitente::class);
+        $this->call(TipoRemitenteJuzgado::class);
+        $this->call(TipoSecretarioJuzgado::class);
     }
 }
-

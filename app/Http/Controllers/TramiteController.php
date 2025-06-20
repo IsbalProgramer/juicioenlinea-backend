@@ -126,17 +126,24 @@ class TramiteController extends Controller
     public function store(Request $request, PermisosApiService $permisosApiService)
     {
         $validator = Validator::make($request->all(), [
-            'idExpediente'     => 'required|exists:expedientes,idExpediente',
+            'idExpediente'     => 'required|',
             'idCatTramite'     => 'required|exists:cat_tramites,idCatTramite',
-            // 'idGeneral'        => 'required|integer',  logeo 
-            // 'tramiteOrigen'    => 'required|string|max:255',
-            // 'folioOficio'      => 'required|string|max:255',
-            // 'idPr' => 'required|string|max:255',
             'sintesis'         => 'required|string',
             'observaciones'    => 'required|string',
-            // 'fechaRecepcion'   => 'required|date',
             'documentoTramite' => 'required|file|mimes:pdf,doc,docx',
+            'partes' => 'nullable|array|min:1',
+            'partes.*.idUsr' => 'nullable|integer',
+            'partes.*.nombre' => 'required|string|max:255',
+            'partes.*.apellidoPaterno' => 'string|max:255',
+            'partes.*.apellidoMaterno' => 'string|max:255',
+            'partes.*.idCatSexo' => 'required|integer',
+            'partes.*.idCatTipoParte' => 'required|integer',
+            'partes.*.correo' => 'required|email|max:255',
+            'partes.*.direccion' => 'nullable|string|max:255',
+            'idCatRemitente' => 'required|exists:cat_remitentes,idCatRemitente',
         ]);
+
+        // dd($request->all());
 
         if ($validator->fails()) {
             $errors = $validator->messages()->all();
@@ -159,6 +166,8 @@ class TramiteController extends Controller
                     'message' => 'No se pudo obtener los datos del token',
                 ], 400);
             }
+
+
 
             $idGeneral = $datosUsuario['idGeneral'];
             $usr = $datosUsuario['Usr'];
@@ -212,12 +221,64 @@ class TramiteController extends Controller
                 'observaciones' => $request->observaciones,
                 'idExpediente' => $request->idExpediente,
                 'idDocumentoTramite' => $documento->idDocumento, // Aquí se asigna el ID del documento
+                'idCatRemitente' => $request->idCatRemitente, // Permite nulo si no viene en la request
             ]);
+
+            // $partesProcesadas = [];
+            // foreach ($request->partes as $parte) {
+            //     // Si idUsr viene con valor, solo almacena el nombre tal cual
+            //     if (!empty($parte['idUsr'])) {
+            //         $nombreFinal = $parte['nombre'];
+            //     } else {
+            //         // Si idUsr es null, concatena nombre + apellidoPaterno + apellidoMaterno
+            //         $nombreFinal = trim(
+            //             $parte['nombre'] . ' ' .
+            //                 ($parte['apellidoPaterno'] ?? '') . ' ' .
+            //                 ($parte['apellidoMaterno'] ?? '')
+            //         );
+            //     }
+
+            //     $parteProcesada = $parte;
+            //     $parteProcesada['nombre'] = $nombreFinal;
+
+            //     // Puedes quitar los apellidos si no quieres guardarlos en la base
+            //     unset($parteProcesada['apellidoPaterno'], $parteProcesada['apellidoMaterno']);
+
+            //     $partesProcesadas[] = $parteProcesada;
+            // }
+
+            $partesProcesadas = [];
+
+            if (is_array($request->partes)) {
+                foreach ($request->partes as $parte) {
+                    if (!empty($parte['idUsr'])) {
+                        $nombreFinal = $parte['nombre'];
+                    } else {
+                        $nombreFinal = trim(
+                            $parte['nombre'] . ' ' .
+                                ($parte['apellidoPaterno'] ?? '') . ' ' .
+                                ($parte['apellidoMaterno'] ?? '')
+                        );
+                    }
+
+                    $parteProcesada = $parte;
+                    $parteProcesada['nombre'] = $nombreFinal;
+
+                    unset($parteProcesada['apellidoPaterno'], $parteProcesada['apellidoMaterno']);
+
+                    $partesProcesadas[] = $parteProcesada;
+                }
+            } else {
+                // Manejo en caso de partes nulas
+                $partesProcesadas = [];
+            }
+
+            // Insertar las partes asociadas
+            $tramite->partesTramite()->createMany($partesProcesadas);
 
             // Crear historial de trámite
             $historial = HistorialEstadoTramite::create([
                 'idTramite' => $tramite->idTramite,
-                // 'idUsuario' => $idGeneral,
                 'idCatEstadoTramite' => 1,
             ]);
 
@@ -229,7 +290,8 @@ class TramiteController extends Controller
                 'data' => [
                     'tramite' => $tramite,
                     'documento' => $documento,
-                    'historial' => $historial
+                    'historial' => $historial,
+                    'partes' => $partesProcesadas,
                 ]
             ]);
         } catch (\Exception $e) {
@@ -250,10 +312,11 @@ class TramiteController extends Controller
     {
         try {
             $tramite = Tramite::with([
-                'expediente',
+                'expediente.preRegistro.partes.catTipoParte',
                 'historial',
                 'documento',
-                'catTramite'
+                'catTramite',
+                'partesTramite.catTipoParte'
             ])->findOrFail($idTramite);
             return response()->json([
                 'status' => 200,
@@ -312,7 +375,4 @@ class TramiteController extends Controller
     {
         //
     }
-
-
-
 }

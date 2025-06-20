@@ -15,7 +15,6 @@ return new class extends Migration
             $table->id('idRequerimiento');
             $table->string('descripcion');
             $table->string('descripcionRechazo')->nullable();
-            // $table->string('NumExpediente');
             $table->unsignedBigInteger('idExpediente');
             $table->unsignedBigInteger('idDocumentoAcuerdo');
             $table->unsignedBigInteger('idDocumentoAcuse')->nullable();
@@ -28,8 +27,8 @@ return new class extends Migration
             $table->dateTime('fechaLimite', 6); // precisión de 6 dígitos = microsegundos
 
             // Claves foráneas
-            // $table->foreign('idExpediente')->references('idExpediente')->on('expedientes');
-            // $table->foreign('idDocumentoAcuerdo')->references('idDocumento')->on('documentos');
+            $table->foreign('idExpediente')->references('idExpediente')->on('expedientes');
+            $table->foreign('idDocumentoAcuerdo')->references('idDocumento')->on('documentos');
         });
     }
 

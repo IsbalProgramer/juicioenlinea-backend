@@ -190,7 +190,8 @@ class PreRegistroController extends Controller
             // Obtener perfiles del usuario
             $perfiles = $permisosApiService->obtenerPerfilesUsuario($token, $idAreaSistemaUsuario);
 
-            //Validar que tenga el perfil "Abogado"
+
+            // Validar que tenga el perfil "Abogado"
             $tienePerfilAbogado = false;
             if (is_array($perfiles)) {
                 foreach ($perfiles as $perfil) {

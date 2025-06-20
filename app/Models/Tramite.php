@@ -19,6 +19,7 @@ class Tramite extends Model
         'idExpediente',
         'usr',
         'idDocumentoTramite',
+        'idCatRemitente'
     ];
 
     // Relación con la tabla cat_tramites
@@ -41,6 +42,11 @@ class Tramite extends Model
     public function documento()
     {
         return $this->belongsTo(Documento::class, 'idDocumentoTramite');
+    }
+
+     public function partesTramite()
+    {
+        return $this->hasMany(PartesTramite::class, 'idTramite');
     }
 
 }
