@@ -132,4 +132,29 @@ class MeetingService
             'errors' => $response->json()['errors'] ?? null,
         ];
     }
+    public function obtenerGrabaciones(string $token, string $from, string $to)
+    {
+        $url = 'https://webexapis.com/v1/recordings';
+        $response = Http::withToken($token)
+            ->acceptJson()
+            ->get($url, [
+                'from' => $from,
+                'to' => $to,
+            ]);
+    
+        if ($response->successful()) {
+            return [
+                'success' => true,
+                'status' => 200,
+                'data' => $response->json()['items'] ?? [],
+            ];
+        }
+    
+        return [
+            'success' => false,
+            'status' => $response->status(),
+            'message' => $response->json()['message'] ?? 'Error al obtener grabaciones',
+            'errors' => $response->json()['errors'] ?? null,
+        ];
+    }
 }
