@@ -26,6 +26,7 @@ class Requerimiento extends Model
         'usuarioSecretario',
         'idAbogado',
         'fechaLimite',
+        'folioRequerimiento'
     ];
 
     public function documentoAcuerdo()
@@ -59,5 +60,10 @@ class Requerimiento extends Model
     public function getFechaLimiteAttribute($value)
     {
         return Carbon::parse($value)->format('Y-m-d\TH:i:s.u\Z');
+    }
+
+    public function abogado()
+    {
+        return $this->belongsTo(abogado::class, 'idAbogado');
     }
 }

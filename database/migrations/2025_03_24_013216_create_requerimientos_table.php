@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('requerimientos', function (Blueprint $table) {
             $table->id('idRequerimiento');
+            $table->string('folioRequerimiento');
             $table->string('descripcion');
             $table->string('descripcionRechazo')->nullable();
             $table->unsignedBigInteger('idExpediente');
@@ -22,13 +23,13 @@ return new class extends Migration
             $table->unsignedBigInteger('idSecretario');
             $table->unsignedBigInteger('usuarioSecretario');
             $table->unsignedBigInteger('idAbogado');
-            $table->unsignedBigInteger('usuarioAbogado')->nullable();
             $table->timestamps();
             $table->dateTime('fechaLimite', 6); // precisión de 6 dígitos = microsegundos
 
             // Claves foráneas
             $table->foreign('idExpediente')->references('idExpediente')->on('expedientes');
             $table->foreign('idDocumentoAcuerdo')->references('idDocumento')->on('documentos');
+             $table->foreign('idAbogado')->references('idAbogado')->on('abogados');
         });
     }
 
