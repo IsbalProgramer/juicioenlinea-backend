@@ -6,7 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Remitente extends Model
 {
-    protected $primaryKey = 'idRemitente';
+     protected $table = 'cat_remitentes';
+    protected $primaryKey = 'idCatRemitente';
 
     protected $fillable = [
         'idTramite',

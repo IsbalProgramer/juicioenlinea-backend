@@ -49,4 +49,8 @@ class Tramite extends Model
         return $this->hasMany(PartesTramite::class, 'idTramite');
     }
 
+    public function remitente(){
+        return $this->hasMany(Remitente::class, 'idCatRemitente');
+    
+    }
 }

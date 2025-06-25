@@ -40,11 +40,11 @@ class DatabaseSeeder extends Seeder
         CatEstadoInicios::create(['descripcion' => 'Asignado']);
         CatEstadoInicios::create(['descripcion' => 'Finalizado']);
 
-        // Crear estados para aduiencias
-        CatEstadoAudiencia::create(['descripcion' => 'Programada' ]);
-        CatEstadoAudiencia::create(['descripcion' => 'Finalizada' ]);
-        CatEstadoAudiencia::create(['descripcion' => 'Reprogramada' ]);
-        CatEstadoAudiencia::create(['descripcion' => 'Cancelada' ]);
+        // Crear estados para audiencias
+        CatEstadoAudiencia::create(['descripcion' => 'Programada']);
+        CatEstadoAudiencia::create(['descripcion' => 'Finalizada']);
+        CatEstadoAudiencia::create(['descripcion' => 'Reprogramada']);
+        CatEstadoAudiencia::create(['descripcion' => 'Cancelada']);
 
         $this->call(TipoViaSeeder::class);
         $this->call(TipoMateriaViaSeeder::class);
@@ -56,6 +56,7 @@ class DatabaseSeeder extends Seeder
         $this->call(TipoJuzgadoSeeder::class);
         $this->call(TipoRemitente::class);
         $this->call(TipoRemitenteJuzgado::class);
+        
         $this->call(TipoSecretarioJuzgado::class);
     }
 }

@@ -69,8 +69,8 @@ Route::prefix('Expediente')->group(function () {
     Route::get('ExpedientesAbogados/{id}', [ExpedienteController::class, 'listarAbogadosPorExpediente'])->middleware(VerifyJwtToken::class);
     Route::get('PartesAudiencia/{idExpediente}', [ParteController::class, 'show'])->middleware(VerifyJwtToken::class);
     Route::post('DetalleBusquedaExpediente', [ExpedienteController::class, 'busquedaExpedienteDetalles'])->middleware(VerifyJwtToken::class);
-    Route::get('Contar', [ExpedienteController::class, 'contarExpedientesUsuario'])->middleware(VerifyJwtToken::class);
     Route::post('Relacionar/{idExpediente}', [ExpedienteController::class, 'relacionarAbogadoConExpediente'])->middleware(VerifyJwtToken::class);
+
 });
 
 

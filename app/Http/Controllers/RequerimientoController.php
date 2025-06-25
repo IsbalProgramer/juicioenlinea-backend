@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Helpers\AuthHelper;
 use App\Helpers\FolioHelper;
+use App\Models\Abogado;
 use App\Models\Requerimiento;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -100,7 +101,8 @@ class RequerimientoController extends Controller
             // Construir la consulta base
             $query = Requerimiento::with([
                 'historial:idHistorialEstadoRequerimientos,idCatEstadoRequerimientos,idRequerimiento,created_at',
-                'expediente',
+                'expediente.juzgado',
+                'abogado'
             ])->where('idSecretario', $idGeneral);
 
             // Filtro de fechas
@@ -297,7 +299,7 @@ class RequerimientoController extends Controller
                 $expedienteRuta = $expediente;
             }
 
-            $ruta = "PERICIALES/JUZGADOS/{$expedienteRuta}/REQUERIMIENTOS/ACUERDOS";
+            $ruta = "SitiosWeb/JuicioLinea/JUZGADOS/{$expedienteRuta}/REQUERIMIENTOS/ACUERDOS";
 
             // Enviar el archivo como multipart/form-data
             $response = Http::withToken($request->bearerToken())
@@ -333,6 +335,12 @@ class RequerimientoController extends Controller
                 throw new \Exception("Error: No se generó un ID para el documento.");
             }
 
+            //Folio
+            $ultimoFolio = Requerimiento::latest('idRequerimiento')->value('folioRequerimiento');
+            $numeroConsecutivo = $ultimoFolio ? intval(explode('/', $ultimoFolio)[0]) + 1 : 1;
+            $anio = now()->year;
+            $folioRequerimiento = str_pad($numeroConsecutivo, 4, '0', STR_PAD_LEFT) . '/' . $anio;
+
             // Crear el requerimiento con la referencia al documento
             $requerimiento = Requerimiento::create([
                 'idExpediente' => $request->idExpediente,
@@ -342,8 +350,7 @@ class RequerimientoController extends Controller
                 'idDocumentoAcuerdo' => $documentoID,
                 'fechaLimite' => Carbon::parse($request->fechaLimite)->endOfDay(),
                 'idAbogado' => $request->idAbogado,
-
-
+                'folioRequerimiento' => $folioRequerimiento
             ]);
 
             // Obtener el ID del requerimiento recién creado
@@ -376,7 +383,7 @@ class RequerimientoController extends Controller
                     "date" => $requerimiento->created_at ? $requerimiento->created_at->format('Y-m-d') : null,
                     "delivery" => $requerimiento->descripcion,
                     "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d') : null,
-                    "address" => $numExpediente ,
+                    "address" => $numExpediente,
                     "support_email" => "zoemarquez678@gmail.com",
                     "mensaje" => "Usted ha creado el requerimiento correctamente."
                 ],
@@ -454,7 +461,8 @@ class RequerimientoController extends Controller
                 'documentosRequerimiento.catTipoDocumento',
                 'documentoAcuse.catTipoDocumento',
                 'documentoOficioRequerimiento.catTipoDocumento',
-                'expediente'
+                'expediente.juzgado',
+                'abogado'
             ])->findOrFail($idRequerimiento);
 
             //Acuerdo
@@ -629,14 +637,15 @@ class RequerimientoController extends Controller
                 ], 403);
             }
 
-            $idAbogado = $requerimiento->idAbogado;
+            $abogado = $requerimiento->abogado; // relación con modelo Abogado
 
-            if ($idGeneral != $idAbogado) {
+            if (!$abogado || $abogado->idGeneral != $idGeneral) {
                 return response()->json([
                     'status' => 400,
-                    'message' => 'Requerimiento no asignado',
+                    'message' => 'Requerimiento no asignado a este abogado',
                 ], 400);
             }
+
 
             $documentos = [];
 
@@ -667,7 +676,7 @@ class RequerimientoController extends Controller
                 $expedienteRuta = $expediente;
             }
 
-            $ruta = "PERICIALES/JUZGADOS/{$expedienteRuta}/REQUERIMIENTOS/OFICIOREQUERIMIENTO";
+            $ruta = "SitiosWeb/JuicioLinea/JUZGADOS/{$expedienteRuta}/REQUERIMIENTOS/OFICIOREQUERIMIENTO";
 
             // Enviar el archivo como multipart/form-data
             $response = Http::withToken($request->bearerToken())
@@ -716,7 +725,7 @@ class RequerimientoController extends Controller
 
                 $expedienteRuta = $expediente;
             }
-            $ruta = "PERICIALES/JUZGADOS/{$expedienteRuta}/REQUERIMIENTOS/TRAMITESRECIBIDOS";
+            $ruta = "SitiosWeb/JuicioLinea/JUZGADOS/{$expedienteRuta}/REQUERIMIENTOS/TRAMITESRECIBIDOS";
 
             foreach ($archivos as $index => $archivo) {
                 $nombreOriginal = pathinfo($archivo->getClientOriginalName(), PATHINFO_FILENAME);
@@ -835,7 +844,7 @@ class RequerimientoController extends Controller
 
                 $expedienteRuta = $expediente;
             }
-            $ruta = "PERICIALES/JUZGADOS/{$expedienteRuta}/REQUERIMIENTOS/ACUSES";
+            $ruta = "SitiosWeb/JuicioLinea/JUZGADOS/{$expedienteRuta}/REQUERIMIENTOS/ACUSES";
 
             // Subir PDF generado directamente al NAS
             $response = Http::withToken($request->bearerToken())
@@ -865,7 +874,6 @@ class RequerimientoController extends Controller
 
             // Asociar a requerimiento
             $requerimiento->idDocumentoAcuse = $acuseDocumento->idDocumento;
-            $requerimiento->usuarioAbogado = $usr;
             $requerimiento->save();
 
             // Agregar a lista de documentos
@@ -1354,8 +1362,8 @@ class RequerimientoController extends Controller
                 $mailerSend = new MailerSendService();
 
                 $numExpediente = DB::table('expedientes')
-                ->where('idExpediente', $requerimiento->idExpediente)
-                ->value('NumExpediente');
+                    ->where('idExpediente', $requerimiento->idExpediente)
+                    ->value('NumExpediente');
 
                 // Enviar correo al creador del requerimiento
                 $resultadoCreador = $mailerSend->enviarCorreo(
@@ -1495,11 +1503,29 @@ class RequerimientoController extends Controller
                 }
             }
 
-            // Construir la consulta base
+            // Buscar al abogado con idGeneral del token
+            $abogado = Abogado::where('idGeneral', $idGeneral)->first();
+
+            if (!$abogado) {
+                return response()->json([
+                    'status' => 404,
+                    'message' => 'El usuario no está registrado como abogado',
+                ], 404);
+            }
+
+            $idAbogado = $abogado->idAbogado;
+
+            // contruir la consulta
             $query = Requerimiento::with([
                 'historial:idHistorialEstadoRequerimientos,idCatEstadoRequerimientos,idRequerimiento,created_at',
-                'expediente',
-            ])->where('idAbogado', $idGeneral);
+                'expediente.juzgado',
+                'documentoAcuerdo',
+                'documentoAcuse',
+                'documentoOficioRequerimiento',
+                'abogado',
+            ])
+                ->where('idAbogado', $idAbogado);
+
 
             // Filtro de fechas
             if ($fechaInicioParam && $fechaFinalParam) {

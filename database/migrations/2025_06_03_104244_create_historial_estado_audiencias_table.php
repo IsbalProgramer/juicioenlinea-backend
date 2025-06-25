@@ -18,7 +18,6 @@ return new class extends Migration
             $table->dateTime('fechaHora');
             $table->string('observaciones')->nullable();
             $table->unsignedBigInteger('idDocumento')->nullable();;
-
             $table->timestamps();
 
             $table->foreign('idAudiencia')->references('idAudiencia')->on ('audiencias')->onDelete('cascade');

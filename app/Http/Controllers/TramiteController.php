@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\FolioHelper;
+use App\Models\Abogado;
 use App\Models\Documento;
 use App\Models\HistorialEstadoTramite;
 use App\Models\Tramite;
@@ -140,7 +141,7 @@ class TramiteController extends Controller
             'partes.*.idCatTipoParte' => 'required|integer',
             'partes.*.correo' => 'required|email|max:255',
             'partes.*.direccion' => 'nullable|string|max:255',
-            'idCatRemitente' => 'required|exists:cat_remitentes,idCatRemitente',
+            'idCatRemitente' => 'nullable|exists:cat_remitentes,idCatRemitente',
         ]);
 
         // dd($request->all());
@@ -172,6 +173,82 @@ class TramiteController extends Controller
             $idGeneral = $datosUsuario['idGeneral'];
             $usr = $datosUsuario['Usr'];
 
+            // Obtener ID del sistema (puedes ajustar el ID real si es diferente)
+            $idSistema = $permisosApiService->obtenerIdAreaSistemaUsuario(
+                $request->bearerToken(),
+                $idGeneral,
+                4171 // ID de tu sistema
+            );
+
+            if (!$idSistema) {
+                return response()->json([
+                    'status' => 400,
+                    'message' => 'No se pudo obtener el sistema del usuario.',
+                ], 400);
+            }
+
+            // Obtener perfiles del usuario
+            $perfiles = $permisosApiService->obtenerPerfilesUsuario(
+                $request->bearerToken(),
+                $idSistema
+            );
+
+            if (!$perfiles) {
+                return response()->json([
+                    'status' => 400,
+                    'message' => 'No se pudieron obtener los perfiles del usuario.',
+                ], 400);
+            }
+
+
+            $tienePerfilAbogado = collect($perfiles)->contains(function ($perfil) {
+                return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'abogado';
+            });
+
+
+            if ($tienePerfilAbogado) {
+                $token = $request->bearerToken();
+
+                $respuesta = $permisosApiService->obtenerDatosUsuarioByApi($token, $usr);
+
+                if (!empty($respuesta['data']['pD_Abogados']) && is_array($respuesta['data']['pD_Abogados'])) {
+                    foreach ($respuesta['data']['pD_Abogados'] as $abogadoData) {
+                        if (isset($abogadoData['idGeneral']) && $abogadoData['idGeneral'] == $idGeneral) {
+                            // Registrar abogado si no existe
+                            $abogado = Abogado::firstOrCreate(
+                                [
+                                    'idUsr' => $usr,
+                                    'idGeneral' => $idGeneral,
+                                ],
+                                [
+                                    'nombre' => mb_strtoupper($abogadoData['nombre'] ?? ''),
+                                    'correo' => mb_strtoupper($abogadoData['correo'] ?? ''),
+                                    'correoAlterno' => mb_strtoupper($abogadoData['correoAlterno'] ?? ''),
+                                ]
+                            );
+
+                            // Verificar si ya está enlazado al expediente
+                            $yaRelacionado = DB::table('expediente_abogado')
+                                ->where('idExpediente', $request->idExpediente)
+                                ->where('idAbogado', $abogado->idAbogado)
+                                ->exists();
+
+                            if (!$yaRelacionado) {
+                                DB::table('expediente_abogado')->insert([
+                                    'idExpediente' => $request->idExpediente,
+                                    'idAbogado' => $abogado->idAbogado,
+                                    'created_at' => now(),
+                                    'updated_at' => now(),
+                                ]);
+                            }
+
+                            break; // Solo una coincidencia necesaria
+                        }
+                    }
+                }
+            }
+
+
             // Subir documento 
             $documentoTramite = $request->file('documentoTramite');
             $nombreOriginal = pathinfo($documentoTramite->getClientOriginalName(), PATHINFO_FILENAME);
@@ -182,7 +259,7 @@ class TramiteController extends Controller
             // Obtener número de expediente
             $expediente = DB::table('expedientes')->where('idExpediente', $request->idExpediente)->value('NumExpediente');
             $expedienteRuta = implode('/', array_reverse(explode('/', $expediente)));
-            $ruta = "PERICIALES/JUZGADOS/{$expedienteRuta}/TRAMITES";
+            $ruta = "SitiosWeb/JuicioLinea/JUZGADOS/{$expedienteRuta}/TRAMITES";
 
             // Subir a NAS
             $response = Http::withToken($request->bearerToken())
@@ -197,13 +274,21 @@ class TramiteController extends Controller
                 ], 500);
             }
 
-            // Guardar documento en BD
+            // Obtener nombre del trámite en mayúsculas
+            $nombreTramite = DB::table('cat_tramites')
+                ->where('idCatTramite', $request->idCatTramite)
+                ->value('nombre');
+
+            $nombreTramiteMayus = mb_strtoupper($nombreTramite, 'UTF-8');
+
+            // Guardar documento en BD con nombre dinámico
             $documento = Documento::create([
-                'idCatTipoDocumento' => -1, // Asume que ya tienes un ID para tipo trámite
-                'nombre' => 'TRAMITE',
+                'idCatTipoDocumento' => -1,
+                'nombre' => $nombreTramiteMayus, // ← Aquí se usa en mayúsculas
                 'idExpediente' => $request->idExpediente,
                 'documento' => $ruta . '/' . $nuevoNombre,
             ]);
+
 
             $ultimoFolio = Tramite::latest('idTramite')->value('folioOficio');
             $numeroConsecutivo = $ultimoFolio ? intval(explode('/', $ultimoFolio)[0]) + 1 : 1;
@@ -223,29 +308,6 @@ class TramiteController extends Controller
                 'idDocumentoTramite' => $documento->idDocumento, // Aquí se asigna el ID del documento
                 'idCatRemitente' => $request->idCatRemitente, // Permite nulo si no viene en la request
             ]);
-
-            // $partesProcesadas = [];
-            // foreach ($request->partes as $parte) {
-            //     // Si idUsr viene con valor, solo almacena el nombre tal cual
-            //     if (!empty($parte['idUsr'])) {
-            //         $nombreFinal = $parte['nombre'];
-            //     } else {
-            //         // Si idUsr es null, concatena nombre + apellidoPaterno + apellidoMaterno
-            //         $nombreFinal = trim(
-            //             $parte['nombre'] . ' ' .
-            //                 ($parte['apellidoPaterno'] ?? '') . ' ' .
-            //                 ($parte['apellidoMaterno'] ?? '')
-            //         );
-            //     }
-
-            //     $parteProcesada = $parte;
-            //     $parteProcesada['nombre'] = $nombreFinal;
-
-            //     // Puedes quitar los apellidos si no quieres guardarlos en la base
-            //     unset($parteProcesada['apellidoPaterno'], $parteProcesada['apellidoMaterno']);
-
-            //     $partesProcesadas[] = $parteProcesada;
-            // }
 
             $partesProcesadas = [];
 
@@ -316,7 +378,8 @@ class TramiteController extends Controller
                 'historial',
                 'documento',
                 'catTramite',
-                'partesTramite.catTipoParte'
+                'partesTramite.catTipoParte',
+                'remitente'
             ])->findOrFail($idTramite);
             return response()->json([
                 'status' => 200,
