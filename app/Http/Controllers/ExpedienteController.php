@@ -493,4 +493,53 @@ class ExpedienteController extends Controller
             'data' => $expediente
         ]);
     }
+
+    
+    public function relacionarAbogadoConExpediente($idExpediente)
+    {
+        $expediente = Expediente::find($idExpediente);
+        if (!$expediente) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Expediente no encontrado',
+            ], 404);
+        }
+    
+        // Obtener el preregistro relacionado
+        $preregistro = PreRegistro::find($expediente->idPreregistro);
+        if (!$preregistro) {
+            return response()->json([
+                'success' => false,
+                'message' => 'PreRegistro no encontrado para este expediente',
+            ], 404);
+        }
+    
+        // Buscar el abogado por idGeneral
+        $abogado = Abogado::where('idGeneral', $preregistro->idGeneral)->first();
+        if (!$abogado) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Abogado no encontrado con ese idGeneral',
+            ], 404);
+        }
+    
+        // Verificar si ya existe la relación
+        $yaRelacionado = $expediente->abogados()->where('abogados.idAbogado', $abogado->idAbogado)->exists();
+        if ($yaRelacionado) {
+            return response()->json([
+                'success' => true,
+                'status' => 409,
+                'message' => 'La relación ya existe',
+            ]);
+        }
+    
+        // Relacionar abogado con expediente
+        $expediente->abogados()->attach($abogado->idAbogado);
+    
+        return response()->json([
+            'success' => true,
+            'status' => 200,
+            'message' => 'Abogado relacionado correctamente con el expediente',
+        ]);
+    }
 }

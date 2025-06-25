@@ -11,6 +11,7 @@ use App\Http\Controllers\Catalogos\CatViasController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DocumentoController;
 use App\Http\Controllers\ExpedienteController;
+use App\Http\Controllers\GrabacionesController;
 use App\Http\Controllers\ParteController;
 use App\Http\Controllers\PermisosApiController;
 use App\Http\Controllers\PreRegistroController;
@@ -64,10 +65,12 @@ Route::prefix('Documento')->group(
 Route::prefix('Expediente')->group(function () {
     Route::get('Listar', [ExpedienteController::class, 'index'])->middleware(VerifyJwtToken::class);
     Route::post('Asignar', [ExpedienteController::class, 'store'])->middleware(VerifyJwtToken::class);
-    Route::get('Detalle/{id}', [ExpedienteController::class, 'show'])->middleware(VerifyJwtToken::class)->middleware(VerifyJwtToken::class);
-    Route::get('ExpedientesAbogados/{id}', [ExpedienteController::class, 'listarAbogadosExpediente'])->middleware(VerifyJwtToken::class);
+    Route::get('Detalle/{id}', [ExpedienteController::class, 'show'])->middleware(VerifyJwtToken::class);
+    Route::get('ExpedientesAbogados/{id}', [ExpedienteController::class, 'listarAbogadosPorExpediente'])->middleware(VerifyJwtToken::class);
     Route::get('PartesAudiencia/{idExpediente}', [ParteController::class, 'show'])->middleware(VerifyJwtToken::class);
     Route::post('DetalleBusquedaExpediente', [ExpedienteController::class, 'busquedaExpedienteDetalles'])->middleware(VerifyJwtToken::class);
+    Route::post('Relacionar/{idExpediente}', [ExpedienteController::class, 'relacionarAbogadoConExpediente'])->middleware(VerifyJwtToken::class);
+
 });
 
 
@@ -79,6 +82,7 @@ Route::prefix('Audiencia')->group(function () {
     Route::get('rango-maximo', [AudienciaController::class, 'rangoMaximoDisponible']);
     Route::put('Editar/{idAudiencia}', [AudienciaController::class, 'update']);
     Route::post('Cancelar/{idAudiencia}', [AudienciaController::class, 'cancelarAudiencia'])->middleware(VerifyJwtToken::class);
+
 });
 
 Route::prefix('Tramites')->group(function () {
@@ -96,3 +100,5 @@ Route::prefix('Juzgados')->group(function () {
 Route::prefix('Remitentes')->group(function () {
     Route::get('Listar', [RemitenteController::class, 'index'])->middleware(VerifyJwtToken::class);
 });
+
+Route::post('Grabaciones/{idAudiencia}', [GrabacionesController::class, 'store']);

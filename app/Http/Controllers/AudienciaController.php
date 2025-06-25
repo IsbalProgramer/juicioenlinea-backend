@@ -7,6 +7,7 @@ use App\Models\Documento;
 use Illuminate\Http\Request;
 use App\Services\MeetingService;
 use App\Services\NasApiService;
+use App\Services\PermisosApiService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -16,10 +17,73 @@ class AudienciaController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         try {
-            $audiencias = Audiencia::with(['expediente', 'ultimoEstado.catalogoEstadoAudiencia'])->get();
+            // Parámetros de filtro
+            $fechaInicioParam = $request->query('fechaInicio');
+            $fechaFinalParam = $request->query('fechaFinal');
+            $folio = $request->query('folio');
+            $estado = $request->query('estado');
+
+            $fechaInicio = null;
+            $fechaFinal = null;
+
+            // Aplicar filtro de fechas si se mandan
+            $timezone = config('app.timezone', 'America/Mexico_City');
+            if ($fechaInicioParam && $fechaFinalParam) {
+                $fechaInicio = Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
+                $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
+            } elseif ($fechaInicioParam) {
+                $fechaInicio = Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
+                $fechaFinal = Carbon::parse($fechaInicioParam, $timezone)->endOfDay();
+            } elseif ($fechaFinalParam) {
+                $fechaInicio = Carbon::parse($fechaFinalParam, $timezone)->startOfDay();
+                $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
+            } elseif (!$folio) {
+                $fechaInicio = Carbon::now()->subDays(6)->startOfDay();
+                $fechaFinal = Carbon::now()->endOfDay();
+            }
+
+            $audiencias = Audiencia::with(['expediente', 'ultimoEstado.catalogoEstadoAudiencia'])
+                ->when($folio, function ($query) use ($folio) {
+                    // Filtrar por NumExpediente de la relación expediente
+                    $query->whereHas('expediente', function ($q) use ($folio) {
+                        $q->where('NumExpediente', 'like', "%{$folio}%");
+                    });
+                })
+                ->when($fechaInicio && $fechaFinal, function ($query) use ($fechaInicio, $fechaFinal) {
+                    $query->whereBetween('created_at', [$fechaInicio, $fechaFinal]);
+                })
+                ->when(!is_null($estado), function ($query) use ($estado) {
+                    // Filtrar por el estado más reciente en historialEstados
+                    $query->whereHas('ultimoEstado', function ($q) use ($estado) {
+                        $q->where('idCatalogoEstadoAudiencia', $estado);
+                    });
+                })
+                ->get();
+
+            $ahora = now();
+
+            // Verifica y actualiza el estado si corresponde
+            foreach ($audiencias as $audiencia) {
+                if (
+                    $audiencia->ultimoEstado &&
+                    in_array($audiencia->ultimoEstado->idCatalogoEstadoAudiencia, [1, 3])
+                ) {
+                    $fin = Carbon::parse($audiencia->end);
+                    if ($ahora->gt($fin)) {
+                        // Cambia el estado a 2 (finalizada)
+                        $audiencia->historialEstados()->create([
+                            'idCatalogoEstadoAudiencia' => 2,
+                            'fechaHora' => $ahora,
+                            'observaciones' => 'Audiencia finalizada, consulte la grabación en las proximas 12 horas.',
+                        ]);
+                        // Recarga la relación para reflejar el cambio en la respuesta
+                        $audiencia->load('ultimoEstado.catalogoEstadoAudiencia');
+                    }
+                }
+            }
 
             $data = $audiencias->map(function ($audiencia) {
                 $arr = $audiencia->toArray();
@@ -74,11 +138,11 @@ class AudienciaController extends Controller
             'invitees.*.correo' => 'required|email|max:255',
             'invitees.*.correoAlterno' => 'nullable|email|max:255',
             'invitees.*.nombre' => 'required|string|max:255',
-            'invitees.*.coHost' => 'sometimes|boolean|nullable',
-            'invitees.*.idCatSexo' => 'required|integer',
-            'invitees.*.idCatTipoParte' => 'required|integer',
+            'invitees.*.direccion' => 'nullable|string|max:255',
+            'invitees.*.esAbogado' => 'nullable|boolean',
+            'invitees.*.idCatSexo' => 'nullable|integer',
+            'invitees.*.idCatTipoParte' => 'nullable|integer',
             'invitees.*.idUsr' => 'nullable|integer',
-            'invitees.*.direccion' => 'required|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -92,7 +156,27 @@ class AudienciaController extends Controller
 
         $validated = $validator->validated();
 
-        // Normalizar los invitados: siempre agregar el email principal y, si existe, el correo alternativo
+        // 1. Obtener datos del usuario logueado
+        $token = $request->bearerToken();
+        $idUsr = $request->user()->idUsr ?? null; // O ajusta según cómo obtienes el idUsr del usuario logueado
+
+        $servicio = new PermisosApiService();
+        $respuesta = $servicio->obtenerDatosUsuarioByApi($token, $idUsr);
+
+        $usuarioLogueado = null;
+        if (!empty($respuesta['data']['pD_Abogados'][0])) {
+            $abogado = $respuesta['data']['pD_Abogados'][0];
+            $usuarioLogueado = [
+                'email' => $abogado['correo'] ?? null,
+                'displayName' => $abogado['nombre'] ?? null,
+            ];
+            if (!empty($abogado['correoAlterno'])) {
+                $usuarioLogueado['correoAlterno'] = $abogado['correoAlterno'];
+            }
+        }
+        
+
+        // 2. Normalizar los invitados del request
         $invitees = [];
         foreach ($validated['invitees'] as $invitado) {
             $invitees[] = [
@@ -106,6 +190,21 @@ class AudienciaController extends Controller
                 ];
             }
         }
+
+        // 3. Agregar usuario logueado solo para Webex (no guardar en tabla)
+        if ($usuarioLogueado && !empty($usuarioLogueado['email'])) {
+            $invitees[] = [
+                'email' => $usuarioLogueado['email'],
+                'displayName' => $usuarioLogueado['displayName'],
+            ];
+            if (!empty($usuarioLogueado['correoAlterno'])) {
+                $invitees[] = [
+                    'email' => $usuarioLogueado['correoAlterno'],
+                    'displayName' => $usuarioLogueado['displayName'],
+                ];
+            }
+        }
+
         $validated['invitees'] = $invitees;
         Log::info('Datos validados para crear audiencia:', $validated);
         Log::info('Invitees enviados a Webex:', $validated['invitees']);
@@ -149,13 +248,14 @@ class AudienciaController extends Controller
                     'idCatTipoParte' => $invitado['idCatTipoParte'],
                     'idUsr' => $invitado['idUsr'] ?? null,
                     'direccion' => $invitado['direccion'],
+                    'esAbogado' => $invitado['esAbogado'] ?? false,
                 ]);
             }
             // Insertar historial de estado de la audiencia
             $audiencia->historialEstados()->create([
                 'idCatalogoEstadoAudiencia' => 1,
                 'fechaHora' => now(),
-                'observaciones' => 'Audiencia creada y activa',
+                'observaciones' => 'Audiencia programada y activa',
             ]);
 
             return response()->json([
@@ -183,7 +283,9 @@ class AudienciaController extends Controller
                 'invitados.catSexo',
                 'invitados.catTipoParte',
                 'expediente',
-                'ultimoEstado.catalogoEstadoAudiencia'
+                'ultimoEstado.catalogoEstadoAudiencia',
+                //'ultimoEstado.documento'
+                'grabaciones'
             ])->findOrFail($idAudiencia);
 
             $arr = $audiencia->toArray();
@@ -217,6 +319,8 @@ class AudienciaController extends Controller
                     'descripcion'                   => $audiencia->ultimoEstado->catalogoEstadoAudiencia->descripcion ?? null,
                     'fechaHora'                     => $audiencia->ultimoEstado->fechaHora,
                     'observaciones'                 => $audiencia->ultimoEstado->observaciones,
+                    'idDocumento'                   => $audiencia->ultimoEstado->idDocumento ?? null,
+                    //'documento'                     => $audiencia->ultimoEstado->documento,
                 ];
             } else {
                 $arr['ultimo_estado'] = null;
@@ -331,12 +435,23 @@ class AudienciaController extends Controller
         // Token de Webex (puedes cambiarlo por el método que uses)
         $webexToken = env('WEBEX_TOKEN');
 
+        // Antes de llamar a actualizarReunion:
+        $startWithTz = $validated['start'] . '-06:00';
+        $endWithTz = $validated['end'] . '-06:00';
+
         // Actualizar en Webex
-        $webexResponse = $meetingService->actualizarReunion($webexToken, $meetingId, $validated);
+        $webexResponse = $meetingService->actualizarReunion(
+            $webexToken,
+            $meetingId,
+            array_merge($validated, [
+                'start' => $startWithTz,
+                'end' => $endWithTz,
+            ])
+        );
         Log::info('Webex response:', $webexResponse);
 
         if (!isset($webexResponse['webLink'])) {
-            return response()->json($webexResponse);
+            return response()->json([$webexResponse]);
         }
 
         // Si todo bien en Webex, actualiza en la base de datos
@@ -433,7 +548,7 @@ class AudienciaController extends Controller
 
             list($numeroExpediente, $anioExpediente) = explode('/', $numExpediente);
 
-            $ruta = "PERICIALES/AUDIENCIAS/{$anioExpediente}/{$numeroExpediente}";
+            $ruta = "SitiosWeb/JuicioLinea/AUDIENCIAS/{$anioExpediente}/{$numeroExpediente}";
             $timestamp = now()->format('Y_m_d_His');
             $nombreArchivo = "{$timestamp}_{$idCatTipoDocumento}_{$file->getClientOriginalName()}";
 
@@ -560,9 +675,12 @@ class AudienciaController extends Controller
                 'end' => $finDia->copy(),
             ];
         }
-
+        
         // Dividir los rangos libres en bloques de 30 minutos
         $disponibles = [];
+        $ahora = Carbon::now();
+        $esHoy = $fecha === $ahora->format('Y-m-d');
+        
         foreach ($libres as $rango) {
             $slotStart = $rango['start']->copy();
             while ($slotStart->lt($rango['end'])) {
@@ -570,14 +688,27 @@ class AudienciaController extends Controller
                 if ($slotEnd->gt($rango['end'])) {
                     $slotEnd = $rango['end']->copy();
                 }
-                if ($slotStart->lt($slotEnd)) {
-                    $disponibles[] = $slotStart->format('H:i');
+                // Solo mostrar bloques futuros si es hoy
+                if (!$esHoy || $slotStart->gte($ahora)) {
+                    if ($slotStart->lt($slotEnd)) {
+                        $disponibles[] = $slotStart->format('H:i');
+                    }
                 }
                 $slotStart = $slotEnd->copy();
             }
         }
+        
+        // Si es hoy y no hay bloques disponibles, mostrar el siguiente bloque de 30 minutos futuro
+        if ($esHoy && empty($disponibles)) {
+            $proximo = $ahora->copy()->ceilMinute(30);
+            if ($proximo->between($inicioDia, $finDia)) {
+                $disponibles[] = $proximo->format('H:i');
+            }
+        }
+        
         $disponibles = array_values(array_unique($disponibles));
         sort($disponibles);
+        
         return response()->json([
             'success' => true,
             'status' => 200,
