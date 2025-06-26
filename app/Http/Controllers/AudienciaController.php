@@ -29,7 +29,7 @@ class AudienciaController extends Controller
             $fechaInicio = null;
             $fechaFinal = null;
 
-            // Aplicar filtro de fechas si se mandan
+            // Por defecto, solo mostrar audiencias del día de hoy
             $timezone = config('app.timezone', 'America/Mexico_City');
             if ($fechaInicioParam && $fechaFinalParam) {
                 $fechaInicio = Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
@@ -40,14 +40,14 @@ class AudienciaController extends Controller
             } elseif ($fechaFinalParam) {
                 $fechaInicio = Carbon::parse($fechaFinalParam, $timezone)->startOfDay();
                 $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
-            } elseif (!$folio) {
-                $fechaInicio = Carbon::now()->subDays(6)->startOfDay();
-                $fechaFinal = Carbon::now()->endOfDay();
+            } else {
+                // Si no hay filtro, solo hoy
+                $fechaInicio = Carbon::now($timezone)->startOfDay();
+                $fechaFinal = Carbon::now($timezone)->endOfDay();
             }
 
             $audiencias = Audiencia::with(['expediente', 'ultimoEstado.catalogoEstadoAudiencia'])
                 ->when($folio, function ($query) use ($folio) {
-                    // Filtrar por NumExpediente de la relación expediente
                     $query->whereHas('expediente', function ($q) use ($folio) {
                         $q->where('NumExpediente', 'like', "%{$folio}%");
                     });
@@ -55,11 +55,13 @@ class AudienciaController extends Controller
                 ->when($fechaInicio && $fechaFinal, function ($query) use ($fechaInicio, $fechaFinal) {
                     $query->whereBetween('created_at', [$fechaInicio, $fechaFinal]);
                 })
-                ->when(!is_null($estado), function ($query) use ($estado) {
-                    // Filtrar por el estado más reciente en historialEstados
-                    $query->whereHas('ultimoEstado', function ($q) use ($estado) {
+                ->whereHas('ultimoEstado', function ($q) use ($estado) {
+                    // Si hay filtro de estado, úsalo, si no, solo 1 y 3
+                    if (!is_null($estado)) {
                         $q->where('idCatalogoEstadoAudiencia', $estado);
-                    });
+                    } else {
+                        $q->whereIn('idCatalogoEstadoAudiencia', [1, 3]);
+                    }
                 })
                 ->get();
 
@@ -174,7 +176,7 @@ class AudienciaController extends Controller
                 $usuarioLogueado['correoAlterno'] = $abogado['correoAlterno'];
             }
         }
-        
+
 
         // 2. Normalizar los invitados del request
         $invitees = [];
@@ -675,12 +677,12 @@ class AudienciaController extends Controller
                 'end' => $finDia->copy(),
             ];
         }
-        
+
         // Dividir los rangos libres en bloques de 30 minutos
         $disponibles = [];
         $ahora = Carbon::now();
         $esHoy = $fecha === $ahora->format('Y-m-d');
-        
+
         foreach ($libres as $rango) {
             $slotStart = $rango['start']->copy();
             while ($slotStart->lt($rango['end'])) {
@@ -697,7 +699,7 @@ class AudienciaController extends Controller
                 $slotStart = $slotEnd->copy();
             }
         }
-        
+
         // Si es hoy y no hay bloques disponibles, mostrar el siguiente bloque de 30 minutos futuro
         if ($esHoy && empty($disponibles)) {
             $proximo = $ahora->copy()->ceilMinute(30);
@@ -705,10 +707,10 @@ class AudienciaController extends Controller
                 $disponibles[] = $proximo->format('H:i');
             }
         }
-        
+
         $disponibles = array_values(array_unique($disponibles));
         sort($disponibles);
-        
+
         return response()->json([
             'success' => true,
             'status' => 200,

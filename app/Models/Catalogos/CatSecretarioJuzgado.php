@@ -14,4 +14,6 @@ class CatSecretarioJuzgado extends Model
         'idGeneral',
         'idCatJuzgado'
     ];
+
+    
 }

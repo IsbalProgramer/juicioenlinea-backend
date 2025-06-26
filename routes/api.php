@@ -17,6 +17,7 @@ use App\Http\Controllers\PermisosApiController;
 use App\Http\Controllers\PreRegistroController;
 use App\Http\Controllers\RemitenteController;
 use App\Http\Controllers\RequerimientoController;
+use App\Http\Controllers\SolicitudesController;
 use App\Http\Controllers\TramiteController;
 use App\Http\Middleware\VerifyJwtToken;
 
@@ -29,8 +30,10 @@ Route::prefix('Inicio')->group(function () {
     Route::put('ActualizarPreregistro/{preRegistro}', [PreRegistroController::class, 'update'])->middleware(VerifyJwtToken::class);
 });
 
-Route::post('Permisos/Datos-usuario/{idUsr}/{idGeneral}', [PermisosApiController::class, 'show'])->middleware(VerifyJwtToken::class);
-Route::get('Permisos/ModulosYPantallas', [PermisosApiController::class, 'index'])->middleware(VerifyJwtToken::class);
+Route::prefix('Permisos')->middleware(VerifyJwtToken::class)->group(function () {
+    Route::post('Datos-usuario/{idUsr}/{idGeneral}', [PermisosApiController::class, 'show']);
+    Route::get('ModulosYPantallas', [PermisosApiController::class, 'index']);
+});
 
 Route::prefix('Catalogo')->group(function () {
     Route::get('Vias/{idCatMateria}', [CatViasController::class, 'show']); // Listar vías por idCatMateria
@@ -55,7 +58,6 @@ Route::prefix('Requerimiento')->group(function () {
     Route::get('Datos/{usuario}', [RequerimientoController::class, 'datosUsuario'])->middleware(VerifyJwtToken::class);
 });
 
-
 Route::prefix('Documento')->group(
     function () {
         Route::get('VerDocumento/{id}', [DocumentoController::class, 'show'])->middleware(VerifyJwtToken::class);
@@ -70,9 +72,7 @@ Route::prefix('Expediente')->group(function () {
     Route::get('PartesAudiencia/{idExpediente}', [ParteController::class, 'show'])->middleware(VerifyJwtToken::class);
     Route::post('DetalleBusquedaExpediente', [ExpedienteController::class, 'busquedaExpedienteDetalles'])->middleware(VerifyJwtToken::class);
     Route::get('Contar', [ExpedienteController::class, 'contarExpedientesUsuario'])->middleware(VerifyJwtToken::class);
-    Route::post('Relacionar/{idExpediente}', [ExpedienteController::class, 'relacionarAbogadoConExpediente'])->middleware(VerifyJwtToken::class);
 });
-
 
 Route::prefix('Audiencia')->group(function () {
     Route::get('Listar', [AudienciaController::class, 'index']);
@@ -102,3 +102,7 @@ Route::prefix('Remitentes')->group(function () {
 });
 
 Route::post('Grabaciones/{idAudiencia}', [GrabacionesController::class, 'store']);
+
+Route::prefix('Solicitud')->group(function () {
+    Route::post('Crear', [SolicitudesController::class, 'store']);
+});

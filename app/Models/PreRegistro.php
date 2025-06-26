@@ -19,7 +19,7 @@ class PreRegistro extends Model
         'observaciones',
         'fechaCreada',
         'idGeneral',
-        'usr',
+        'idUsr',
         'idCatJuzgado',
         'idExpediente',
         'fechaResponse',

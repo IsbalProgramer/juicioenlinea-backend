@@ -112,7 +112,7 @@ class PermisosApiController extends Controller
             // Buscar en pD_Abogados
             if (!empty($respuesta['data']['pD_Abogados'])) {
                 foreach ($respuesta['data']['pD_Abogados'] as $abogado) {
-                    if (isset($abogado['idGeneral']) && $abogado['idGeneral'] == $idGeneral) {
+                    if (isset($abogado['curp']) && $abogado['curp'] == $idGeneral) {
                         $partes = [];
 
                         if (!empty($abogado['direccionPart'])) {

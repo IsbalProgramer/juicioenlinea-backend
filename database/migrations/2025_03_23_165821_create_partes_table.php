@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('partes', function (Blueprint $table) {
             $table->id('idParte');
             $table->unsignedBigInteger('idPreregistro');
-            $table->unsignedBigInteger('idUsr')->nullable();
+            $table->string('idUsr')->nullable();
             $table->string('nombre');
             // $table->string('apellidoMaterno');
             // $table->string('apellidoPaterno');

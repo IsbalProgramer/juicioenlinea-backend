@@ -6,6 +6,7 @@ use App\Models\Catalogos\CatEstadoAudiencia;
 use App\Models\Catalogos\CatGeneros;
 use App\Models\Catalogos\CatMaterias;
 use App\Models\Catalogos\CatEstadoInicios;
+use App\Models\Catalogos\CatEstadoSolicitud;
 use App\Models\Catalogos\CatSexos;
 use App\Models\Catalogos\CatTipoDocumento;
 use Illuminate\Database\Seeder;
@@ -45,6 +46,11 @@ class DatabaseSeeder extends Seeder
         CatEstadoAudiencia::create(['descripcion' => 'Finalizada' ]);
         CatEstadoAudiencia::create(['descripcion' => 'Reprogramada' ]);
         CatEstadoAudiencia::create(['descripcion' => 'Cancelada' ]);
+
+        // Crear estados de solicitudes
+        CatEstadoSolicitud::create(['descripcion' => 'Pendiente']);
+        CatEstadoSolicitud::create(['descripcion' => 'Aceptada']);
+        CatEstadoSolicitud::create(['descripcion' => 'Rechazada']);
 
         $this->call(TipoViaSeeder::class);
         $this->call(TipoMateriaViaSeeder::class);

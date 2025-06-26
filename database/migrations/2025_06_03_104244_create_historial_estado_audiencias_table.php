@@ -21,10 +21,9 @@ return new class extends Migration
 
             $table->timestamps();
 
-            $table->foreign('idAudiencia')->references('idAudiencia')->on ('audiencias')->onDelete('cascade');
+            $table->foreign('idAudiencia')->references('idAudiencia')->on('audiencias')->onDelete('cascade');
             $table->foreign('idCatalogoEstadoAudiencia')->references('idCatalogoEstadoAudiencia')->on('cat_estado_audiencias')->onDelete('cascade');
-            $table->foreign('idDocumento')->references('idDocumento')->on ('documentos')->onDelete('cascade');
-
+            $table->foreign('idDocumento')->references('idDocumento')->on('documentos');
         });
     }
 
