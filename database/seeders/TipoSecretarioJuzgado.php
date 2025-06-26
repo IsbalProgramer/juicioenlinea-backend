@@ -121,13 +121,6 @@ class TipoSecretarioJuzgado extends Seeder
                 'created_at' => now()->subDays(1),
                 'updated_at' => now()->subDays(1),
             ],
-            [
-                'idUsr' => 5857,
-                'idGeneral' => 30057,
-                'idCatJuzgado' => 4,
-                'created_at' => now()->subDays(1),
-                'updated_at' => now()->subDays(1),
-            ],
         ]);
     }
 }
