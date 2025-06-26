@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('observaciones')->nullable();
             $table->dateTime('fechaCreada');
             $table->integer('idGeneral');
-            $table->integer('usr');
+            $table->string('idUsr');
             $table->unsignedBigInteger('idCatJuzgado')->nullable();
             $table->string('idExpediente')->nullable();
             $table->dateTime('fechaResponse')->nullable();

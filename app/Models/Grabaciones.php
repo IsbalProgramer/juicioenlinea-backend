@@ -21,6 +21,14 @@ class Grabaciones extends Model
         'password',
         'durationSeconds'
     ];
+    public function audiencia()
+    {
+        return $this->belongsTo(Audiencia::class, 'idAudiencia', 'idAudiencia');
+    }
+    public function solicitudes()
+    {
+        return $this->hasMany(Solicitudes::class, 'idGrabacion', 'idGrabacion');
+    }
 
 
 

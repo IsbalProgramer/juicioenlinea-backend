@@ -15,7 +15,6 @@ return new class extends Migration
             $table->id("idExpedienteAbogado");
             $table->unsignedBigInteger('idExpediente');
             $table->unsignedBigInteger('idAbogado');
-            $table->timestamps();
             $table->foreign('idExpediente')->references('idExpediente')->on('expedientes')->onDelete('cascade');
             $table->foreign('idAbogado')->references('idAbogado')->on('abogados')->onDelete('cascade');
         });

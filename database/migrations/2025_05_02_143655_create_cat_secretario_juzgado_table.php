@@ -15,10 +15,10 @@ return new class extends Migration
             $table->id('idCatSecretarioJuzgado');
             $table->unsignedBigInteger('idUsr');
             $table->unsignedBigInteger('idGeneral');
-             $table->unsignedBigInteger('idCatJuzgado');
+            $table->unsignedBigInteger('idCatJuzgado');
             $table->timestamps();
 
-      $table->foreign('idCatJuzgado')->references('idCatJuzgado')->on('cat_juzgados');
+            $table->foreign('idCatJuzgado')->references('idCatJuzgado')->on('cat_juzgados');
         });
     }
 
