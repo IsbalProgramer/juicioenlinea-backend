@@ -36,6 +36,11 @@ class Expediente extends Model
     {
         return $this->hasMany(Requerimiento::class, 'idExpediente');
     }
+
+    public function audiencias()
+    {
+        return $this->hasMany(audiencia::class, 'idExpediente');
+    }
     public function juzgado()
     {
         return $this->belongsTo(CatJuzgados::class, 'idCatJuzgado');
