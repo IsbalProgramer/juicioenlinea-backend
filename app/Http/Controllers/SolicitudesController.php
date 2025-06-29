@@ -203,10 +203,109 @@ class SolicitudesController extends Controller
     /**
      * Display the specified resource.
      */
+    // public function show($id, Request $request, PermisosApiService $permisosApiService)
+    // {
+    //     try {
+    //         // Obtener datos del usuario desde el token
+    //         $jwtPayload = $request->attributes->get('jwt_payload');
+    //         $datosUsuario = $permisosApiService->obtenerDatosUsuarioByToken($jwtPayload);
+
+    //         if (!$datosUsuario || !isset($datosUsuario['idGeneral'])) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'status' => 400,
+    //                 'message' => 'No se pudo obtener el idGeneral del token',
+    //             ], 400);
+    //         }
+
+    //         $idGeneral = $datosUsuario['idGeneral'];
+
+    //         // Obtener el sistema y perfiles
+    //         $idSistema = $permisosApiService->obtenerIdAreaSistemaUsuario($request->bearerToken(), $idGeneral, 4171);
+    //         if (!$idSistema) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'status' => 400,
+    //                 'message' => 'No se pudo obtener el idAreaSistemaUsuario',
+    //             ], 400);
+    //         }
+
+    //         $perfiles = $permisosApiService->obtenerPerfilesUsuario($request->bearerToken(), $idSistema);
+    //         if (!$perfiles) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'status' => 400,
+    //                 'message' => 'No se pudo obtener los perfiles del usuario',
+    //             ], 400);
+    //         }
+
+    //         $esAbogado = collect($perfiles)->contains(
+    //             fn($perfil) =>
+    //             isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'abogado'
+    //         );
+
+    //         $esSecretario = collect($perfiles)->contains(
+    //             fn($perfil) =>
+    //             isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'secretario'
+    //         );
+
+    //         if (!$esAbogado && !$esSecretario) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'status' => 403,
+    //                 'message' => 'No tiene permisos para realizar esta acción.',
+    //             ], 403);
+    //         }
+
+    //         // Buscar la solicitud con relaciones
+    //         $solicitud = Solicitudes::with(['grabacion.audiencia.expediente'])
+    //             ->find($id);
+
+    //         if (!$solicitud) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'status' => 404,
+    //                 'message' => 'Solicitud no encontrada',
+    //             ], 404);
+    //         }
+
+    //         // Validar pertenencia
+    //         $puedeVer = false;
+    //         if ($esAbogado && !$esSecretario) {
+    //             // Solo si es suya
+    //             $puedeVer = $solicitud->idGeneral == $idGeneral;
+    //         } else {
+    //             // Secretario: si el expediente le pertenece
+    //             $puedeVer = optional($solicitud->grabacion->audiencia->expediente)->idSecretario == $idGeneral;
+    //         }
+
+    //         if (!$puedeVer) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'status' => 403,
+    //                 'message' => 'No tiene permisos para ver esta solicitud.',
+    //             ], 403);
+    //         }
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'status' => 200,
+    //             'message' => 'Solicitud encontrada',
+    //             'data' => $solicitud,
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'status' => 500,
+    //             'message' => 'Error al obtener la solicitud',
+    //             'errors' => $e->getMessage(),
+    //         ], 500);
+    //     }
+    // }
+
     public function show($id, Request $request, PermisosApiService $permisosApiService)
     {
         try {
-            // Obtener datos del usuario desde el token
             $jwtPayload = $request->attributes->get('jwt_payload');
             $datosUsuario = $permisosApiService->obtenerDatosUsuarioByToken($jwtPayload);
 
@@ -220,7 +319,6 @@ class SolicitudesController extends Controller
 
             $idGeneral = $datosUsuario['idGeneral'];
 
-            // Obtener el sistema y perfiles
             $idSistema = $permisosApiService->obtenerIdAreaSistemaUsuario($request->bearerToken(), $idGeneral, 4171);
             if (!$idSistema) {
                 return response()->json([
@@ -257,9 +355,10 @@ class SolicitudesController extends Controller
                 ], 403);
             }
 
-            // Buscar la solicitud con relaciones
-            $solicitud = Solicitudes::with(['grabacion.audiencia.expediente'])
-                ->find($id);
+            // Buscar la solicitud sin cargar grabaciones todavía
+            $solicitud = Solicitudes::with([
+                'grabacion.audiencia.expediente'
+            ])->find($id);
 
             if (!$solicitud) {
                 return response()->json([
@@ -272,10 +371,8 @@ class SolicitudesController extends Controller
             // Validar pertenencia
             $puedeVer = false;
             if ($esAbogado && !$esSecretario) {
-                // Solo si es suya
                 $puedeVer = $solicitud->idGeneral == $idGeneral;
             } else {
-                // Secretario: si el expediente le pertenece
                 $puedeVer = optional($solicitud->grabacion->audiencia->expediente)->idSecretario == $idGeneral;
             }
 
@@ -287,11 +384,26 @@ class SolicitudesController extends Controller
                 ], 403);
             }
 
+            // Si quieres paginar grabaciones:
+            $perPage = (int)$request->query('per_page', 2);
+            $page = (int)$request->query('page', 1);
+
+            $grabaciones = $solicitud->grabacion()->paginate($perPage, ['*'], 'page', $page);
+
             return response()->json([
                 'success' => true,
                 'status' => 200,
                 'message' => 'Solicitud encontrada',
-                'data' => $solicitud,
+                'data' => [
+                    'solicitud' => $solicitud,
+                    'grabaciones' => $grabaciones->items(),
+                    'pagination' => [
+                        'current_page' => $grabaciones->currentPage(),
+                        'per_page' => $grabaciones->perPage(),
+                        'total' => $grabaciones->total(),
+                        'last_page' => $grabaciones->lastPage(),
+                    ]
+                ]
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -302,6 +414,7 @@ class SolicitudesController extends Controller
             ], 500);
         }
     }
+
 
     /**
      * Update the specified resource in storage.
