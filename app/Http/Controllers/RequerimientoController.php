@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use App\Services\PermisosApiService;
 use App\Services\MailerSendService;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class RequerimientoController extends Controller
 {
@@ -27,10 +28,11 @@ class RequerimientoController extends Controller
      * Display a listing of the resource.
      */
 
+
     public function index(Request $request, PermisosApiService $permisosApiService)
     {
         try {
-            // Obtener el payload del token desde los atributos de la solicitud
+            // Obtener datos del usuario
             $jwtPayload = $request->attributes->get('jwt_payload');
             $datosUsuario = $permisosApiService->obtenerDatosUsuarioByToken($jwtPayload);
 
@@ -53,7 +55,7 @@ class RequerimientoController extends Controller
                 ], 400);
             }
 
-            $idSistema = $permisosApiService->obtenerIdAreaSistemaUsuario($request->bearerToken(), $datosUsuario['idGeneral'], 4171);
+            $idSistema = $permisosApiService->obtenerIdAreaSistemaUsuario($request->bearerToken(), $idGeneral, 4171);
             if (!$idSistema) {
                 return response()->json([
                     'success' => false,
@@ -61,6 +63,7 @@ class RequerimientoController extends Controller
                     'message' => 'No se pudo obtener el idAreaSistemaUsuario del token',
                 ], 400);
             }
+
             $perfiles = $permisosApiService->obtenerPerfilesUsuario($request->bearerToken(), $idSistema);
             if (!$perfiles) {
                 return response()->json([
@@ -71,7 +74,7 @@ class RequerimientoController extends Controller
             }
 
             $tienePerfilSecretario = collect($perfiles)->contains(function ($perfil) {
-                return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === strtolower(trim('secretario'));
+                return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === strtolower('secretario');
             });
 
             if (!$tienePerfilSecretario) {
@@ -81,31 +84,29 @@ class RequerimientoController extends Controller
                 ], 403);
             }
 
-            // Filtros de estado y fechas
+            // Filtros
             $estado = $request->query('estado');
             $fechaInicioParam = $request->query('fechaInicio');
             $fechaFinalParam = $request->query('fechaFinal');
             $timezone = config('app.timezone', 'America/Mexico_City');
 
-            // Verificar y actualizar el estado de los requerimientos expirados
+            // Verificar y actualizar requerimientos expirados
             $requerimientosExp = Requerimiento::where('idSecretario', $idGeneral)->get();
             foreach ($requerimientosExp as $requerimiento) {
-                $estadoFinal = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
-                $fechaLimite = $requerimiento->fechaLimite;
-                $fechaActual = now();
-                if (($fechaLimite < $fechaActual) && $estadoFinal == 1) {
+                $ultimoEstado = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
+                if ($requerimiento->fechaLimite < now() && $ultimoEstado == 1) {
                     $this->estadoRequerimientoExpiro($requerimiento, $request, $permisosApiService);
                 }
             }
 
-            // Construir la consulta base
+            // Consulta base
             $query = Requerimiento::with([
                 'historial:idHistorialEstadoRequerimientos,idCatEstadoRequerimientos,idRequerimiento,created_at',
                 'expediente.juzgado',
                 'abogado'
             ])->where('idSecretario', $idGeneral);
 
-            // Filtro de fechas
+            // Filtro fechas y estado
             if ($fechaInicioParam && $fechaFinalParam) {
                 $fechaInicio = Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
                 $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
@@ -118,49 +119,55 @@ class RequerimientoController extends Controller
                 $fechaInicio = Carbon::parse($fechaFinalParam, $timezone)->startOfDay();
                 $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
                 $query->whereBetween('fechaLimite', [$fechaInicio, $fechaFinal]);
-            } elseif (!$estado) {
-                // Si no hay estado ni fechas, mostrar últimos 7 días por defecto
+            } elseif (is_null($estado)) {
+                // Por defecto: últimos 7 días y estado 3
                 $fechaInicio = Carbon::now($timezone)->subDays(6)->startOfDay();
                 $fechaFinal = Carbon::now($timezone)->endOfDay();
-
-                // Filtrar requerimientos cuyo último historial sea estado 3 y created_at en rango
                 $query->whereHas('historial', function ($q) use ($fechaInicio, $fechaFinal) {
                     $q->where('idCatEstadoRequerimientos', 3)
                         ->whereBetween('created_at', [$fechaInicio, $fechaFinal]);
                 });
             }
 
-            $requerimientos = $query->get()
-                ->filter(function ($requerimiento) use ($estado) {
-                    $ultimoEstado = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
-                    if (is_null($estado)) {
-                        // Por defecto, estado 3
-                        return $ultimoEstado == 3;
-                    }
-                    if ($estado === '0' || $estado === 0) {
-                        // No aplicar filtro
-                        return true;
-                    }
-                    // Filtro por estado específico (ej. 1-5)
-                    return $ultimoEstado == $estado;
-                })
-                ->sortByDesc(function ($requerimiento) {
-                    // Ordenar por la fecha de creación del último historial (el más reciente primero)
-                    return optional($requerimiento->historial->last())->created_at;
-                })
-                ->when(is_null($estado), function ($collection) {
-                    // Solo ordenar por defecto (estado 1)
-                    return $collection->sortByDesc(function ($requerimiento) {
-                        // Ordenar por la fecha de creación del último historial (el más reciente primero)
-                        return optional($requerimiento->historial->last())->created_at;
-                    });
-                })
-                ->values();
+            $todos = $query->get();
+
+            // Filtrar por estado (por defecto estado 3)
+            $filtrados = $todos->filter(function ($requerimiento) use ($estado) {
+                $ultimoEstado = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
+                if (is_null($estado)) {
+                    return $ultimoEstado == 3;
+                }
+                if ($estado === '0' || $estado === 0) {
+                    return true;
+                }
+                return $ultimoEstado == $estado;
+            })->sortByDesc(function ($requerimiento) {
+                return optional($requerimiento->historial->last())->created_at;
+            })->values();
+
+            $perPage = (int)$request->query('per_page', 10);
+            $page = (int)$request->query('page', 1);
+            $total = $filtrados->count();
+            $items = $filtrados->forPage($page, $perPage)->values();
+
+            $paginator = new LengthAwarePaginator(
+                $items,
+                $total,
+                $perPage,
+                $page,
+                ['path' => url()->current()]
+            );
 
             return response()->json([
                 'status' => 200,
-                'message' => "Listado de requerimientos",
-                'data' => $requerimientos
+                'message' => 'Listado de requerimientos',
+                'data' => $paginator->items(),
+                'pagination' => [
+                    'current_page' => $paginator->currentPage(),
+                    'per_page' => $paginator->perPage(),
+                    'total' => $paginator->total(),
+                    'last_page' => $paginator->lastPage(),
+                ]
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
@@ -170,6 +177,7 @@ class RequerimientoController extends Controller
             ], 500);
         }
     }
+
 
 
     /**
@@ -1432,10 +1440,12 @@ class RequerimientoController extends Controller
 
 
 
+
+
     public function listarRequerimientosAbogado(Request $request, PermisosApiService $permisosApiService)
     {
         try {
-            // Obtener el payload del token desde los atributos de la solicitud
+            // Obtener el payload
             $jwtPayload = $request->attributes->get('jwt_payload');
             $datosUsuario = $permisosApiService->obtenerDatosUsuarioByToken($jwtPayload);
 
@@ -1450,15 +1460,7 @@ class RequerimientoController extends Controller
             $idGeneral = $datosUsuario['idGeneral'];
             $usr = $datosUsuario['Usr'];
 
-            if (!$idGeneral || !$usr) {
-                return response()->json([
-                    'success' => false,
-                    'status' => 400,
-                    'message' => 'No se pudo obtener el idGeneral del token',
-                ], 400);
-            }
-
-            $idSistema = $permisosApiService->obtenerIdAreaSistemaUsuario($request->bearerToken(), $datosUsuario['idGeneral'], 4171);
+            $idSistema = $permisosApiService->obtenerIdAreaSistemaUsuario($request->bearerToken(), $idGeneral, 4171);
             if (!$idSistema) {
                 return response()->json([
                     'success' => false,
@@ -1466,6 +1468,7 @@ class RequerimientoController extends Controller
                     'message' => 'No se pudo obtener el idAreaSistemaUsuario del token',
                 ], 400);
             }
+
             $perfiles = $permisosApiService->obtenerPerfilesUsuario($request->bearerToken(), $idSistema);
             if (!$perfiles) {
                 return response()->json([
@@ -1476,7 +1479,7 @@ class RequerimientoController extends Controller
             }
 
             $tienePerfilAbogado = collect($perfiles)->contains(function ($perfil) {
-                return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === strtolower(trim('abogado'));
+                return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'abogado';
             });
 
             if (!$tienePerfilAbogado) {
@@ -1486,26 +1489,14 @@ class RequerimientoController extends Controller
                 ], 403);
             }
 
-            // Filtros de estado y fechas
+            // Filtros
             $estado = $request->query('estado');
             $fechaInicioParam = $request->query('fechaInicio');
             $fechaFinalParam = $request->query('fechaFinal');
             $timezone = config('app.timezone', 'America/Mexico_City');
 
-            // Verificar y actualizar el estado de los requerimientos expirados
-            $requerimientosExp = Requerimiento::where('idSecretario', $idGeneral)->get();
-            foreach ($requerimientosExp as $requerimiento) {
-                $estadoFinal = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
-                $fechaLimite = $requerimiento->fechaLimite;
-                $fechaActual = now();
-                if (($fechaLimite < $fechaActual) && $estadoFinal == 1) {
-                    $this->estadoRequerimientoExpiro($requerimiento, $request, $permisosApiService);
-                }
-            }
-
-            // Buscar al abogado con idGeneral del token
+            // Obtener abogado
             $abogado = Abogado::where('idGeneral', $idGeneral)->first();
-
             if (!$abogado) {
                 return response()->json([
                     'status' => 404,
@@ -1515,7 +1506,7 @@ class RequerimientoController extends Controller
 
             $idAbogado = $abogado->idAbogado;
 
-            // contruir la consulta
+            // Query base
             $query = Requerimiento::with([
                 'historial:idHistorialEstadoRequerimientos,idCatEstadoRequerimientos,idRequerimiento,created_at',
                 'expediente.juzgado',
@@ -1523,9 +1514,7 @@ class RequerimientoController extends Controller
                 'documentoAcuse',
                 'documentoOficioRequerimiento',
                 'abogado',
-            ])
-                ->where('idAbogado', $idAbogado);
-
+            ])->where('idAbogado', $idAbogado);
 
             // Filtro de fechas
             if ($fechaInicioParam && $fechaFinalParam) {
@@ -1541,48 +1530,55 @@ class RequerimientoController extends Controller
                 $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
                 $query->whereBetween('fechaLimite', [$fechaInicio, $fechaFinal]);
             } elseif (!$estado) {
-                // Si no hay estado ni fechas, mostrar últimos 7 días por defecto
                 $fechaInicio = Carbon::now($timezone)->subDays(6)->startOfDay();
                 $fechaFinal = Carbon::now($timezone)->endOfDay();
-
-                // Filtrar requerimientos cuyo último historial sea estado 3 y created_at en rango
                 $query->whereHas('historial', function ($q) use ($fechaInicio, $fechaFinal) {
                     $q->where('idCatEstadoRequerimientos', 1)
                         ->whereBetween('created_at', [$fechaInicio, $fechaFinal]);
                 });
             }
 
-            $requerimientos = $query->get()
-                ->filter(function ($requerimiento) use ($estado) {
-                    $ultimoEstado = $requerimiento->historial->last()->idCatEstadoRequerimientos ?? null;
-                    if (is_null($estado)) {
-                        // Por defecto, estado 1
-                        return $ultimoEstado == 1;
-                    }
-                    if ($estado === '0' || $estado === 0) {
-                        // No aplicar filtro
-                        return true;
-                    }
-                    // Filtro por estado específico (ej. 1-5)
-                    return $ultimoEstado == $estado;
-                })
-                ->sortByDesc(function ($requerimiento) {
-                    // Ordenar por la fecha de creación del último historial (el más reciente primero)
-                    return optional($requerimiento->historial->last())->created_at;
-                })
-                ->when(is_null($estado), function ($collection) {
-                    // Solo ordenar por defecto (estado 1)
-                    return $collection->sortByDesc(function ($requerimiento) {
-                        // Ordenar por la fecha de creación del último historial (el más reciente primero)
-                        return optional($requerimiento->historial->last())->created_at;
-                    });
-                })
-                ->values();
+            // Obtener todos
+            $todos = $query->get();
+
+            // Filtrar por estado
+            $filtrados = $todos->filter(function ($req) use ($estado) {
+                $ultimoEstado = $req->historial->last()->idCatEstadoRequerimientos ?? null;
+                if (is_null($estado)) {
+                    return $ultimoEstado == 1;
+                }
+                if ($estado === '0' || $estado === 0) {
+                    return true;
+                }
+                return $ultimoEstado == $estado;
+            })->sortByDesc(function ($req) {
+                return optional($req->historial->last())->created_at;
+            })->values();
+
+            // Paginación manual
+            $perPage = (int) $request->query('per_page', 10);
+            $page = (int) $request->query('page', 1);
+            $total = $filtrados->count();
+            $items = $filtrados->forPage($page, $perPage)->values();
+
+            $paginator = new LengthAwarePaginator(
+                $items,
+                $total,
+                $perPage,
+                $page,
+                ['path' => url()->current()]
+            );
 
             return response()->json([
                 'status' => 200,
-                'message' => "Listado de requerimientos",
-                'data' => $requerimientos
+                'message' => 'Listado de requerimientos',
+                'data' => $paginator->items(),
+                'pagination' => [
+                    'current_page' => $paginator->currentPage(),
+                    'per_page' => $paginator->perPage(),
+                    'total' => $paginator->total(),
+                    'last_page' => $paginator->lastPage(),
+                ]
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
@@ -1592,6 +1588,7 @@ class RequerimientoController extends Controller
             ], 500);
         }
     }
+
 
     public function datosUsuario(string $usuario, Request $request)
     {

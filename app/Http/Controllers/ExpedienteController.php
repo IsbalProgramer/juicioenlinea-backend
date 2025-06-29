@@ -234,7 +234,7 @@ class ExpedienteController extends Controller
         try {
             $fechaInicio = $request->input('fechaInicio');
             $fechaFin = $request->input('fechaFinal');
-            $tipoFiltro = $request->input('tipo'); // 0: todos, 1: requerimientos, 2: trámites, 3: grabaciones, 4: otros
+            $tipoFiltro = $request->input('tipo'); // 0: todos, 1: requerimientos, 2: trámites, 3: audiencias, 4: otros
             $folio = $request->input('folio');
 
             // Por defecto: últimos 7 días solo si no se proporcionan fechas
@@ -295,6 +295,21 @@ class ExpedienteController extends Controller
                 ->get()
                 : collect();
 
+            // Audiencias (solo finalizadas o canceladas)
+            // $audiencias = $expediente->audiencias()
+            //     ->with(['historialEstadoAudiencias.catEstadoAudiencia']) // Trae historial y estado
+            //     ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+            //     ->whereHas('historialEstadoAudiencias', function ($q) {
+            //         $q->whereIn('idCatEstadoAudiencia', [2, 4]); // 2: finalizada, 4: cancelada
+            //     })
+            //     ->get();
+            $audiencias = $expediente->audiencias()
+                ->with(['ultimoEstado.catEstadoAudiencia'])
+                ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+                ->get()
+                ->filter(function ($audiencia) {
+                    return in_array($audiencia->ultimoEstado?->idCatEstadoAudiencia, [2, 4]);
+                });
 
             return response()->json([
                 'success' => true,
@@ -304,6 +319,7 @@ class ExpedienteController extends Controller
                     'pre_registro' => $preRegistro,
                     'requerimientos' => $requerimientos,
                     'tramites' => $tramites,
+                    'audiencias' => $audiencias,
                 ],
             ]);
         } catch (ModelNotFoundException $e) {
@@ -372,49 +388,8 @@ class ExpedienteController extends Controller
         }
     }
 
-    // Obtener el detalle del expediente por el número de expediente en formato 0000/0000
-    // public function busquedaExpedienteDetalles(Request $request)
-    // {
 
-    //     // Validar el request
-    //     $validator = Validator::make($request->all(), [
-    //         'expediente' => 'required|string',
-    //         'juzgado' => 'required|integer',
-    //         'folio' => 'required|string'
-    //     ]);
-
-    //     if ($validator->fails()) {
-    //         return response()->json(['errors' => $validator->errors()], 422);
-    //     }
-
-    //     // Buscar el preregistro por folio
-    //     $preregistro = DB::table('pre_registros')
-    //         ->where('folioPreregistro', $request->folio)
-    //         ->value('idPreregistro');
-
-    //     if (!$preregistro) {
-    //         return response()->json([
-    //             'message' => 'No se encontró un preregistro con ese folio.'
-    //         ], 404);
-    //     }
-    //     // Buscar el expediente que coincida con todos los datos
-    //     $expediente = DB::table('expedientes')
-    //         ->where('NumExpediente', $request->expediente)
-    //         ->where('idCatJuzgado', $request->juzgado)
-    //         ->where('idPreregistro', $preregistro)
-    //         ->first();
-
-    //     if (!$expediente) {
-    //         return response()->json([
-    //             'message' => 'No se encontró un expediente con los datos proporcionados.'
-    //         ], 404);
-    //     }
-
-    //     return response()->json([
-    //         'message' => 'Expediente encontrado correctamente.',
-    //         'data' => $expediente
-    //     ]);
-    // }
+  
     public function busquedaExpedienteDetalles(Request $request, PermisosApiService $permisosApiService)
     {
         $validator = Validator::make($request->all(), [
@@ -494,6 +469,52 @@ class ExpedienteController extends Controller
         ]);
     }
 
-    
+    public function relacionarAbogadoConExpediente($idExpediente)
+    {
+        $expediente = Expediente::find($idExpediente);
+        if (!$expediente) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Expediente no encontrado',
+            ], 404);
+        }
+
+        // Obtener el preregistro relacionado
+        $preregistro = PreRegistro::find($expediente->idPreregistro);
+        if (!$preregistro) {
+            return response()->json([
+                'success' => false,
+                'message' => 'PreRegistro no encontrado para este expediente',
+            ], 404);
+        }
+
+        // Buscar el abogado por idGeneral
+        $abogado = Abogado::where('idGeneral', $preregistro->idGeneral)->first();
+        if (!$abogado) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Abogado no encontrado con ese idGeneral',
+            ], 404);
+        }
+
+        // Verificar si ya existe la relación
+        $yaRelacionado = $expediente->abogados()->where('abogados.idAbogado', $abogado->idAbogado)->exists();
+        if ($yaRelacionado) {
+            return response()->json([
+                'success' => true,
+                'status' => 409,
+                'message' => 'La relación ya existe',
+            ]);
+        }
+
+        // Relacionar abogado con expediente
+        $expediente->abogados()->attach($abogado->idAbogado);
+
+        return response()->json([
+            'success' => true,
+            'status' => 200,
+            'message' => 'Abogado relacionado correctamente con el expediente',
+        ]);
+    }
 
 }

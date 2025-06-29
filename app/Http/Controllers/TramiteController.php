@@ -43,18 +43,6 @@ class TramiteController extends Controller
                 ], 400);
             }
 
-            // $perfiles = $permisosApiService->obtenerPerfilesUsuario($request->bearerToken(), $idSistema);
-            // $tienePerfilAbogado = collect($perfiles)->contains(function ($perfil) {
-            //     return isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'abogado';
-            // });
-
-            // if (!$tienePerfilAbogado) {
-            //     return response()->json([
-            //         'status' => 403,
-            //         'message' => 'No tiene permisos para realizar esta acción.',
-            //     ], 403);
-            // }
-
             // Filtros
             $estado = $request->query('estado');
             $fechaInicio = $request->query('fechaInicio');
@@ -67,49 +55,64 @@ class TramiteController extends Controller
             $inicio = $fechaInicio ? Carbon::parse($fechaInicio, $timezone)->startOfDay() : null;
             $fin = $fechaFinal ? Carbon::parse($fechaFinal, $timezone)->endOfDay() : null;
 
-            // Si no hay filtros, usar últimos 7 días por defecto
             if (!$fechaInicio && !$fechaFinal && !$folioOficio && !$estado && !$tipo) {
                 $inicio = Carbon::now($timezone)->subDays(6)->startOfDay();
                 $fin = Carbon::now($timezone)->endOfDay();
             }
 
             // Base query
-            $query = Tramite::with(['historial', 'catTramite']);
+            $query = Tramite::with(['historial', 'catTramite'])->where('idGeneral', $idGeneral);
 
-            // Folio
             if ($folioOficio) {
                 $query->where('folioOficio', 'like', "%$folioOficio%");
             }
 
-            // Tipo de trámite
             if ($tipo) {
                 $query->where('idCatTramite', $tipo);
             }
 
-            // Filtrado por historial
             if ($inicio && $fin) {
                 $query->whereHas('historial', function ($q) use ($inicio, $fin) {
                     $q->whereBetween('created_at', [$inicio, $fin]);
                 });
             }
 
-            // Obtener trámites
-            $tramites = $query->get()
+            // Ahora traemos TODO el dataset filtrado en BD
+            $all = $query->get()
                 ->filter(function ($tramite) use ($estado) {
                     $ultimoEstado = $tramite->historial->last()->idCatEstadoTramite ?? null;
-
-                    if (is_null($estado) || $estado == 0) return true;
-
+                    if (is_null($estado)) {
+                        return $ultimoEstado == 1; // Ajusta si tu valor por defecto es otro
+                    }
+                    if ($estado === '0' || $estado === 0) {
+                        return true;
+                    }
                     return $ultimoEstado == $estado;
                 })
-                ->where('idGeneral', $idGeneral)
-                ->sortByDesc(fn($tramite) => optional($tramite->historial->last())->created_at)
+                ->sortByDesc(function ($tramite) {
+                    return optional($tramite->historial->last())->created_at;
+                })
                 ->values();
+
+            // Paginación manual
+            $perPage = (int)$request->query('per_page', 10);
+            $page = (int)$request->query('page', 1);
+
+            $total = $all->count();
+            $lastPage = (int)ceil($total / $perPage);
+
+            $pageItems = $all->forPage($page, $perPage)->values();
 
             return response()->json([
                 'status' => 200,
                 'message' => 'Listado de trámites',
-                'data' => $tramites
+                'data' => $pageItems,
+                'pagination' => [
+                    'current_page' => $page,
+                    'per_page' => $perPage,
+                    'total' => $total,
+                    'last_page' => $lastPage,
+                ]
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
