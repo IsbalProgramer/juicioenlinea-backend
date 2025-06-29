@@ -388,49 +388,8 @@ class ExpedienteController extends Controller
         }
     }
 
-    // Obtener el detalle del expediente por el número de expediente en formato 0000/0000
-    // public function busquedaExpedienteDetalles(Request $request)
-    // {
 
-    //     // Validar el request
-    //     $validator = Validator::make($request->all(), [
-    //         'expediente' => 'required|string',
-    //         'juzgado' => 'required|integer',
-    //         'folio' => 'required|string'
-    //     ]);
-
-    //     if ($validator->fails()) {
-    //         return response()->json(['errors' => $validator->errors()], 422);
-    //     }
-
-    //     // Buscar el preregistro por folio
-    //     $preregistro = DB::table('pre_registros')
-    //         ->where('folioPreregistro', $request->folio)
-    //         ->value('idPreregistro');
-
-    //     if (!$preregistro) {
-    //         return response()->json([
-    //             'message' => 'No se encontró un preregistro con ese folio.'
-    //         ], 404);
-    //     }
-    //     // Buscar el expediente que coincida con todos los datos
-    //     $expediente = DB::table('expedientes')
-    //         ->where('NumExpediente', $request->expediente)
-    //         ->where('idCatJuzgado', $request->juzgado)
-    //         ->where('idPreregistro', $preregistro)
-    //         ->first();
-
-    //     if (!$expediente) {
-    //         return response()->json([
-    //             'message' => 'No se encontró un expediente con los datos proporcionados.'
-    //         ], 404);
-    //     }
-
-    //     return response()->json([
-    //         'message' => 'Expediente encontrado correctamente.',
-    //         'data' => $expediente
-    //     ]);
-    // }
+  
     public function busquedaExpedienteDetalles(Request $request, PermisosApiService $permisosApiService)
     {
         $validator = Validator::make($request->all(), [
@@ -510,7 +469,6 @@ class ExpedienteController extends Controller
         ]);
     }
 
-
     public function relacionarAbogadoConExpediente($idExpediente)
     {
         $expediente = Expediente::find($idExpediente);
@@ -558,4 +516,5 @@ class ExpedienteController extends Controller
             'message' => 'Abogado relacionado correctamente con el expediente',
         ]);
     }
+
 }
