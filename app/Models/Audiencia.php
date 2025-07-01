@@ -44,4 +44,8 @@ class Audiencia extends Model
     {
         return $this->hasMany(Grabaciones::class, 'idAudiencia', 'idAudiencia');
     }
+    public function solicitudes()
+    {
+        return $this->hasMany(Solicitudes::class, 'idAudiencia', 'idAudiencia');
+    }
 }

@@ -13,14 +13,13 @@ return new class extends Migration
     {
         Schema::create('solicitudes', function (Blueprint $table) {
             $table->id('idSolicitud');
-            $table->unsignedBigInteger('idGrabacion');
+            $table->unsignedBigInteger('idAudiencia'); // Cambiado
             $table->integer('idGeneral');
             $table->string('observaciones')->nullable();
             $table->timestamps();
 
-            $table->foreign('idGrabacion')->references('idGrabacion')->on('grabaciones')->onDelete('cascade');
+            $table->foreign('idAudiencia')->references('idAudiencia')->on('audiencias')->onDelete('cascade');
         });
-
     }
 
     /**

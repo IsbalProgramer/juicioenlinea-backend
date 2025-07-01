@@ -21,7 +21,7 @@ class MeetingService
         $defaults = [
             'timezone' => 'America/Mexico_City',
             'excludePassword' => true, // Excluir contraseña de la reunión
-            'reminderTime' => 30, // Recordatorio en minutos
+            'reminderTime' => 0, // Recordatorio en minutos
             'sendEmail' => true, // Enviar correo electrónico de invitación
             'hostEmail' => 'unidad.informatica.dpi@gmail.com',
             'enabledAutoRecordMeeting' => true,
@@ -108,7 +108,7 @@ class MeetingService
         ];
     }
     
-    public function eliminarReunion(string $token, string $meetingId)
+    public function cancelarReunion(string $token, string $meetingId)
     {
         $url = $this->baseUrl . '/' . $meetingId;
     

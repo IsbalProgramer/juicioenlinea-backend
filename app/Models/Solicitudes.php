@@ -10,14 +10,27 @@ class Solicitudes extends Model
     protected $table = 'solicitudes';
     protected $primaryKey = 'idSolicitud';
     protected $fillable = [
-        'idGrabacion',
+        'idAudiencia',
         'idGeneral',
         'observaciones',
     ];
 
-    public function grabacion()
+    public function audiencia()
     {
-        return $this->belongsTo(Grabaciones::class, 'idGrabacion', 'idGrabacion');
+        return $this->belongsTo(Audiencia::class, 'idAudiencia', 'idAudiencia');
+    }
+
+    // Si quieres acceder a las grabaciones desde la solicitud:
+    public function grabaciones()
+    {
+        return $this->hasManyThrough(
+            Grabaciones::class,
+            Audiencia::class,
+            'idAudiencia', // Foreign key on Audiencia
+            'idAudiencia', // Foreign key on Grabaciones
+            'idAudiencia', // Local key on Solicitudes
+            'idAudiencia'  // Local key on Audiencia
+        );
     }
 
     public function historialEstado()
@@ -28,6 +41,20 @@ class Solicitudes extends Model
     public function ultimoEstado()
     {
         return $this->hasOne(HistorialEstadoSolicitud::class, 'idSolicitud', 'idSolicitud')
-            ->latestOfMany('fechaHora');
+            ->latestOfMany('fechaEstado');
+    }
+
+       public function getCreatedAtAttribute($value)
+    {
+        return \Carbon\Carbon::parse($value)
+            ->setTimezone(config('app.timezone', 'America/Mexico_City'))
+            ->toIso8601String();
+    }
+    
+    public function getUpdatedAtAttribute($value)
+    {
+        return \Carbon\Carbon::parse($value)
+            ->setTimezone(config('app.timezone', 'America/Mexico_City'))
+            ->toIso8601String();
     }
 }

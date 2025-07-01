@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('invitados', function (Blueprint $table) {
             $table->id('idInvitado');
-            $table->integer('idUsr')->nullable(); 
+            $table->string('idUsr')->nullable(); 
             $table->unsignedBigInteger('idAudiencia');
             $table->string('correo');
             $table->string('correoAlterno')->nullable();
