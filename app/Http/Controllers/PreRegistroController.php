@@ -22,10 +22,94 @@ class PreRegistroController extends Controller
     /**
      * Display a listing of the resource.
      */
+    // public function index(Request $request, PermisosApiService $permisosApiService)
+    // {
+    //     try {
+    //         // Obtener el payload del token desde los atributos de la solicitud
+    //         $jwtPayload = $request->attributes->get('jwt_payload');
+    //         $datosUsuario = $permisosApiService->obtenerDatosUsuarioByToken($jwtPayload);
+
+    //         if (!$datosUsuario || !isset($datosUsuario['idGeneral'])) {
+    //             return response()->json([
+    //                 'status' => 400,
+    //                 'message' => 'No se pudo obtener el idGeneral del token',
+    //             ], 400);
+    //         }
+
+    //         $idGeneral = $datosUsuario['idGeneral'];
+
+    //         $fechaInicioParam = $request->query('fechaInicio');
+    //         $fechaFinalParam = $request->query('fechaFinal');
+    //         $folio = $request->query('folio');
+    //         $estado = $request->query('estado');
+
+    //         $fechaInicio = null;
+    //         $fechaFinal = null;
+
+    //         // Aplicar filtro de fechas si se mandan
+    //         $timezone = config('app.timezone', 'America/Mexico_City');
+    //         if ($fechaInicioParam && $fechaFinalParam) {
+    //             $fechaInicio = Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
+    //             $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
+    //         } elseif ($fechaInicioParam) {
+    //             $fechaInicio = Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
+    //             $fechaFinal = Carbon::parse($fechaInicioParam, $timezone)->endOfDay();
+    //         } elseif ($fechaFinalParam) {
+    //             $fechaInicio = Carbon::parse($fechaFinalParam, $timezone)->startOfDay();
+    //             $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
+    //         } elseif (!$folio) {
+    //             $fechaInicio = Carbon::now()->subDays(6)->startOfDay();
+    //             $fechaFinal = Carbon::now()->endOfDay();
+    //         }
+
+    //         $preRegistros = PreRegistro::with([
+    //             'partes',
+    //             'documentos:idPreregistro,nombre',
+    //             'catMateriaVia.catMateria',
+    //             'catMateriaVia.catVia',
+    //             'historialEstado' => function ($query) {
+    //                 $query->latest('fechaEstado')
+    //                     ->limit(1)
+    //                     ->select('idPreregistro', 'idCatEstadoInicio', 'fechaEstado')
+    //                     ->with('estado:idCatEstadoInicio,descripcion');
+    //             }
+    //         ])
+    //             ->where('idGeneral', $idGeneral)
+    //             ->when($folio, function ($query) use ($folio) {
+    //                 $query->where('folioPreregistro', 'like', "%{$folio}%");
+    //             })
+    //             ->when($fechaInicio && $fechaFinal, function ($query) use ($fechaInicio, $fechaFinal) {
+    //                 $query->whereBetween('created_at', [$fechaInicio, $fechaFinal]);
+    //             })
+    //             ->when($estado, function ($query) use ($estado) {
+    //                 // Filtrar por el estado más reciente en historialEstado
+    //                 $query->whereHas('historialEstado', function ($q) use ($estado) {
+    //                     $q->latest('fechaEstado')
+    //                         ->limit(1)
+    //                         ->where('idCatEstadoInicio', $estado);
+    //                 });
+    //             })
+    //             ->get();
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'status' => 200,
+    //             'message' => "Listado de preregistros",
+    //             'data' => $preRegistros
+    //         ], 200);
+    //     } catch (\Exception $e) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'status' => 500,
+    //             'message' => 'Error al obtener la lista de preregistros',
+    //             'error' => $e->getMessage(),
+    //         ], 500);
+    //     }
+    // }
+
     public function index(Request $request, PermisosApiService $permisosApiService)
     {
         try {
-            // Obtener el payload del token desde los atributos de la solicitud
             $jwtPayload = $request->attributes->get('jwt_payload');
             $datosUsuario = $permisosApiService->obtenerDatosUsuarioByToken($jwtPayload);
 
@@ -46,8 +130,8 @@ class PreRegistroController extends Controller
             $fechaInicio = null;
             $fechaFinal = null;
 
-            // Aplicar filtro de fechas si se mandan
             $timezone = config('app.timezone', 'America/Mexico_City');
+
             if ($fechaInicioParam && $fechaFinalParam) {
                 $fechaInicio = Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
                 $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
@@ -58,11 +142,11 @@ class PreRegistroController extends Controller
                 $fechaInicio = Carbon::parse($fechaFinalParam, $timezone)->startOfDay();
                 $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
             } elseif (!$folio) {
-                $fechaInicio = Carbon::now()->subDays(6)->startOfDay();
-                $fechaFinal = Carbon::now()->endOfDay();
+                $fechaInicio = Carbon::now($timezone)->subDays(6)->startOfDay();
+                $fechaFinal = Carbon::now($timezone)->endOfDay();
             }
 
-            $preRegistros = PreRegistro::with([
+            $query = PreRegistro::with([
                 'partes',
                 'documentos:idPreregistro,nombre',
                 'catMateriaVia.catMateria',
@@ -79,23 +163,46 @@ class PreRegistroController extends Controller
                     $query->where('folioPreregistro', 'like', "%{$folio}%");
                 })
                 ->when($fechaInicio && $fechaFinal, function ($query) use ($fechaInicio, $fechaFinal) {
-                    $query->whereBetween('created_at', [$fechaInicio, $fechaFinal]);
+                    $query->whereBetween('fechaCreada', [$fechaInicio, $fechaFinal]);
                 })
                 ->when($estado, function ($query) use ($estado) {
-                    // Filtrar por el estado más reciente en historialEstado
                     $query->whereHas('historialEstado', function ($q) use ($estado) {
                         $q->latest('fechaEstado')
                             ->limit(1)
                             ->where('idCatEstadoInicio', $estado);
                     });
-                })
-                ->get();
+                });
+
+            // Si per_page es 0 o menor, traer todos los registros
+            $perPage = (int) $request->query('per_page', 2);
+            $page = (int) $request->query('page', 1);
+
+            $all = $query->get()->sortByDesc(function ($item) {
+                return optional($item->fechaCreada);
+            })->values();
+
+            if ($perPage <= 0) {
+                $pageItems = $all;
+                $total = $all->count();
+                $lastPage = 1;
+                $page = 1;
+            } else {
+                $total = $all->count();
+                $lastPage = (int) ceil($total / $perPage);
+                $pageItems = $all->forPage($page, $perPage)->values();
+            }
 
             return response()->json([
                 'success' => true,
                 'status' => 200,
                 'message' => "Listado de preregistros",
-                'data' => $preRegistros
+                'data' => $pageItems,
+                'pagination' => [
+                    'current_page' => $page,
+                    'per_page' => $perPage,
+                    'total' => $total,
+                    'last_page' => $lastPage,
+                ]
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
@@ -106,6 +213,7 @@ class PreRegistroController extends Controller
             ], 500);
         }
     }
+
 
     /**
      * Store a newly created resource in storage.
