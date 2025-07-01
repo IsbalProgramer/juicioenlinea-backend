@@ -283,7 +283,7 @@ class ExpedienteController extends Controller
         });
 
         // Paginación manual
-        $perPage = (int)$request->query('per_page', 2);
+        $perPage = (int)$request->query('per_page', 1);
         $page = (int)$request->query('page', 1);
         $total = $transformados->count();
         $items = $transformados->forPage($page, $perPage)->values();
@@ -488,7 +488,7 @@ class ExpedienteController extends Controller
             $fechaInicioParam = $request->input('fechaInicio');
             $fechaFinalParam = $request->input('fechaFinal');
             $folio = $request->input('folio');
-            $perPage = (int) $request->input('per_page', 2);
+            $perPage = (int) $request->input('per_page', 5);
             $page = (int) $request->input('page', 1);
             $timezone = config('app.timezone', 'America/Mexico_City');
 
@@ -508,7 +508,11 @@ class ExpedienteController extends Controller
             }
 
             // Obtener expediente
-            $expediente = Expediente::with('juzgado')->findOrFail($idExpediente);
+            $expediente = Expediente::with([
+                'juzgado',
+                'preRegistro.partes',
+                'preRegistro.partes.catTipoParte'
+            ])->findOrFail($idExpediente);
 
             // PreRegistro
             $preRegistro = $expediente->preRegistro()
@@ -554,14 +558,33 @@ class ExpedienteController extends Controller
 
             // Audiencias
             $audiencias = $expediente->audiencias()
-                ->with(['ultimoEstado.catEstadoAudiencia'])
+                ->with(['ultimoEstado.catalogoEstadoAudiencia'])
                 ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+                ->whereHas('ultimoEstado', function ($q) {
+                    $q->whereIn('idCatalogoEstadoAudiencia', [2, 4]);
+                })
                 ->get()
-                ->filter(fn($a) => in_array($a->ultimoEstado?->idCatEstadoAudiencia, [2, 4]))
-                ->map(function ($item) {
-                    $item->tipo = 'audiencia';
-                    return $item;
+                ->map(function ($audiencia) {
+                    return [
+                        'idAudiencia' => $audiencia->idAudiencia,
+                        'title' => $audiencia->title,
+                        'created_at'=>$audiencia->created_at,
+                        'idExpediente' => $audiencia->idExpediente,
+                        'start' => $audiencia->start,
+                        'end' => $audiencia->end,
+                        'ultimo_estado' => $audiencia->ultimoEstado
+                            ? [
+                                'idHistorialEstadoAudiencia' => $audiencia->ultimoEstado->idHistorialEstadoAudiencia,
+                                'idCatalogoEstadoAudiencia' => $audiencia->ultimoEstado->idCatalogoEstadoAudiencia,
+                                'descripcion' => optional($audiencia->ultimoEstado->catalogoEstadoAudiencia)->descripcion,
+                                'fechaHora' => $audiencia->ultimoEstado->fechaHora,
+                                'observaciones' => $audiencia->ultimoEstado->observaciones,
+                            ]
+                            : null,
+                        'tipo' => 'audiencia',
+                    ];
                 });
+
 
             // Combinar todos
             $todo = collect()

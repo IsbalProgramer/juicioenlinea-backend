@@ -22,5 +22,8 @@ class ExpedienteAbogado extends Model
         return $this->belongsTo(Abogado::class, 'idAbogado', 'idAbogado');
     }
 
+    public $timestamps = false; //<--- DESACTIVA los timestamps
+
+
 }
 

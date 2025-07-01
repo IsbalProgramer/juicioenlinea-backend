@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class HistorialEstadoSolicitud extends Model
 {
     //
-    protected $table = 'historial_estado_solicitudes';
+    protected $table = 'historial_estado_solicituds';
     protected $primaryKey = 'idHistorialEstadoSolicitud';
     protected $fillable = [
         'idSolicitud',

@@ -9,6 +9,7 @@ use App\Models\Catalogos\CatEstadoInicios;
 use App\Models\Catalogos\CatEstadoSolicitud;
 use App\Models\Catalogos\CatSexos;
 use App\Models\Catalogos\CatTipoDocumento;
+use App\Models\HistorialEstadoAudiencia;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -62,7 +63,10 @@ class DatabaseSeeder extends Seeder
         $this->call(TipoJuzgadoSeeder::class);
         $this->call(TipoRemitente::class);
         $this->call(TipoRemitenteJuzgado::class);
-        
         $this->call(TipoSecretarioJuzgado::class);
+        $this->call(ExpedienteSeeder::class);
+        $this->call(AudienciaSeeder::class);
+        $this->call(HistorialEstadoAudienciasSeeder::class);
+    
     }
 }

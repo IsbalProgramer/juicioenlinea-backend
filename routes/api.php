@@ -76,7 +76,7 @@ Route::prefix('Expediente')->group(function () {
 });
 
 Route::prefix('Audiencia')->group(function () {
-    Route::get('Listar', [AudienciaController::class, 'index']);
+    Route::get('Listar', [AudienciaController::class, 'index'])->middleware(VerifyJwtToken::class);
     Route::get('Detalle/{idAudiencia}', [AudienciaController::class, 'show']);
     Route::post('Crear', [AudienciaController::class, 'store']);
     Route::get('Disponibilidad', [AudienciaController::class, 'disponibilidad']);
@@ -106,4 +106,5 @@ Route::post('Grabaciones/{idAudiencia}', [GrabacionesController::class, 'store']
 
 Route::prefix('Solicitud')->group(function () {
     Route::post('Crear', [SolicitudesController::class, 'store']);
+    Route::get('Listar', [SolicitudesController::class, 'index'])->middleware(VerifyJwtToken::class);
 });
