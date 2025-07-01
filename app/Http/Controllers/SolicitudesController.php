@@ -7,6 +7,7 @@ use App\Models\Documento;
 use App\Models\Grabaciones;
 use App\Models\HistorialEstadoSolicitud;
 use App\Models\Solicitudes;
+use App\Services\NasApiService;
 use App\Services\PermisosApiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -72,13 +73,13 @@ class SolicitudesController extends Controller
 
             // Si es abogado, solo sus solicitudes
             if ($esAbogado && !$esSecretario) {
-                $solicitudes = Solicitudes::with(['grabacion.audiencia.expediente'])
+                $solicitudes = Solicitudes::with(['grabaciones.audiencia.expediente'])
                     ->where('idGeneral', $idGeneral)
                     ->get();
             } else {
                 // Si es secretario, buscar solicitudes de expedientes donde es secretario
-                $solicitudes = Solicitudes::with(['grabacion.audiencia.expediente'])
-                    ->whereHas('grabacion.audiencia.expediente', function ($q) use ($idGeneral) {
+                $solicitudes = Solicitudes::with(['ultimoEstado.estado','audiencia.expediente'])
+                    ->whereHas('grabaciones.audiencia.expediente', function ($q) use ($idGeneral) {
                         $q->where('idSecretario', $idGeneral);
                     })
                     ->get();
@@ -102,16 +103,38 @@ class SolicitudesController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request, \App\Services\NasApiService $nasApiService)
+    public function store(Request $request, NasApiService $nasApiService, PermisosApiService $permisosApiService)
     {
         try {
+            // Obtener el payload del token desde los atributos de la solicitud
+            $jwtPayload = $request->attributes->get('jwt_payload');
+            $datosUsuario = $permisosApiService->obtenerDatosUsuarioByToken($jwtPayload);
+
+            if (!$datosUsuario || !isset($datosUsuario['idGeneral']) || !isset($datosUsuario['Usr'])) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 400,
+                    'message' => 'No se pudo obtener el idGeneral o Usr del token',
+                ], 400);
+            }
+
+            $idGeneral = $datosUsuario['idGeneral'];
+            $usr = $datosUsuario['Usr'];
+
+            if (!$idGeneral || !$usr) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 400,
+                    'message' => 'No se pudo obtener el idGeneral',
+                ], 400);
+            }
+
             $validator = Validator::make($request->all(), [
-                'idGrabacion'   => 'required|integer',
-                'idGeneral'     => 'required|integer',
+                'idAudiencia'   => 'required|integer',
                 'observaciones' => 'nullable|string',
                 'documento'     => 'required|file',
             ]);
-
+ 
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
@@ -123,22 +146,22 @@ class SolicitudesController extends Controller
 
             $validated = $validator->validated();
 
-            // Verificar que exista la grabación
-            $grabacionExiste = Grabaciones::where('idGrabacion', $validated['idGrabacion'])->exists();
-            if (!$grabacionExiste) {
+            // Verificar que exista la audiencia
+            $audienciaExiste = Audiencia::where('idAudiencia', $validated['idAudiencia'])->exists();
+            if (!$audienciaExiste) {
                 return response()->json([
                     'success' => false,
                     'status' => 404,
-                    'message' => 'La grabación especificada no existe.',
+                    'message' => 'La audiencia especificada no existe.',
                     'data' => null,
                 ], 404);
             }
 
-            // Verificar si ya existe una solicitud pendiente (status 1 o 3) para ese usuario y grabación
-            $solicitudPendiente = Solicitudes::where('idGrabacion', $validated['idGrabacion'])
-                ->where('idGeneral', $validated['idGeneral'])
-                ->whereHas('historialEstadoSolicitud', function ($q) {
-                    $q->whereIn('idCatalogoEstadoSolicitud', [1, 3]);
+            // Verificar si ya existe una solicitud pendiente (último estado = 1) para ese usuario y audiencia
+            $solicitudPendiente = Solicitudes::where('idAudiencia', $validated['idAudiencia'])
+                ->where('idGeneral', $idGeneral)
+                ->whereHas('ultimoEstado', function ($q) {
+                    $q->where('idCatalogoEstadoSolicitud', 1);
                 })
                 ->first();
 
@@ -146,7 +169,7 @@ class SolicitudesController extends Controller
                 return response()->json([
                     'success' => false,
                     'status' => 409,
-                    'message' => 'Ya existe una solicitud pendiente para esta grabación.',
+                    'message' => 'Ya existe una solicitud pendiente para esta audiencia.',
                     'data' => null,
                 ], 409);
             }
@@ -171,8 +194,8 @@ class SolicitudesController extends Controller
 
             // Crear la solicitud
             $solicitud = Solicitudes::create([
-                'idGrabacion'   => $validated['idGrabacion'],
-                'idGeneral'     => $validated['idGeneral'],
+                'idAudiencia'   => $validated['idAudiencia'],
+                'idGeneral'     => $idGeneral,
                 'observaciones' => $validated['observaciones'] ?? null,
             ]);
 
@@ -180,7 +203,7 @@ class SolicitudesController extends Controller
             $solicitud->historialEstado()->create([
                 'idCatalogoEstadoSolicitud' => 1,
                 'fechaEstado' => now(),
-                'observaciones' => 'SOLICITUD CREADA Y EN REVISIÓN.',
+                'observaciones' => 'SOLICITUD ENVIADA.',
                 'idDocumento' => $documento->idDocumento,
             ]);
 

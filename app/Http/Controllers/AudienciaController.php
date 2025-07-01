@@ -53,15 +53,18 @@ class AudienciaController extends Controller
                     });
                 })
                 ->when($fechaInicio && $fechaFinal, function ($query) use ($fechaInicio, $fechaFinal) {
-                    $query->whereBetween('created_at', [$fechaInicio, $fechaFinal]);
+                    $query->whereBetween('start', [$fechaInicio, $fechaFinal]);
                 })
-                ->whereHas('ultimoEstado', function ($q) use ($estado) {
-                    // Si hay filtro de estado, úsalo, si no, solo 1 y 3
-                    if (!is_null($estado)) {
-                        $q->where('idCatalogoEstadoAudiencia', $estado);
-                    } else {
-                        $q->whereIn('idCatalogoEstadoAudiencia', [1, 3]);
-                    }
+                ->when(!is_null($estado), function ($query) use ($estado) {
+                    $query->whereHas('ultimoEstado', function ($q) use ($estado) {
+                        if ($estado == 1) {
+                            $q->whereIn('idCatalogoEstadoAudiencia', [1, 3]);
+                        } elseif ($estado == 2) {
+                            $q->where('idCatalogoEstadoAudiencia', 2);
+                        } elseif ($estado == 3) {
+                            $q->where('idCatalogoEstadoAudiencia', 4);
+                        }
+                    });
                 })
                 ->get();
 
@@ -144,7 +147,7 @@ class AudienciaController extends Controller
             'invitees.*.esAbogado' => 'nullable|boolean',
             'invitees.*.idCatSexo' => 'nullable|integer',
             'invitees.*.idCatTipoParte' => 'nullable|integer',
-            'invitees.*.idUsr' => 'nullable|integer',
+            'invitees.*.idUsr' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -489,7 +492,7 @@ class AudienciaController extends Controller
         ], 200);
     }
 
-    public function cancelarAudiencia(Request $request, $idAudiencia, NasApiService $nasApiService)
+    public function cancelarAudiencia(Request $request, $idAudiencia, NasApiService $nasApiService, MeetingService $meetingService)
     {
         $validator = Validator::make($request->all(), [
             'idCatTipoDocumento' => 'required|integer',
@@ -507,7 +510,7 @@ class AudienciaController extends Controller
         }
 
         // Buscar la audiencia con su último estado
-        $audiencia = Audiencia::with('ultimoEstado')->findOrFail($idAudiencia);
+        $audiencia = Audiencia::with('ultimoEstado', 'expediente')->findOrFail($idAudiencia);
 
         // 1. No permitir si ya está cancelada
         if ($audiencia->ultimoEstado && $audiencia->ultimoEstado->idCatalogoEstadoAudiencia == 4) {
@@ -518,25 +521,26 @@ class AudienciaController extends Controller
             ], 400);
         }
 
-        // 2. No permitir si la audiencia ya está en progreso o terminó
         $ahora = now();
         $inicio = Carbon::parse($audiencia->start);
         $fin = Carbon::parse($audiencia->end);
-        if ($ahora->between($inicio, $fin) || $ahora->gt($fin)) {
-            return response()->json([
-                'success' => false,
-                'status' => 400,
-                'message' => 'No se puede cancelar una audiencia que ya está en progreso o finalizó.',
-            ], 400);
+
+        // 2. Intenta cancelar en Webex solo si la audiencia no ha finalizado
+        $webexCancelResult = null;
+        if ($ahora->lte($fin)) {
+            $webexToken = env('WEBEX_TOKEN');
+            $meetingId = $audiencia->id; // campo 'id' en tu modelo Audiencia
+            if ($meetingId) {
+                $webexCancelResult = $meetingService->cancelarReunion($webexToken, $meetingId);
+                // Puedes loguear el resultado si lo deseas
+                Log::info('Resultado de cancelar en Webex:', ['webex' => $webexCancelResult]);
+            }
         }
 
         try {
-            $audiencia = Audiencia::with('expediente')->findOrFail($idAudiencia);
-
             // Subir documento al NAS
             $file = $request->file('documento');
             $idCatTipoDocumento = $request->input('idCatTipoDocumento');
-            // Extraer año y número del expediente
             $numExpediente = $audiencia->expediente->NumExpediente ?? null;
 
             if (!$numExpediente || strpos($numExpediente, '/') === false) {
@@ -590,6 +594,7 @@ class AudienciaController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Estado de la audiencia y documento actualizados correctamente',
+                'webex' => $webexCancelResult,
                 'data' => $audiencia->fresh('historialEstados')
             ], 200);
         } catch (\Exception $e) {

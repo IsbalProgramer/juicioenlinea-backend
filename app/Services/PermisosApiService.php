@@ -2,6 +2,7 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class PermisosApiService
 {
@@ -30,6 +31,7 @@ class PermisosApiService
         if ($response->failed() || !($response->json()['success'] ?? false)) {
             return null;
         }
+        Log::info('Respuesta de obtenerIdAreaSistemaUsuario: ' . json_encode($response->json()));
         return $response->json()['data']['idAreaSistemaUsuario'] ?? null;
     }
 
