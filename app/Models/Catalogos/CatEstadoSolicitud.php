@@ -9,7 +9,7 @@ class CatEstadoSolicitud extends Model
 {
     // Clase catalogo Estado Audiencia
     protected $table = 'cat_estado_solicitudes';
-    protected $primaryKey = 'idCatalogoEstadoSolicitud';
+    protected $primaryKey = 'idCatEstadoSolicitud';
     protected $fillable = [
         'descripcion',
         'activo'
