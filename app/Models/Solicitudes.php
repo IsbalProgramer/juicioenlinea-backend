@@ -37,20 +37,24 @@ class Solicitudes extends Model
     {
         return $this->hasMany(HistorialEstadoSolicitud::class, 'idSolicitud', 'idSolicitud');
     }
-    //ulitmo estado de la solicitud
+    public function primerEstado()
+    {
+        return $this->hasOne(HistorialEstadoSolicitud::class, 'idSolicitud', 'idSolicitud')
+            ->oldestOfMany('fechaEstado');
+    }
     public function ultimoEstado()
     {
         return $this->hasOne(HistorialEstadoSolicitud::class, 'idSolicitud', 'idSolicitud')
             ->latestOfMany('fechaEstado');
     }
 
-       public function getCreatedAtAttribute($value)
+    public function getCreatedAtAttribute($value)
     {
         return \Carbon\Carbon::parse($value)
             ->setTimezone(config('app.timezone', 'America/Mexico_City'))
             ->toIso8601String();
     }
-    
+
     public function getUpdatedAtAttribute($value)
     {
         return \Carbon\Carbon::parse($value)

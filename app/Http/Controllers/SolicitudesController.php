@@ -73,13 +73,13 @@ class SolicitudesController extends Controller
 
             // Si es abogado, solo sus solicitudes
             if ($esAbogado && !$esSecretario) {
-                $solicitudes = Solicitudes::with(['grabaciones.audiencia.expediente'])
+                $solicitudes = Solicitudes::with(['primerEstado','ultimoEstado.estado','audiencia.expediente'])
                     ->where('idGeneral', $idGeneral)
                     ->get();
             } else {
                 // Si es secretario, buscar solicitudes de expedientes donde es secretario
-                $solicitudes = Solicitudes::with(['ultimoEstado.estado','audiencia.expediente'])
-                    ->whereHas('grabaciones.audiencia.expediente', function ($q) use ($idGeneral) {
+                $solicitudes = Solicitudes::with(['primerEstado','ultimoEstado.estado','audiencia.expediente'])
+                    ->whereHas('audiencia.expediente', function ($q) use ($idGeneral) {
                         $q->where('idSecretario', $idGeneral);
                     })
                     ->get();
@@ -226,106 +226,6 @@ class SolicitudesController extends Controller
     /**
      * Display the specified resource.
      */
-    // public function show($id, Request $request, PermisosApiService $permisosApiService)
-    // {
-    //     try {
-    //         // Obtener datos del usuario desde el token
-    //         $jwtPayload = $request->attributes->get('jwt_payload');
-    //         $datosUsuario = $permisosApiService->obtenerDatosUsuarioByToken($jwtPayload);
-
-    //         if (!$datosUsuario || !isset($datosUsuario['idGeneral'])) {
-    //             return response()->json([
-    //                 'success' => false,
-    //                 'status' => 400,
-    //                 'message' => 'No se pudo obtener el idGeneral del token',
-    //             ], 400);
-    //         }
-
-    //         $idGeneral = $datosUsuario['idGeneral'];
-
-    //         // Obtener el sistema y perfiles
-    //         $idSistema = $permisosApiService->obtenerIdAreaSistemaUsuario($request->bearerToken(), $idGeneral, 4171);
-    //         if (!$idSistema) {
-    //             return response()->json([
-    //                 'success' => false,
-    //                 'status' => 400,
-    //                 'message' => 'No se pudo obtener el idAreaSistemaUsuario',
-    //             ], 400);
-    //         }
-
-    //         $perfiles = $permisosApiService->obtenerPerfilesUsuario($request->bearerToken(), $idSistema);
-    //         if (!$perfiles) {
-    //             return response()->json([
-    //                 'success' => false,
-    //                 'status' => 400,
-    //                 'message' => 'No se pudo obtener los perfiles del usuario',
-    //             ], 400);
-    //         }
-
-    //         $esAbogado = collect($perfiles)->contains(
-    //             fn($perfil) =>
-    //             isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'abogado'
-    //         );
-
-    //         $esSecretario = collect($perfiles)->contains(
-    //             fn($perfil) =>
-    //             isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'secretario'
-    //         );
-
-    //         if (!$esAbogado && !$esSecretario) {
-    //             return response()->json([
-    //                 'success' => false,
-    //                 'status' => 403,
-    //                 'message' => 'No tiene permisos para realizar esta acción.',
-    //             ], 403);
-    //         }
-
-    //         // Buscar la solicitud con relaciones
-    //         $solicitud = Solicitudes::with(['grabacion.audiencia.expediente'])
-    //             ->find($id);
-
-    //         if (!$solicitud) {
-    //             return response()->json([
-    //                 'success' => false,
-    //                 'status' => 404,
-    //                 'message' => 'Solicitud no encontrada',
-    //             ], 404);
-    //         }
-
-    //         // Validar pertenencia
-    //         $puedeVer = false;
-    //         if ($esAbogado && !$esSecretario) {
-    //             // Solo si es suya
-    //             $puedeVer = $solicitud->idGeneral == $idGeneral;
-    //         } else {
-    //             // Secretario: si el expediente le pertenece
-    //             $puedeVer = optional($solicitud->grabacion->audiencia->expediente)->idSecretario == $idGeneral;
-    //         }
-
-    //         if (!$puedeVer) {
-    //             return response()->json([
-    //                 'success' => false,
-    //                 'status' => 403,
-    //                 'message' => 'No tiene permisos para ver esta solicitud.',
-    //             ], 403);
-    //         }
-
-    //         return response()->json([
-    //             'success' => true,
-    //             'status' => 200,
-    //             'message' => 'Solicitud encontrada',
-    //             'data' => $solicitud,
-    //         ]);
-    //     } catch (\Exception $e) {
-    //         return response()->json([
-    //             'success' => false,
-    //             'status' => 500,
-    //             'message' => 'Error al obtener la solicitud',
-    //             'errors' => $e->getMessage(),
-    //         ], 500);
-    //     }
-    // }
-
     public function show($id, Request $request, PermisosApiService $permisosApiService)
     {
         try {
@@ -442,12 +342,12 @@ class SolicitudesController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $idSolicitud, \App\Services\NasApiService $nasApiService)
+    public function update(Request $request, string $idSolicitud, NasApiService $nasApiService)
     {
         try {
             $validator = Validator::make($request->all(), [
                 'estado' => 'required|in:2,3',
-                'observaciones' => 'required_if:estado,3|string|nullable',
+                'observaciones' => 'required|string',
                 'documento' => 'nullable|file',
             ]);
 
@@ -482,10 +382,8 @@ class SolicitudesController extends Controller
             }
 
             $estado = (int) $request->input('estado');
-            $observaciones = $estado === 2
-                ? 'SOLICITUD ACEPTADA, YA PUEDE CONSULTAR LA GRABACION DE LA AUDIENICA'
-                : $request->input('observaciones');
 
+      
             $idDocumento = null;
 
             // Si se sube un documento, guárdalo en el NAS y en la base de datos
@@ -513,7 +411,7 @@ class SolicitudesController extends Controller
             $solicitud->historialEstado()->create([
                 'idCatalogoEstadoSolicitud' => $estado,
                 'fechaEstado' => now(),
-                'observaciones' => $observaciones,
+                'observaciones' => $request->input('observaciones'),
                 'idDocumento' => $idDocumento,
             ]);
 

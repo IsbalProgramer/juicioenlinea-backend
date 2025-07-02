@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Audiencia;
 use App\Models\Documento;
+use App\Models\Solicitudes;
 use Illuminate\Http\Request;
 use App\Services\MeetingService;
 use App\Services\NasApiService;
@@ -17,9 +18,60 @@ class AudienciaController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request)
+    public function index(Request $request, PermisosApiService $permisosApiService)
     {
         try {
+            // Obtener datos del usuario desde el token
+            $jwtPayload = $request->attributes->get('jwt_payload');
+            $datosUsuario = $permisosApiService->obtenerDatosUsuarioByToken($jwtPayload);
+
+            if (!$datosUsuario || !isset($datosUsuario['idGeneral'])) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 400,
+                    'message' => 'No se pudo obtener el idGeneral del token',
+                ], 400);
+            }
+
+            $idGeneral = $datosUsuario['idGeneral'];
+
+            // Obtener el sistema y perfiles
+            $idSistema = $permisosApiService->obtenerIdAreaSistemaUsuario($request->bearerToken(), $idGeneral, 4171);
+            if (!$idSistema) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 400,
+                    'message' => 'No se pudo obtener el idAreaSistemaUsuario',
+                ], 400);
+            }
+
+            $perfiles = $permisosApiService->obtenerPerfilesUsuario($request->bearerToken(), $idSistema);
+            if (!$perfiles) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 400,
+                    'message' => 'No se pudo obtener los perfiles del usuario',
+                ], 400);
+            }
+
+            $esAbogado = collect($perfiles)->contains(
+                fn($perfil) =>
+                isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'abogado'
+            );
+
+            $esSecretario = collect($perfiles)->contains(
+                fn($perfil) =>
+                isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'secretario'
+            );
+
+            if (!$esAbogado && !$esSecretario) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 403,
+                    'message' => 'No tiene permisos para realizar esta acción.',
+                ], 403);
+            }
+
             // Parámetros de filtro
             $fechaInicioParam = $request->query('fechaInicio');
             $fechaFinalParam = $request->query('fechaFinal');
@@ -32,21 +84,22 @@ class AudienciaController extends Controller
             // Por defecto, solo mostrar audiencias del día de hoy
             $timezone = config('app.timezone', 'America/Mexico_City');
             if ($fechaInicioParam && $fechaFinalParam) {
-                $fechaInicio = Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
-                $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
+                $fechaInicio = \Carbon\Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
+                $fechaFinal = \Carbon\Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
             } elseif ($fechaInicioParam) {
-                $fechaInicio = Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
-                $fechaFinal = Carbon::parse($fechaInicioParam, $timezone)->endOfDay();
+                $fechaInicio = \Carbon\Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
+                $fechaFinal = \Carbon\Carbon::parse($fechaInicioParam, $timezone)->endOfDay();
             } elseif ($fechaFinalParam) {
-                $fechaInicio = Carbon::parse($fechaFinalParam, $timezone)->startOfDay();
-                $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
+                $fechaInicio = \Carbon\Carbon::parse($fechaFinalParam, $timezone)->startOfDay();
+                $fechaFinal = \Carbon\Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
             } else {
                 // Si no hay filtro, solo hoy
-                $fechaInicio = Carbon::now($timezone)->startOfDay();
-                $fechaFinal = Carbon::now($timezone)->endOfDay();
+                $fechaInicio = \Carbon\Carbon::now($timezone)->startOfDay();
+                $fechaFinal = \Carbon\Carbon::now($timezone)->endOfDay();
             }
 
-            $audiencias = Audiencia::with(['expediente', 'ultimoEstado.catalogoEstadoAudiencia'])
+            // --- Filtro por perfil ---
+            $audienciasQuery = \App\Models\Audiencia::with(['expediente', 'ultimoEstado.catalogoEstadoAudiencia'])
                 ->when($folio, function ($query) use ($folio) {
                     $query->whereHas('expediente', function ($q) use ($folio) {
                         $q->where('NumExpediente', 'like', "%{$folio}%");
@@ -65,8 +118,21 @@ class AudienciaController extends Controller
                             $q->where('idCatalogoEstadoAudiencia', 4);
                         }
                     });
-                })
-                ->get();
+                });
+
+            if ($esSecretario) {
+                // Solo audiencias donde expediente.idSecretario = idGeneral
+                $audienciasQuery->whereHas('expediente', function ($q) use ($idGeneral) {
+                    $q->where('idSecretario', $idGeneral);
+                });
+            } elseif ($esAbogado) {
+                // Solo audiencias donde expediente.abogados contiene idAbogado = idGeneral
+                $audienciasQuery->whereHas('expediente.abogados', function ($q) use ($idGeneral) {
+                    $q->where('idAbogado', $idGeneral);
+                });
+            }
+
+            $audiencias = $audienciasQuery->get();
 
             $ahora = now();
 
@@ -76,7 +142,7 @@ class AudienciaController extends Controller
                     $audiencia->ultimoEstado &&
                     in_array($audiencia->ultimoEstado->idCatalogoEstadoAudiencia, [1, 3])
                 ) {
-                    $fin = Carbon::parse($audiencia->end);
+                    $fin = \Carbon\Carbon::parse($audiencia->end);
                     if ($ahora->gt($fin)) {
                         // Cambia el estado a 2 (finalizada)
                         $audiencia->historialEstados()->create([
@@ -281,17 +347,99 @@ class AudienciaController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show($idAudiencia)
+    public function show($idAudiencia, Request $request, PermisosApiService $permisosApiService)
     {
         try {
+            // Obtener datos del usuario desde el token
+            $jwtPayload = $request->attributes->get('jwt_payload');
+            $datosUsuario = $permisosApiService->obtenerDatosUsuarioByToken($jwtPayload);
+
+            if (!$datosUsuario || !isset($datosUsuario['idGeneral'])) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 400,
+                    'message' => 'No se pudo obtener el idGeneral del token',
+                ], 400);
+            }
+
+            $idGeneral = $datosUsuario['idGeneral'];
+
+            // Obtener el sistema y perfiles
+            $idSistema = $permisosApiService->obtenerIdAreaSistemaUsuario($request->bearerToken(), $idGeneral, 4171);
+            if (!$idSistema) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 400,
+                    'message' => 'No se pudo obtener el idAreaSistemaUsuario',
+                ], 400);
+            }
+
+            $perfiles = $permisosApiService->obtenerPerfilesUsuario($request->bearerToken(), $idSistema);
+            if (!$perfiles) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 400,
+                    'message' => 'No se pudo obtener los perfiles del usuario',
+                ], 400);
+            }
+
+            $esAbogado = collect($perfiles)->contains(
+                fn($perfil) =>
+                isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'abogado'
+            );
+
+            $esSecretario = collect($perfiles)->contains(
+                fn($perfil) =>
+                isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'secretario'
+            );
+
+            if (!$esAbogado && !$esSecretario) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 403,
+                    'message' => 'No tiene permisos para realizar esta acción.',
+                ], 403);
+            }
+
+            // Cargar audiencia con relaciones necesarias
             $audiencia = Audiencia::with([
                 'invitados.catSexo',
                 'invitados.catTipoParte',
                 'expediente',
                 'ultimoEstado.catalogoEstadoAudiencia',
-                //'ultimoEstado.documento'
                 'grabaciones'
             ])->findOrFail($idAudiencia);
+
+            $puedeVer = false;
+            $mostrarGrabaciones = false;
+
+            if ($esSecretario) {
+                // SECRETARIO: puede ver si es secretario del expediente relacionado
+                $puedeVer = optional($audiencia->expediente)->idSecretario == $idGeneral;
+                $mostrarGrabaciones = $puedeVer;
+            } elseif ($esAbogado) {
+                // ABOGADO: puede ver el detalle siempre que esté relacionado como abogado en el expediente
+                $puedeVer = optional($audiencia->expediente->abogados)
+                    ->contains(fn($abogado) => $abogado->idGeneral == $idGeneral);
+
+                // Solo recibe grabaciones si tiene una solicitud aprobada (estado 2)
+                $solicitudAprobada = Solicitudes::where('idAudiencia', $audiencia->idAudiencia)
+                    ->where('idGeneral', $idGeneral)
+                    ->whereHas('ultimoEstado', function ($q) {
+                        $q->where('idCatalogoEstadoSolicitud', 2);
+                    })
+                    ->exists();
+
+                $mostrarGrabaciones = $solicitudAprobada;
+            }
+
+            if (!$puedeVer) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 403,
+                    'message' => 'No tiene permisos para ver esta audiencia.',
+                ], 403);
+            }
 
             $arr = $audiencia->toArray();
 
@@ -311,7 +459,6 @@ class AudienciaController extends Controller
                     'tipoParteDescripcion' => $invitado->catTipoParte->descripcion ?? null,
                     'direccion' => $invitado->direccion,
                     'esAbogado' => $invitado->esAbogado ? true : false,
-
                 ];
             });
 
@@ -325,12 +472,16 @@ class AudienciaController extends Controller
                     'fechaHora'                     => $audiencia->ultimoEstado->fechaHora,
                     'observaciones'                 => $audiencia->ultimoEstado->observaciones,
                     'idDocumento'                   => $audiencia->ultimoEstado->idDocumento ?? null,
-                    //'documento'                     => $audiencia->ultimoEstado->documento,
                 ];
             } else {
                 $arr['ultimo_estado'] = null;
             }
             unset($arr['ultimoEstado']);
+
+            // Solo incluir grabaciones si corresponde
+            if (!$mostrarGrabaciones) {
+                unset($arr['grabaciones']);
+            }
 
             return response()->json([
                 'success' => true,
@@ -347,7 +498,6 @@ class AudienciaController extends Controller
             ], 404);
         }
     }
-
     /**
      * Update the specified resource in storage.
      */
