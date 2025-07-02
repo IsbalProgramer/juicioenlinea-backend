@@ -379,108 +379,6 @@ class ExpedienteController extends Controller
     /**
      * Display the specified resource.
      */
-
-    // public function show(Request $request, $idExpediente)
-    // {
-    //     try {
-    //         $fechaInicio = $request->input('fechaInicio');
-    //         $fechaFin = $request->input('fechaFinal');
-    //         $tipoFiltro = $request->input('tipo'); // 0: todos, 1: requerimientos, 2: trámites, 3: audiencias, 4: otros
-    //         $folio = $request->input('folio');
-
-    //         // Por defecto: últimos 7 días solo si no se proporcionan fechas
-    //         if (!$fechaInicio || !$fechaFin) {
-    //             $fechaFin = now();
-    //             $fechaInicio = now()->subDays(7);
-    //         }
-
-    //         // Buscar expediente con relaciones
-    //         $expediente = Expediente::with([
-    //             // 'preRegistro',
-    //             'juzgado'
-    //         ])->findOrFail($idExpediente);
-
-    //         // preregistro (filtrado directo por folio y fecha) con último estado del historialEstado
-    //         $preRegistro = ($tipoFiltro === null || $tipoFiltro == 0 || $tipoFiltro == 2)
-    //             ? $expediente->preRegistro()
-    //             ->when($folio, function ($q) use ($folio) {
-    //                 $q->where('folioPreregistro', 'like', '%' . $folio . '%');
-    //             })
-    //             ->whereBetween('created_at', [$fechaInicio, $fechaFin])
-    //             ->with(['historialEstado' => function ($q) {
-    //                 $q->orderByDesc('created_at')->limit(1);
-    //             }, 'historialEstado.estado'])
-    //             ->with(['partes.catTipoParte', 'catMateriaVia.catMateria', 'catMateriaVia.catVia'])
-    //             ->get()
-    //             : collect();
-
-    //         // Requerimientos (filtrado por documentoAcuerdo.folio, fecha y estado final 2, 4 o 5)
-    //         $requerimientos = ($tipoFiltro === null || $tipoFiltro == 0 || $tipoFiltro == 1)
-    //             ? $expediente->requerimientos()
-    //             ->with(['documentoAcuerdo', 'historial.catEstadoRequerimiento'])
-    //             ->whereHas('documentoAcuerdo', function ($q) use ($folio) {
-    //                 if ($folio) {
-    //                     $q->where('folio', 'like', '%' . $folio . '%');
-    //                 }
-    //             })
-    //             ->whereBetween('created_at', [$fechaInicio, $fechaFin])
-    //             ->whereHas('historial', function ($q) {
-    //                 $q->whereIn('idCatEstadoRequerimientos', [2, 4, 5]);
-    //             })
-    //             ->get()
-    //             : collect();
-
-    //         // Trámites (filtrado directo por folio y fecha)
-    //         $tramites = ($tipoFiltro === null || $tipoFiltro == 0 || $tipoFiltro == 2)
-    //             ? $expediente->tramites()
-    //             ->with(['historial.catEstadoTramite']) // Asegúrate de traer la relación también
-    //             ->with(['catTramite']) // Asegúrate de traer la relación también
-    //             ->when($folio, function ($q) use ($folio) {
-    //                 $q->where('folioOficio', 'like', '%' . $folio . '%');
-    //             })
-    //             ->where('notificado', 1)
-    //             ->whereBetween('created_at', [$fechaInicio, $fechaFin])
-    //             ->whereHas('historial', function ($q) {
-    //                 $q->whereIn('idCatEstadoTramite', [2]); // Aquí defines los estados válidos
-    //             })
-    //             ->get()
-    //             : collect();
-
-    //         // Audiencias (solo finalizadas o canceladas)
-    //         // $audiencias = $expediente->audiencias()
-    //         //     ->with(['historialEstadoAudiencias.catEstadoAudiencia']) // Trae historial y estado
-    //         //     ->whereBetween('created_at', [$fechaInicio, $fechaFin])
-    //         //     ->whereHas('historialEstadoAudiencias', function ($q) {
-    //         //         $q->whereIn('idCatEstadoAudiencia', [2, 4]); // 2: finalizada, 4: cancelada
-    //         //     })
-    //         //     ->get();
-    //         $audiencias = $expediente->audiencias()
-    //             ->with(['ultimoEstado.catEstadoAudiencia'])
-    //             ->whereBetween('created_at', [$fechaInicio, $fechaFin])
-    //             ->get()
-    //             ->filter(function ($audiencia) {
-    //                 return in_array($audiencia->ultimoEstado?->idCatEstadoAudiencia, [2, 4]);
-    //             });
-
-    //         return response()->json([
-    //             'success' => true,
-    //             'status' => 200,
-    //             'datos' => [
-    //                 'expediente' => $expediente,
-    //                 'pre_registro' => $preRegistro,
-    //                 'requerimientos' => $requerimientos,
-    //                 'tramites' => $tramites,
-    //                 'audiencias' => $audiencias,
-    //             ],
-    //         ]);
-    //     } catch (ModelNotFoundException $e) {
-    //         return response()->json([
-    //             'success' => false,
-    //             'status' => 404,
-    //             'mensaje' => 'Expediente no encontrado',
-    //         ]);
-    //     }
-    // }
     public function show(Request $request, $idExpediente)
     {
         try {
@@ -511,7 +409,9 @@ class ExpedienteController extends Controller
             $expediente = Expediente::with([
                 'juzgado',
                 'preRegistro.partes',
-                'preRegistro.partes.catTipoParte'
+                'preRegistro.partes.catTipoParte',
+                'preRegistro.catMateriaVia.catMateria',
+                'preRegistro.catMateriaVia.catVia',
             ])->findOrFail($idExpediente);
 
             // PreRegistro
@@ -568,7 +468,7 @@ class ExpedienteController extends Controller
                     return [
                         'idAudiencia' => $audiencia->idAudiencia,
                         'title' => $audiencia->title,
-                        'created_at'=>$audiencia->created_at,
+                        'created_at' => $audiencia->created_at,
                         'idExpediente' => $audiencia->idExpediente,
                         'start' => $audiencia->start,
                         'end' => $audiencia->end,
