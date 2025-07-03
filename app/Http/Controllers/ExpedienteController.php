@@ -21,144 +21,6 @@ class ExpedienteController extends Controller
     /**
      * Display a listing of the resource.
      */
-
-    // public function index(Request $request, PermisosApiService $permisosApiService)
-    // {
-    //     $jwtPayload = $request->attributes->get('jwt_payload');
-    //     $datosUsuario = $permisosApiService->obtenerDatosUsuarioByToken($jwtPayload);
-
-    //     if (!$datosUsuario || !isset($datosUsuario['idGeneral'])) {
-    //         return response()->json([
-    //             'success' => false,
-    //             'status' => 400,
-    //             'message' => 'No se pudo obtener el idGeneral del token',
-    //         ], 400);
-    //     }
-
-    //     $idGeneral = $datosUsuario['idGeneral'];
-
-    //     $idSistema = $permisosApiService->obtenerIdAreaSistemaUsuario($request->bearerToken(), $idGeneral, 4171);
-    //     if (!$idSistema) {
-    //         return response()->json([
-    //             'success' => false,
-    //             'status' => 400,
-    //             'message' => 'No se pudo obtener el idAreaSistemaUsuario',
-    //         ], 400);
-    //     }
-
-    //     $perfiles = $permisosApiService->obtenerPerfilesUsuario($request->bearerToken(), $idSistema);
-    //     if (!$perfiles) {
-    //         return response()->json([
-    //             'success' => false,
-    //             'status' => 400,
-    //             'message' => 'No se pudo obtener los perfiles del usuario',
-    //         ], 400);
-    //     }
-
-    //     $esAbogado = collect($perfiles)->contains(
-    //         fn($perfil) =>
-    //         isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'abogado'
-    //     );
-
-    //     $esSecretario = collect($perfiles)->contains(
-    //         fn($perfil) =>
-    //         isset($perfil['descripcion']) && strtolower(trim($perfil['descripcion'])) === 'secretario'
-    //     );
-
-    //     if (!$esAbogado && !$esSecretario) {
-    //         return response()->json([
-    //             'success' => false,
-    //             'status' => 403,
-    //             'message' => 'No tiene permisos para realizar esta acción.',
-    //         ], 403);
-    //     }
-
-    //     // Filtros
-    //     $expediente = $request->query('expediente');
-    //     $fechaInicioParam = $request->query('fechaInicio');
-    //     $fechaFinalParam = $request->query('fechaFinal');
-
-    //     $fechaInicio = null;
-    //     $fechaFinal = null;
-
-    //     // Aplicar filtro de fechas si se mandan
-    //     $timezone = config('app.timezone', 'America/Mexico_City');
-    //     if ($fechaInicioParam && $fechaFinalParam) {
-    //         // Si ambas fechas, usar startOfDay para inicio y endOfDay para final (inclusivo)
-    //         $fechaInicio = Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
-    //         $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
-    //     } elseif ($fechaInicioParam) {
-    //         // Solo fecha de inicio, filtra solo ese día completo
-    //         $fechaInicio = Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
-    //         $fechaFinal = Carbon::parse($fechaInicioParam, $timezone)->endOfDay();
-    //     } elseif ($fechaFinalParam) {
-    //         // Solo fecha final, filtra solo ese día completo
-    //         $fechaInicio = Carbon::parse($fechaFinalParam, $timezone)->startOfDay();
-    //         $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
-    //     } elseif (!$expediente) {
-    //         // Solo si no hay expediente ni fechas, usar los últimos 7 días por defecto
-    //         $fechaInicio = Carbon::now()->subDays(6)->startOfDay();
-    //         $fechaFinal = Carbon::now()->endOfDay();
-    //     }
-
-    //     // Consulta
-
-    //     $expedientes = Expediente::with(['preRegistro.catMateriaVia.catMateria', 'preRegistro.catMateriaVia.catVia', 'tramites'])
-    //         ->when($esAbogado, function ($query) use ($idGeneral) {
-    //             $query->where(function ($q) use ($idGeneral) {
-    //                 // Expedientes donde el preregistro es suyo
-    //                 $q->whereHas('preRegistro', function ($subquery) use ($idGeneral) {
-    //                     $subquery->where('idGeneral', $idGeneral);
-    //                 })
-    //                     // O expedientes donde haya hecho algún trámite (aunque no sea el preregistro)
-    //                     ->orWhereHas('tramites', function ($subquery) use ($idGeneral) {
-    //                         $subquery->where('idGeneral', $idGeneral)
-    //                             ->where('notificado', 1);
-    //                     });
-    //             });
-    //         })
-    //         ->when($esSecretario, function ($query) use ($idGeneral) {
-    //             // Solo los que es secretario O donde haya hecho un trámite (prueba)
-    //             $query->orWhere(function ($q) use ($idGeneral) {
-    //                 $q->where('idSecretario', $idGeneral)
-    //                     ->orWhereHas('tramites', function ($subquery) use ($idGeneral) {
-    //                         $subquery->where('idGeneral', $idGeneral);
-    //                     });
-    //             });
-    //         })
-    //         ->when($expediente, function ($query) use ($expediente) {
-    //             $query->where('numExpediente', 'like', "%{$expediente}%");
-    //         })
-    //         ->when($fechaInicio && $fechaFinal, function ($query) use ($fechaInicio, $fechaFinal) {
-    //             $query->whereBetween('fechaResponse', [$fechaInicio, $fechaFinal]);
-    //         })
-    //         ->get();
-
-    //     // Transformar
-    //     $expedientes->transform(function ($expediente) {
-    //         $preRegistro = $expediente->preRegistro;
-    //         return [
-    //             'idExpediente'       => $expediente->idExpediente,
-    //             'NumExpediente'      => $expediente->NumExpediente,
-    //             'idCatJuzgado'       => $expediente->idCatJuzgado,
-    //             'fechaResponse'      => $expediente->fechaResponse,
-    //             'idPreregistro'      => $expediente->idPreregistro,
-    //             'folioPreregistro'   => $preRegistro?->folioPreregistro,
-    //             'idCatMateriaVia'    => $preRegistro?->idCatMateriaVia,
-    //             'fechaCreada'        => $preRegistro?->fechaCreada,
-    //             'created_at_pre'     => $preRegistro?->created_at,
-    //             'materiaDescripcion' => optional($preRegistro?->catMateriaVia?->catMateria)->descripcion,
-    //             'viaDescripcion'     => optional($preRegistro?->catMateriaVia?->catVia)->descripcion,
-    //         ];
-    //     });
-
-    //     return response()->json([
-    //         'success' => true,
-    //         'status' => 200,
-    //         'data' => $expedientes
-    //     ], 200);
-    // }
-
     public function index(Request $request, PermisosApiService $permisosApiService)
     {
         $jwtPayload = $request->attributes->get('jwt_payload');
@@ -389,6 +251,7 @@ class ExpedienteController extends Controller
             $perPage = (int) $request->input('per_page', 5);
             $page = (int) $request->input('page', 1);
             $timezone = config('app.timezone', 'America/Mexico_City');
+            $tipo = $request->input('tipo'); // <-- Nuevo filtro por tipo
 
             // Fechas
             if ($fechaInicioParam && $fechaFinalParam) {
@@ -465,26 +328,9 @@ class ExpedienteController extends Controller
                 })
                 ->get()
                 ->map(function ($audiencia) {
-                    return [
-                        'idAudiencia' => $audiencia->idAudiencia,
-                        'title' => $audiencia->title,
-                        'created_at' => $audiencia->created_at,
-                        'idExpediente' => $audiencia->idExpediente,
-                        'start' => $audiencia->start,
-                        'end' => $audiencia->end,
-                        'ultimo_estado' => $audiencia->ultimoEstado
-                            ? [
-                                'idHistorialEstadoAudiencia' => $audiencia->ultimoEstado->idHistorialEstadoAudiencia,
-                                'idCatalogoEstadoAudiencia' => $audiencia->ultimoEstado->idCatalogoEstadoAudiencia,
-                                'descripcion' => optional($audiencia->ultimoEstado->catalogoEstadoAudiencia)->descripcion,
-                                'fechaHora' => $audiencia->ultimoEstado->fechaHora,
-                                'observaciones' => $audiencia->ultimoEstado->observaciones,
-                            ]
-                            : null,
-                        'tipo' => 'audiencia',
-                    ];
+                    $audiencia->tipo = 'audiencia';
+                    return $audiencia;
                 });
-
 
             // Combinar todos
             $todo = collect()
@@ -494,6 +340,18 @@ class ExpedienteController extends Controller
                 ->merge($audiencias)
                 ->sortByDesc('created_at')
                 ->values();
+
+            // Filtro por tipo (1=requerimiento, 2=tramite, 3=audiencia, 0 o null = todos)
+            $tipo = $request->input('tipo');
+            if ($tipo == 1) {
+                $todo = $todo->where('tipo', 'requerimiento')->values();
+            } elseif ($tipo == 2) {
+                // Incluir trámites y preregistros
+                $todo = $todo->whereIn('tipo', ['tramite', 'pre_registro'])->values();
+            } elseif ($tipo == 3) {
+                $todo = $todo->where('tipo', 'audiencia')->values();
+            }
+            // Si $tipo es 0 o null, no se filtra y se muestran todos los tipos (por defecto últimos 7 días)
 
             // Paginación
             $total = $todo->count();
