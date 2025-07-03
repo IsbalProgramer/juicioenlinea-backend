@@ -4,8 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Audiencia;
 use App\Models\Documento;
-use App\Models\Grabaciones;
-use App\Models\HistorialEstadoSolicitud;
 use App\Models\Solicitudes;
 use App\Services\NasApiService;
 use App\Services\PermisosApiService;

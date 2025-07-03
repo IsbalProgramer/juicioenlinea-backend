@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('historial_estado_solicituds', function (Blueprint $table) {
             $table->id('idHistorialEstadoSolicitud'); 
             $table->unsignedBigInteger('idSolicitud');
-            $table->unsignedBigInteger('idCatEstadoSolicitud');
+            $table->unsignedBigInteger('idCatalogoEstadoSolicitud');
             $table->dateTime('fechaEstado');  
             $table->string('observaciones')->nullable(); // Observaciones opcionales
             $table->unsignedBigInteger('idDocumento')->nullable();
