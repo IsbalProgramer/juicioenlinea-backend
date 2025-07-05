@@ -66,4 +66,5 @@ class Requerimiento extends Model
     {
         return $this->belongsTo(abogado::class, 'idAbogado');
     }
+   
 }

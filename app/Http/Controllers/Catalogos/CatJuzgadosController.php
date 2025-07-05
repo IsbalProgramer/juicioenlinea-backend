@@ -14,7 +14,7 @@ class CatJuzgadosController extends Controller
     $juzgados = CatalogosCatJuzgados::select('idCatJuzgado', 'nombre', 'lugar')->get()->map(function ($juzgado) {
         return [
             'idCatJuzgado' => $juzgado->idCatJuzgado,
-            'nombre' => "{$juzgado->nombre} - {$juzgado->lugar}",
+            'nombre' => mb_strtoupper("{$juzgado->nombre} - {$juzgado->lugar}", 'UTF-8'),
         ];
     });
 
