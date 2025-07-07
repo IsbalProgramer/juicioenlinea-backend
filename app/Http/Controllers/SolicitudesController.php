@@ -159,7 +159,7 @@ class SolicitudesController extends Controller
             $solicitudPendiente = Solicitudes::where('idAudiencia', $validated['idAudiencia'])
                 ->where('idGeneral', $idGeneral)
                 ->whereHas('ultimoEstado', function ($q) {
-                    $q->where('idCatalogoEstadoSolicitud', 1);
+                    $q->where('idCatalogoEstadoSolicitud', [1,2]);
                 })
                 ->first();
 
@@ -167,7 +167,7 @@ class SolicitudesController extends Controller
                 return response()->json([
                     'success' => false,
                     'status' => 409,
-                    'message' => 'Ya existe una solicitud pendiente para esta audiencia.',
+                    'message' => 'Ya existe una solicitud una solicitud para esta audiencia.',
                     'data' => null,
                 ], 409);
             }

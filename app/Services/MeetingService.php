@@ -83,6 +83,8 @@ class MeetingService
             'agenda' => $data['agenda'] ?? null,
             'start' => $data['start'] ?? null,
             'end' => $data['end'] ?? null,
+            'timezone' => 'America/Mexico_City',
+
         ];
 
         // Eliminar valores nulos

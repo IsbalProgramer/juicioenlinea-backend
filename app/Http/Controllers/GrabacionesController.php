@@ -91,7 +91,14 @@ class GrabacionesController extends Controller
                 $grabacionesGuardadas[] = $grabacion;
             }
         }
-
+        
+        if (empty($grabacionesGuardadas)) {
+            return response()->json([
+                'success' => true,
+                'message' => 'No hay grabaciones disponibles para esta audiencia.',
+                'data' => [],
+            ], 200);
+        }
         return response()->json([
             'success' => true,
             'message' => 'Grabaciones guardadas correctamente',
@@ -101,11 +108,7 @@ class GrabacionesController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Grabaciones $grabaciones)
-    {
-        
-        
-    }
+    public function show(Grabaciones $grabaciones) {}
 
     /**
      * Update the specified resource in storage.

@@ -5,11 +5,10 @@ use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 
 Artisan::command('inspire', function () {
-    /** @var ClosureCommand $this */
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Correct way to schedule the command
+// ESTA ES LA ESTRUCTURA CORRECTA para Laravel 11 en routes/console.php
 return function (Schedule $schedule) {
-    $schedule->command('audiencias:guardar-grabaciones')->everyTenSeconds();
+    $schedule->command('audiencias:guardar-grabaciones')->everyThreeHours();
 };
