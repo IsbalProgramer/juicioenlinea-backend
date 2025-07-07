@@ -99,7 +99,7 @@ class AudienciaController extends Controller
             }
 
             // --- Filtro por perfil ---
-            $audienciasQuery = \App\Models\Audiencia::with(['expediente', 'ultimoEstado.catalogoEstadoAudiencia'])
+            $audienciasQuery = Audiencia::with(['expediente', 'ultimoEstado.catalogoEstadoAudiencia'])
                 ->when($folio, function ($query) use ($folio) {
                     $query->whereHas('expediente', function ($q) use ($folio) {
                         $q->where('NumExpediente', 'like', "%{$folio}%");
@@ -128,7 +128,7 @@ class AudienciaController extends Controller
             } elseif ($esAbogado) {
                 // Solo audiencias donde expediente.abogados contiene idAbogado = idGeneral
                 $audienciasQuery->whereHas('expediente.abogados', function ($q) use ($idGeneral) {
-                    $q->where('idAbogado', $idGeneral);
+                    $q->where('abogados.idGeneral', $idGeneral);
                 });
             }
 
@@ -142,7 +142,7 @@ class AudienciaController extends Controller
                     $audiencia->ultimoEstado &&
                     in_array($audiencia->ultimoEstado->idCatalogoEstadoAudiencia, [1, 3])
                 ) {
-                    $fin = \Carbon\Carbon::parse($audiencia->end);
+                    $fin = Carbon::parse($audiencia->end);
                     if ($ahora->gt($fin)) {
                         // Cambia el estado a 2 (finalizada)
                         $audiencia->historialEstados()->create([
@@ -409,20 +409,36 @@ class AudienciaController extends Controller
                 'ultimoEstado.catalogoEstadoAudiencia',
                 'grabaciones'
             ])->findOrFail($idAudiencia);
+           
+            $ahora = now();
+            if (
+                $audiencia->ultimoEstado &&
+                in_array($audiencia->ultimoEstado->idCatalogoEstadoAudiencia, [1, 3])
+            ) {
+                $fin = \Carbon\Carbon::parse($audiencia->end);
+                if ($ahora->gt($fin)) {
+                    // Cambia el estado a 2 (finalizada)
+                    $audiencia->historialEstados()->create([
+                        'idCatalogoEstadoAudiencia' => 2,
+                        'fechaHora' => $ahora,
+                        'observaciones' => 'Audiencia finalizada, consulte la grabación en las proximas 12 horas.',
+                    ]);
+                    // Recarga la relación para reflejar el cambio en la respuesta
+                    $audiencia->load('ultimoEstado.catalogoEstadoAudiencia');
+                }
+            }
 
             $puedeVer = false;
-            $mostrarGrabaciones = false;
+            $mostrarGrabacionesCompletas = false;
 
             if ($esSecretario) {
-                // SECRETARIO: puede ver si es secretario del expediente relacionado
                 $puedeVer = optional($audiencia->expediente)->idSecretario == $idGeneral;
-                $mostrarGrabaciones = $puedeVer;
+                $mostrarGrabacionesCompletas = $puedeVer;
             } elseif ($esAbogado) {
-                // ABOGADO: puede ver el detalle siempre que esté relacionado como abogado en el expediente
                 $puedeVer = optional($audiencia->expediente->abogados)
                     ->contains(fn($abogado) => $abogado->idGeneral == $idGeneral);
 
-                // Solo recibe grabaciones si tiene una solicitud aprobada (estado 2)
+                // Solo recibe grabaciones completas si tiene una solicitud aprobada (estado 2)
                 $solicitudAprobada = Solicitudes::where('idAudiencia', $audiencia->idAudiencia)
                     ->where('idGeneral', $idGeneral)
                     ->whereHas('ultimoEstado', function ($q) {
@@ -430,7 +446,7 @@ class AudienciaController extends Controller
                     })
                     ->exists();
 
-                $mostrarGrabaciones = $solicitudAprobada;
+                $mostrarGrabacionesCompletas = $solicitudAprobada;
             }
 
             if (!$puedeVer) {
@@ -478,8 +494,19 @@ class AudienciaController extends Controller
             }
             unset($arr['ultimoEstado']);
 
-            // Solo incluir grabaciones si corresponde
-            if (!$mostrarGrabaciones) {
+            // Ajuste de grabaciones para abogados
+            if ($esAbogado && isset($arr['grabaciones'])) {
+                $arr['grabaciones'] = collect($arr['grabaciones'])->map(function ($grabacion) use ($mostrarGrabacionesCompletas) {
+                    if (!$mostrarGrabacionesCompletas) {
+                        $grabacion['downloadUrl'] = null;
+                        $grabacion['playbackUrl'] = null;
+                        $grabacion['password'] = null;
+                    }
+                    return $grabacion;
+                });
+            }
+
+            if (!$esAbogado && !$mostrarGrabacionesCompletas && isset($arr['grabaciones'])) {
                 unset($arr['grabaciones']);
             }
 

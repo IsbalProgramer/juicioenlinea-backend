@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Models\PreRegistro;
 use App\Observers\PreRegistroObserver;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Console\Scheduling\Schedule;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,9 +20,8 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-    public function boot(): void
+    public function boot(Schedule $schedule): void
     {
-        PreRegistro::observe(PreRegistroObserver::class);
-
+        $schedule->command('audiencias:guardar-grabaciones')->everyMinute();
     }
 }

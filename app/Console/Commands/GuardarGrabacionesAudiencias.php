@@ -7,6 +7,8 @@ use App\Models\Audiencia;
 use App\Http\Controllers\GrabacionesController;
 use App\Services\MeetingService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
+
 class GuardarGrabacionesAudiencias extends Command
 {
     /**
@@ -28,11 +30,16 @@ class GuardarGrabacionesAudiencias extends Command
      */
     public function handle(MeetingService $meetingService)
     {
-        $hoy = Carbon::today();
+        Log::info('Iniciando comando audiencias:guardar-grabaciones.'); // Log al inicio del comando
+
+        //  $hoy = Carbon::today();
+        $hoy = Carbon::parse('2025-07-03');
+        Log::info('Buscando audiencias para el día: ' . $hoy->toDateString()); // Log antes de la consulta
+
         $audiencias = Audiencia::whereDate('start', $hoy)
             ->whereHas('historialEstados', function ($q) {
-                $q->where('idCatalogoEstadoAudiencia', 2)
-                  ->where('fechaHora', '<=', Carbon::now()->subHour());
+                $q->where('idCatalogoEstadoAudiencia', [2, 4])
+                    ->where('fechaHora', '<=', Carbon::now()->subHour());
             })
             ->get();
 
