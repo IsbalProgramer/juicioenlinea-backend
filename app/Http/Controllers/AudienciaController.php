@@ -100,15 +100,19 @@ class AudienciaController extends Controller
 
             // --- Filtro por perfil ---
             $audienciasQuery = Audiencia::with(['expediente', 'ultimoEstado.catalogoEstadoAudiencia'])
+                // ->when($folio, function ($query) use ($folio) {
+                //     $query->whereHas('expediente', function ($q) use ($folio) {
+                //         $q->where('NumExpediente', 'like', "%{$folio}%");
+                //     });
+                // })
+                //filtro por folio de la audiencia 
                 ->when($folio, function ($query) use ($folio) {
-                    $query->whereHas('expediente', function ($q) use ($folio) {
-                        $q->where('NumExpediente', 'like', "%{$folio}%");
-                    });
+                    $query->where('folio', 'like', "%{$folio}%");
                 })
                 ->when($fechaInicio && $fechaFinal, function ($query) use ($fechaInicio, $fechaFinal) {
                     $query->whereBetween('start', [$fechaInicio, $fechaFinal]);
                 })
-                ->when(!is_null($estado), function ($query) use ($estado) {
+                ->when(!is_null($estado) && $estado != 0, function ($query) use ($estado) {
                     $query->whereHas('ultimoEstado', function ($q) use ($estado) {
                         if ($estado == 1) {
                             $q->whereIn('idCatalogoEstadoAudiencia', [1, 3]);
@@ -132,23 +136,28 @@ class AudienciaController extends Controller
                 });
             }
 
-            $audiencias = $audienciasQuery->get();
+             // Paginación manual
+            $perPage = (int)$request->query('per_page', 10);
+            $page = (int)$request->query('page', 1);
+            
+            $paginator = $audienciasQuery
+                ->orderByDesc('created_at')
+                ->paginate($perPage, ['*'], 'page', $page);
 
+            // Actualiza el estado de las audiencias de la página actual si corresponde
             $ahora = now();
-
-            // Verifica y actualiza el estado si corresponde
-            foreach ($audiencias as $audiencia) {
+            foreach ($paginator->items() as $audiencia) {
                 if (
                     $audiencia->ultimoEstado &&
                     in_array($audiencia->ultimoEstado->idCatalogoEstadoAudiencia, [1, 3])
                 ) {
-                    $fin = Carbon::parse($audiencia->end);
+                    $fin = \Carbon\Carbon::parse($audiencia->end);
                     if ($ahora->gt($fin)) {
                         // Cambia el estado a 2 (finalizada)
                         $audiencia->historialEstados()->create([
                             'idCatalogoEstadoAudiencia' => 2,
                             'fechaHora' => $ahora,
-                            'observaciones' => 'Audiencia finalizada, consulte la grabación en las proximas 12 horas.',
+                            'observaciones' => 'Audiencia finalizada automáticamente por el sistema.',
                         ]);
                         // Recarga la relación para reflejar el cambio en la respuesta
                         $audiencia->load('ultimoEstado.catalogoEstadoAudiencia');
@@ -156,10 +165,9 @@ class AudienciaController extends Controller
                 }
             }
 
-            $data = $audiencias->map(function ($audiencia) {
+            // Transformar los datos para la respuesta
+            $data = collect($paginator->items())->map(function ($audiencia) {
                 $arr = $audiencia->toArray();
-
-                // Transformar el último estado para incluir la descripción del catálogo directamente
                 if ($audiencia->ultimoEstado) {
                     $arr['ultimo_estado'] = [
                         'idHistorialEstadoAudiencia'    => $audiencia->ultimoEstado->idHistorialEstadoAudiencia,
@@ -172,18 +180,22 @@ class AudienciaController extends Controller
                 } else {
                     $arr['ultimo_estado'] = null;
                 }
-
-                unset($arr['ultimoEstado']); // Elimina el original
-
+                unset($arr['ultimoEstado']);
                 return $arr;
             });
 
             return response()->json([
-                'success' => true,
                 'status' => 200,
                 'message' => 'Listado de audiencias',
-                'data' => $data
+                'data' => $data,
+                'pagination' => [
+                    'current_page' => $paginator->currentPage(),
+                    'per_page' => $paginator->perPage(),
+                    'total' => $paginator->total(),
+                    'last_page' => $paginator->lastPage(),
+                ]
             ], 200);
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

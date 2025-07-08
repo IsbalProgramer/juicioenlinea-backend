@@ -34,7 +34,7 @@ class SolicitudesConGrabacionesSeeder extends Seeder
             // Crear una solicitud por cada grabación
             $solicitud = Solicitudes::create([
                 'idGrabacion'   => $grabacion->idGrabacion,
-                'idGeneral'     => rand(1, 1000), // Puedes cambiar esto a un valor real
+                'idGeneral'     => 30057,
                 'observaciones' => 'Solicitud creada automáticamente por el Seeder',
             ]);
 

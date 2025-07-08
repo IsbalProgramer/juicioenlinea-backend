@@ -145,7 +145,7 @@ class ExpedienteController extends Controller
         });
 
         // Paginación manual
-        $perPage = (int)$request->query('per_page', 1);
+        $perPage = (int)$request->query('per_page', 10);
         $page = (int)$request->query('page', 1);
         $total = $transformados->count();
         $items = $transformados->forPage($page, $perPage)->values();
@@ -321,7 +321,7 @@ class ExpedienteController extends Controller
 
             // Audiencias
             $audiencias = $expediente->audiencias()
-                ->with(['ultimoEstado.catalogoEstadoAudiencia'])
+                ->with(['ultimoEstado.catalogoEstadoAudiencia', 'invitados'])
                 ->whereBetween('created_at', [$fechaInicio, $fechaFin])
                 ->whereHas('ultimoEstado', function ($q) {
                     $q->whereIn('idCatalogoEstadoAudiencia', [2, 4]);

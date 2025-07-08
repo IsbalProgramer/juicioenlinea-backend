@@ -24,6 +24,7 @@ return new class extends Migration
             $table->string('id');
             $table->string('meetingNumber');
             $table->string('password');
+            $table->string('folio');
             //agregar estado y crear la siguiente tabla
             $table->timestamps();
             $table->foreign('idExpediente')->references('idExpediente')->on('expedientes')->onDelete('cascade');

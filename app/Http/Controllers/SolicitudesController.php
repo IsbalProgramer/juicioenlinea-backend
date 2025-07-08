@@ -11,6 +11,7 @@ use App\Services\PermisosApiService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Carbon\Carbon;
 
 class SolicitudesController extends Controller
 {
@@ -71,25 +72,66 @@ class SolicitudesController extends Controller
                 ], 403);
             }
 
-            // Si es abogado, solo sus solicitudes
+            // Filtros
+            $expediente = $request->input('expediente'); // NumExpediente
+            $estado = $request->input('estado'); // idCatalogoEstadoSolicitud
+            $fechaInicio = $request->input('fechaInicio');
+            $fechaFin = $request->input('fechaFinal');
+
+            $solicitudesQuery = Solicitudes::with(['primerEstado','ultimoEstado.estado','audiencia.expediente']);
+
+            // Filtro por usuario
             if ($esAbogado && !$esSecretario) {
-                $solicitudes = Solicitudes::with(['primerEstado', 'ultimoEstado.estado', 'audiencia'])
-                    ->where('idGeneral', $idGeneral)
-                    ->get();
+                $solicitudesQuery->where('idGeneral', $idGeneral);
             } else {
-                // Si es secretario, buscar solicitudes de expedientes donde es secretario
-                $solicitudes = Solicitudes::with(['primerEstado', 'ultimoEstado.estado', 'audiencia'])
-                    ->whereHas('audiencia.expediente', function ($q) use ($idGeneral) {
-                        $q->where('idSecretario', $idGeneral);
-                    })
-                    ->get();
+                $solicitudesQuery->whereHas('audiencia.expediente', function ($q) use ($idGeneral) {
+                    $q->where('idSecretario', $idGeneral);
+                });
             }
+
+            // Filtro por expediente (NumExpediente)
+            if ($expediente) {
+                $solicitudesQuery->whereHas('audiencia.expediente', function ($q) use ($expediente) {
+                    $q->where('NumExpediente', 'like', "%$expediente%");
+                });
+            }
+
+            // Filtro por estado (último estado)
+            if (!is_null($estado) && $estado != 0) {
+                $solicitudesQuery->whereHas('ultimoEstado', function ($q) use ($estado) {
+                    $q->where('idCatalogoEstadoSolicitud', $estado);
+                });
+            }
+
+            // Filtro por fecha de creación de la solicitud
+            if ($fechaInicio && $fechaFin) {
+                $solicitudesQuery->whereBetween('created_at', [
+                    Carbon::parse($fechaInicio)->startOfDay(),
+                    Carbon::parse($fechaFin)->endOfDay()
+                ]);
+            } elseif ($fechaInicio) {
+                $solicitudesQuery->whereDate('created_at', '>=', Carbon::parse($fechaInicio)->startOfDay());
+            } elseif ($fechaFin) {
+                $solicitudesQuery->whereDate('created_at', '<=', Carbon::parse($fechaFin)->endOfDay());
+            }
+
+            // Paginación
+            $perPage = (int)$request->query('per_page', 10);
+            $page = (int)$request->query('page', 1);
+
+            $paginator = $solicitudesQuery->orderByDesc('created_at')->paginate($perPage, ['*'], 'page', $page);
 
             return response()->json([
                 'success' => true,
                 'status' => 200,
                 'message' => 'Listado de solicitudes',
-                'data' => $solicitudes,
+                'data' => $paginator->items(),
+                'pagination' => [
+                    'current_page' => $paginator->currentPage(),
+                    'per_page' => $paginator->perPage(),
+                    'total' => $paginator->total(),
+                    'last_page' => $paginator->lastPage(),
+                ]
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -228,7 +270,7 @@ class SolicitudesController extends Controller
                 'folio'         => $folioSolicitud,
             ]);
 
-            // Insertar historial de estado de la solicitud (pendiente) con el documento
+            // Insertar historial de estado de la solicitud (pendiente) with el documento
             $solicitud->historialEstado()->create([
                 'idCatalogoEstadoSolicitud' => 1,
                 'fechaEstado' => now(),
