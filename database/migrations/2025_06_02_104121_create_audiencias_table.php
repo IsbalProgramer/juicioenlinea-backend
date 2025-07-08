@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('audiencias', function (Blueprint $table) {
             $table->id('idAudiencia');
+            $table->string('folio')->unique();
             $table->unsignedBigInteger('idExpediente');
             $table->string('title');
             $table->string('agenda')->nullable();

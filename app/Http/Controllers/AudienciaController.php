@@ -307,8 +307,14 @@ class AudienciaController extends Controller
             $idMeeting = $webexResponse['id'] ?? null;
             $meetingNumber = $webexResponse['meetingNumber'] ?? null;
             $password = $webexResponse['password'] ?? null;
+            // Crear el folio consecutivo para la solicitud
+            $ultimoFolio = Audiencia::latest('idAudiencia')->value('folio');
+            $numeroConsecutivo = $ultimoFolio ? intval(explode('/', $ultimoFolio)[0]) + 1 : 1;
+            $anio = now()->year;
+            $folio = str_pad($numeroConsecutivo, 4, '0', STR_PAD_LEFT) . '/' . $anio;
 
             $audiencia = Audiencia::create([
+                'folio' => $folio,
                 'idExpediente' => $validated['idExpediente'],
                 'title' => $validated['title'],
                 'agenda' => $validated['agenda'] ?? null,
@@ -421,7 +427,7 @@ class AudienciaController extends Controller
                 'ultimoEstado.catalogoEstadoAudiencia',
                 'grabaciones'
             ])->findOrFail($idAudiencia);
-           
+
             $ahora = now();
             if (
                 $audiencia->ultimoEstado &&
@@ -505,7 +511,11 @@ class AudienciaController extends Controller
                 $arr['ultimo_estado'] = null;
             }
             unset($arr['ultimoEstado']);
-
+            
+            // Eliminar el password de la audiencia para abogados
+            if ($esAbogado && isset($arr['password'])) {
+                $arr['password'] = null;
+            }
             // Ajuste de grabaciones para abogados
             if ($esAbogado && isset($arr['grabaciones'])) {
                 $arr['grabaciones'] = collect($arr['grabaciones'])->map(function ($grabacion) use ($mostrarGrabacionesCompletas) {

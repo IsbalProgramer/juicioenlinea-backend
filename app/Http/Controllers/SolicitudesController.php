@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Audiencia;
 use App\Models\Documento;
 use App\Models\Solicitudes;
+use App\Services\MailerSendService;
 use App\Services\NasApiService;
 use App\Services\PermisosApiService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
@@ -174,7 +176,7 @@ class SolicitudesController extends Controller
                 'observaciones' => 'nullable|string',
                 'documento'     => 'required|file',
             ]);
- 
+
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
@@ -187,8 +189,8 @@ class SolicitudesController extends Controller
             $validated = $validator->validated();
 
             // Verificar que exista la audiencia
-            $audienciaExiste = Audiencia::where('idAudiencia', $validated['idAudiencia'])->exists();
-            if (!$audienciaExiste) {
+            $audiencia = Audiencia::with('expediente.abogados')->where('idAudiencia', $validated['idAudiencia'])->first();
+            if (!$audiencia) {
                 return response()->json([
                     'success' => false,
                     'status' => 404,
@@ -197,11 +199,25 @@ class SolicitudesController extends Controller
                 ], 404);
             }
 
+
+            // Validar que el abogado esté relacionado al expediente
+            $abogadoRelacionado = $audiencia->expediente->abogados->contains(function ($abogado) use ($idGeneral) {
+                return $abogado->idGeneral == $idGeneral;
+            });
+            if (!$abogadoRelacionado) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 403,
+                    'message' => 'No tienes los permisos necesarios para realizar esta acción.',
+                ], 403);
+            }
+
+
             // Verificar si ya existe una solicitud pendiente (último estado = 1) para ese usuario y audiencia
             $solicitudPendiente = Solicitudes::where('idAudiencia', $validated['idAudiencia'])
                 ->where('idGeneral', $idGeneral)
                 ->whereHas('ultimoEstado', function ($q) {
-                    $q->where('idCatalogoEstadoSolicitud', [1,2]);
+                    $q->where('idCatalogoEstadoSolicitud', [1, 2]);
                 })
                 ->first();
 
@@ -209,7 +225,7 @@ class SolicitudesController extends Controller
                 return response()->json([
                     'success' => false,
                     'status' => 409,
-                    'message' => 'Ya existe una solicitud una solicitud para esta audiencia.',
+                    'message' => 'Ya existe una solicitud para esta audiencia.',
                     'data' => null,
                 ], 409);
             }
@@ -231,12 +247,27 @@ class SolicitudesController extends Controller
                 'nombre' => $nombreDocumento,
                 'documento' => $ruta . '/' . $nombreArchivo,
             ]);
+            // Crear el folio consecutivo para la solicitud
+            // Obtener la audiencia y expediente relacionados
+            $audiencia = Audiencia::with('expediente')->where('idAudiencia', $validated['idAudiencia'])->first();
+            $folioAudiencia = $audiencia->folio;
+            $folioExpediente = $audiencia->expediente->NumExpediente;
+
+
+            // Crear el folio consecutivo para la solicitud
+            $ultimoFolio = Solicitudes::latest('idSolicitud')->value('folio');
+            $numeroConsecutivo = $ultimoFolio ? intval(explode('/', $ultimoFolio)[0]) + 1 : 1;
+            $anio = now()->year;
+            $folioSolicitud = 'SOL-' . str_pad($numeroConsecutivo, 4, '0', STR_PAD_LEFT) . '/' . $anio
+                . '-EXP-' . $folioExpediente
+                . '-AUD-' . $folioAudiencia;
 
             // Crear la solicitud
             $solicitud = Solicitudes::create([
                 'idAudiencia'   => $validated['idAudiencia'],
                 'idGeneral'     => $idGeneral,
                 'observaciones' => $validated['observaciones'] ?? null,
+                'folio'         => $folioSolicitud,
             ]);
 
             // Insertar historial de estado de la solicitud (pendiente) with el documento
@@ -246,7 +277,28 @@ class SolicitudesController extends Controller
                 'observaciones' => 'SOLICITUD ENVIADA.',
                 'idDocumento' => $documento->idDocumento,
             ]);
+            $mailerSend = new MailerSendService();
+            $mailerSend->enviarCorreo(
+                "dvirdr2@gmail.com", // destinatario, puedes hacerlo dinámico
+                "Solicitud de grabación #{$solicitud->folio}",
+                [
+                    'mensaje' => "solicitud creada exitosamente",
+                    'descripcion' => "Se enviará un correo una vez que la solicutd haya sido atentida",
+                    "folio" => $solicitud->folio,
+                    "fecha" => Carbon::parse($solicitud->ultimoEstado->fechaEstado)->format('d/m/Y H:i') . 'h',
+                    "via" => $solicitud->audiencia->expediente->NumExpediente,
+                    "sistesis" => $solicitud->audiencia->folio,
+                    "observaciones" => $solicitud->observaciones,
 
+                    "Nfolio" => "Folio de audiencia",
+                    "Nfecha" => "Fecha de creación",
+                    "Nvia" => "Expediente",
+                    "Nsitesis" => "Audiencia",
+                    "Nobservaciones" => "Observaciones",
+                    "correo" => "dvirdr2@gmail.com"
+                ],
+                "neqvygm997wl0p7w" // tu template_id
+            );
             return response()->json([
                 'success' => true,
                 'status' => 201,
@@ -423,7 +475,7 @@ class SolicitudesController extends Controller
 
             $estado = (int) $request->input('estado');
 
-      
+
             $idDocumento = null;
 
             // Si se sube un documento, guárdalo en el NAS y en la base de datos
@@ -448,13 +500,36 @@ class SolicitudesController extends Controller
             }
 
             // Crear nuevo historial de estado
-            $solicitud->historialEstado()->create([
+            $historial = $solicitud->historialEstado()->create([
                 'idCatalogoEstadoSolicitud' => $estado,
                 'fechaEstado' => now(),
                 'observaciones' => $request->input('observaciones'),
                 'idDocumento' => $idDocumento,
             ]);
 
+
+            $mailerSend = new MailerSendService();
+            $mailerSend->enviarCorreo(
+                "dvirdr2@gmail.com", // destinatario, puedes hacerlo dinámico
+                "Actualizacion a la solicitud #{$solicitud->folio}",
+                [
+                    'mensaje' => "respuesta a la solicitud",
+                    'descripcion' => "Ingrese a la plataforma de juicio en línea para ver el estado de la solicitud",
+                    "folio" => $solicitud->folio,
+                    "fecha" => Carbon::parse($historial->fechaEstado)->format('d/m/Y H:i') . 'h',
+                    "via" => $solicitud->audiencia->expediente->NumExpediente,
+                    "sistesis" => $solicitud->audiencia->folio,
+                    "observaciones" => $historial->observaciones,
+
+                    "Nfolio" => "Folio de audiencia",
+                    "Nfecha" => "Fecha de creación",
+                    "Nvia" => "Expediente",
+                    "Nsitesis" => "Audiencia",
+                    "Nobservaciones" => "Observaciones",
+                    "correo" => "dvirdr2@gmail.com"
+                ],
+                "neqvygm997wl0p7w" // tu template_id
+            );
             return response()->json([
                 'success' => true,
                 'status' => 200,

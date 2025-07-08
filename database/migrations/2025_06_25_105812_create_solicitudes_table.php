@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('solicitudes', function (Blueprint $table) {
             $table->id('idSolicitud');
+            $table->string('folio')->unique();
             $table->unsignedBigInteger('idAudiencia'); // Cambiado
             $table->integer('idGeneral');
             $table->string('observaciones')->nullable();

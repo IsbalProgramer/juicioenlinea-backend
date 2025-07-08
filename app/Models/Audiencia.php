@@ -10,6 +10,7 @@ class Audiencia extends Model
     protected $table = 'audiencias';
     protected $primaryKey = 'idAudiencia';
     protected $fillable = [
+        'folio',
         'idExpediente',
         'title',
         'agenda',
