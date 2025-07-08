@@ -11,6 +11,7 @@ class Solicitudes extends Model
     protected $primaryKey = 'idSolicitud';
     protected $fillable = [
         'idAudiencia',
+        'folio', // Asegúrate de que este campo exista en tu base de datos
         'idGeneral',
         'observaciones',
     ];

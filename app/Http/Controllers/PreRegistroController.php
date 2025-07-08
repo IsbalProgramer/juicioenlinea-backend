@@ -341,15 +341,22 @@ class PreRegistroController extends Controller
                 "dvirdr2@gmail.com", // destinatario, puedes hacerlo dinámico
                 "Confirmación de preregistro #{$preRegistro->folioPreregistro}",
                 [
-                    'order_number' => $preRegistro->folioPreregistro,
-                    "tracking_number" => $preRegistro->folioPreregistro,
-                    "date" => Carbon::parse($preRegistro->fechaCreada)->format('d/m/Y H:i'),
-                    "delivery" => $preRegistro->catMateriaVia->catVia->descripcion,
-                    "delivery_date" => $preRegistro->observaciones,
-                    "address" => $preRegistro->sintesis,
-                    "support_email" => "dvirdr2@gmail.com"
+                    'mensaje' => "preregistro creado exitosamente",
+                    'descripcion' => "Se ha creado un nuevo preregistro con el folio #{$preRegistro->folioPreregistro}.",
+                    "folio" => $preRegistro->folioPreregistro,
+                    "fecha" => Carbon::parse($preRegistro->fechaCreada)->format('d/m/Y H:i') . 'h',
+                    "via" => $preRegistro->catMateriaVia->catVia->descripcion,
+                    "sistesis" => $preRegistro->sintesis,
+                    "observaciones" => $preRegistro->observaciones,
+
+                    "Nfolio" => "Folio",
+                    "Nfecha" => "Fecha de creación",
+                    "Nvia" => "Vía",
+                    "Nsitesis" => "Sistesis",
+                    "Nobservaciones" => "Observaciones",
+                    "correo" => "dvirdr2@gmail.com"
                 ],
-                "zr6ke4n8p5e4on12" // tu template_id
+                "neqvygm997wl0p7w" // tu template_id
             );
             return response()->json([
                 'success' => true,
