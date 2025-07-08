@@ -23,6 +23,7 @@ class AudienciaSeeder extends Seeder
             'id' => 'webexid1',
             'meetingNumber' => '100001',
             'password' => 'pass1',
+            'folio' => '0001/2025',
         ]);
         Audiencia::create([
             'idExpediente' => 1,
@@ -35,6 +36,7 @@ class AudienciaSeeder extends Seeder
             'id' => 'webexid2',
             'meetingNumber' => '100002',
             'password' => 'pass2',
+            'folio' => '0002/2025',
         ]);
         Audiencia::create([
             'idExpediente' => 1,
@@ -47,6 +49,7 @@ class AudienciaSeeder extends Seeder
             'id' => 'webexid3',
             'meetingNumber' => '100003',
             'password' => 'pass3',
+            'folio' => '0003/2025',
         ]);
         Audiencia::create([
             'idExpediente' => 1,
@@ -59,6 +62,7 @@ class AudienciaSeeder extends Seeder
             'id' => 'webexid4',
             'meetingNumber' => '100004',
             'password' => 'pass4',
+            'folio' => '0004/2025',
         ]);
     }
 }

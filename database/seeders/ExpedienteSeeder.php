@@ -51,5 +51,23 @@ class ExpedienteSeeder extends Seeder
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+
+
+        // Asegúrate de que el abogado exista
+        $abogado = DB::table('abogados')->insertGetId([
+            'idUsr' => 5857,
+            'idGeneral' => 30057,
+            'nombre' => 'ABOGADO DE PRUEBA',
+            'correo' => 'abogado.prueba@correo.com',
+            'correoAlterno' => 'abogado.alterno@correo.com',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // Relacionar el expediente con el abogado en la tabla pivote
+        DB::table('expediente_abogado')->insert([
+            'idExpediente' => $expediente->idExpediente,
+            'idAbogado' => $abogado,
+        ]);
     }
 }

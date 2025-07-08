@@ -1497,7 +1497,7 @@ class RequerimientoController extends Controller
             if (!$abogado) {
                 return response()->json([
                     'status' => 404,
-                    'message' => 'El usuario no está registrado como abogado',
+                    'message' => 'El usuario no está registrado como abogado en la tabla aboogados',
                 ], 404);
             }
 
