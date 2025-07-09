@@ -49,9 +49,10 @@ class GrabacionesController extends Controller
         }
 
         // Rango de fechas: TODO el día de hoy
-        $fechaAudiencia = Carbon::parse($audiencia->start)->format('Y-m-d');
-        $from = $fechaAudiencia . 'T00:00:00-06:00';
-        $to = $fechaAudiencia . 'T23:59:59-06:00';
+        $fechaAudiencia = Carbon::parse($audiencia->start);
+        $from = $fechaAudiencia->copy()->subDay()->format('Y-m-d') . 'T00:00:00-06:00';
+        $to = now()->format('Y-m-d') . 'T23:59:59-06:00';
+        
         $meetingSeriesId = $audiencia->id; // el campo 'id' de tu modelo Audiencia
         Log::info("Obteniendo grabaciones para audiencia: {$audiencia->idAudiencia}, desde: $from, hasta: $to, meetingSeriesId: $meetingSeriesId");
 

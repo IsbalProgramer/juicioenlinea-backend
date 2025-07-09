@@ -10,5 +10,5 @@ Artisan::command('inspire', function () {
 
 // ESTA ES LA ESTRUCTURA CORRECTA para Laravel 11 en routes/console.php
 return function (Schedule $schedule) {
-    $schedule->command('audiencias:guardar-grabaciones')->everyThreeHours();
+    $schedule->command('audiencias:guardar-grabaciones')->everyTwoMinutes();
 };

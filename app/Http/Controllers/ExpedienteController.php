@@ -282,8 +282,12 @@ class ExpedienteController extends Controller
                 ->when($folio, fn($q) => $q->where('folioPreregistro', 'like', "%$folio%"))
                 ->whereBetween('created_at', [$fechaInicio, $fechaFin])
                 ->with([
-                    'historialEstado' => fn($q) => $q->orderByDesc('created_at')->limit(1),
-                    'historialEstado.estado',
+                    'historialEstado' => function ($query) {
+                        $query->latest('fechaEstado')
+                            ->limit(1)
+                            ->select('idPreregistro', 'idCatEstadoInicio', 'fechaEstado')
+                            ->with('estado:idCatEstadoInicio,descripcion');
+                    },
                     'partes.catTipoParte',
                     'catMateriaVia.catMateria',
                     'catMateriaVia.catVia'
