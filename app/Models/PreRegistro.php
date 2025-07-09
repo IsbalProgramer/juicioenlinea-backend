@@ -42,6 +42,10 @@ class PreRegistro extends Model
     {
         return $this->hasMany(HistorialEstadoInicio::class, 'idPreregistro');
     }
+    public function ultimoEstado()
+    {
+        return $this->hasOne(HistorialEstadoInicio::class, 'idPreregistro')->latestOfMany('fechaEstado');
+    }
     public function expediente()
     {
         return $this->hasOne(Expediente::class);

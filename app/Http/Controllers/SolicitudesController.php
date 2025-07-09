@@ -77,7 +77,7 @@ class SolicitudesController extends Controller
             $fechaInicio = $request->input('fechaInicio');
             $fechaFin = $request->input('fechaFinal');
 
-            $solicitudesQuery = Solicitudes::with(['primerEstado','ultimoEstado.estado','audiencia.expediente']);
+            $solicitudesQuery = Solicitudes::with(['primerEstado', 'ultimoEstado.estado', 'audiencia.expediente']);
 
             // Filtro por usuario
             if ($esAbogado && !$esSecretario) {
@@ -216,7 +216,7 @@ class SolicitudesController extends Controller
             $solicitudPendiente = Solicitudes::where('idAudiencia', $validated['idAudiencia'])
                 ->where('idGeneral', $idGeneral)
                 ->whereHas('ultimoEstado', function ($q) {
-                    $q->where('idCatalogoEstadoSolicitud', [1, 2]);
+                    $q->where('idCatalogoEstadoSolicitud', 1);
                 })
                 ->first();
 
@@ -228,7 +228,22 @@ class SolicitudesController extends Controller
                     'data' => null,
                 ], 409);
             }
+            
+            $solicitudAceptada = Solicitudes::where('idAudiencia', $validated['idAudiencia'])
+                ->where('idGeneral', $idGeneral)
+                ->whereHas('ultimoEstado', function ($q) {
+                    $q->where('idCatalogoEstadoSolicitud', 2); // 2 = aceptada
+                })
+                ->first();
 
+            if ($solicitudAceptada) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 409,
+                    'message' => 'Ya existe una solicitud aceptada para esta audiencia.',
+                    'data' => null,
+                ], 409);
+            }
             // Subir el documento al NAS
             $file = $request->file('documento');
             $anio = now()->year;
@@ -253,14 +268,22 @@ class SolicitudesController extends Controller
             $folioExpediente = $audiencia->expediente->NumExpediente;
 
 
-            // Crear el folio consecutivo para la solicitud
-            $ultimoFolio = Solicitudes::latest('idSolicitud')->value('folio');
-            $numeroConsecutivo = $ultimoFolio ? intval(explode('/', $ultimoFolio)[0]) + 1 : 1;
+            // Crear el folio consecutivo para la solicitud (único por año)
             $anio = now()->year;
+            $ultimoFolio = Solicitudes::where('folio', 'like', 'SOL-%/' . $anio . '%')
+                ->orderByDesc('idSolicitud')
+                ->value('folio');
+
+            if ($ultimoFolio) {
+                preg_match('/SOL-(\d{4})\/' . $anio . '/', $ultimoFolio, $matches);
+                $numeroConsecutivo = isset($matches[1]) ? intval($matches[1]) + 1 : 1;
+            } else {
+                $numeroConsecutivo = 1;
+            }
+
             $folioSolicitud = 'SOL-' . str_pad($numeroConsecutivo, 4, '0', STR_PAD_LEFT) . '/' . $anio
                 . '-EXP-' . $folioExpediente
                 . '-AUD-' . $folioAudiencia;
-
             // Crear la solicitud
             $solicitud = Solicitudes::create([
                 'idAudiencia'   => $validated['idAudiencia'],

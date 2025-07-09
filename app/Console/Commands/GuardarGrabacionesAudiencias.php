@@ -32,8 +32,7 @@ class GuardarGrabacionesAudiencias extends Command
     {
         Log::info('Iniciando comando audiencias:guardar-grabaciones.'); // Log al inicio del comando
 
-        //  $hoy = Carbon::today();
-        $hoy = Carbon::parse('2025-07-03');
+        $hoy = Carbon::today();
         Log::info('Buscando audiencias para el día: ' . $hoy->toDateString()); // Log antes de la consulta
 
         $audiencias = Audiencia::whereDate('start', $hoy)
