@@ -79,16 +79,7 @@ class TramiteController extends Controller
 
             // Ahora traemos TODO el dataset filtrado en BD
             $all = $query->get()
-                ->filter(function ($tramite) use ($estado) {
-                    $ultimoEstado = $tramite->historial->last()->idCatEstadoTramite ?? null;
-                    if (is_null($estado)) {
-                        return $ultimoEstado == 1; // Ajusta si tu valor por defecto es otro
-                    }
-                    if ($estado === '0' || $estado === 0) {
-                        return true;
-                    }
-                    return $ultimoEstado == $estado;
-                })
+                // Elimina el filtro por estado, solo deja el sort
                 ->sortByDesc(function ($tramite) {
                     return optional($tramite->historial->last())->created_at;
                 })

@@ -322,6 +322,9 @@ class ExpedienteController extends Controller
             // Audiencias
             $audiencias = $expediente->audiencias()
                 ->with(['ultimoEstado.catalogoEstadoAudiencia', 'invitados'])
+                ->when($folio, function ($q) use ($folio) {
+                    $q->where('folio', 'like', "%$folio%");
+                })
                 ->whereBetween('created_at', [$fechaInicio, $fechaFin])
                 ->whereHas('ultimoEstado', function ($q) {
                     $q->whereIn('idCatalogoEstadoAudiencia', [2, 4]);
