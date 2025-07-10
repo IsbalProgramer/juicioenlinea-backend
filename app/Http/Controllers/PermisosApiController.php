@@ -162,7 +162,6 @@ class PermisosApiController extends Controller
                 'message' => 'No hay coincidencias para los datos proporcionados.',
                 'data' => null
             ], 404);
-
         } catch (\Throwable $e) {
             // Error fatal, timeout o conexión
             return response()->json([
@@ -188,5 +187,53 @@ class PermisosApiController extends Controller
     public function destroy(string $id)
     {
         //
+    }
+
+    public function obtenerDatosUsuarioByApi(Request $request, PermisosApiService $permisosApiService)
+    {
+        try {
+            $jwtPayload = $request->attributes->get('jwt_payload');
+            $datosUsuario = $permisosApiService->obtenerDatosUsuarioByToken($jwtPayload);
+
+            if (!$datosUsuario || !isset($datosUsuario['Usr'])) {
+                return response()->json([
+                    'status' => 400,
+                    'message' => 'No se pudo obtener el usuario del token',
+                ], 400);
+            }
+
+            $idUsr = $datosUsuario['Usr'];
+            $token = $request->bearerToken();
+
+            $userData = $permisosApiService->obtenerDatosUsuarioByApi($token, $idUsr);
+            if (!$userData || !isset($userData['data']['pD_Abogados'][0])) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 404,
+                    'message' => 'No se encontraron datos del usuario.',
+                ], 404);
+            }
+
+            $abogado = $userData['data']['pD_Abogados'][0];
+
+            return response()->json([
+                'success' => true,
+                'status' => 200,
+                'message' => 'Datos del usuario',
+                'data' => [
+                    'nombre' => isset($abogado['nombre']) ? ucwords(strtolower($abogado['nombre'])) : null,
+                    'correo' => $abogado['correo'] ?? null,
+                    'correoAlterno' => $abogado['correoAlterno'] ?? null,
+                    'foto' => $abogado['foto'] ?? null,
+                ],
+            ], 200);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'status' => 500,
+                'message' => 'Error al obtener los datos del usuario.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 }

@@ -31,8 +31,9 @@ Route::prefix('Inicio')->group(function () {
 });
 
 Route::prefix('Permisos')->middleware(VerifyJwtToken::class)->group(function () {
-    Route::post('Datos-usuario/{idUsr}/{idGeneral}', [PermisosApiController::class, 'show']);
+    Route::post('DatosParte/{idUsr}/{idGeneral}', [PermisosApiController::class, 'show']);
     Route::get('ModulosYPantallas', [PermisosApiController::class, 'index']);
+    Route::get('DatosUsuario', [PermisosApiController::class, 'obtenerDatosUsuarioByApi']);
 });
 
 Route::prefix('Catalogo')->group(function () {
