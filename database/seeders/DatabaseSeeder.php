@@ -64,9 +64,9 @@ class DatabaseSeeder extends Seeder
         $this->call(TipoRemitente::class);
         $this->call(TipoRemitenteJuzgado::class);
         $this->call(TipoSecretarioJuzgado::class);
-        $this->call(ExpedienteSeeder::class);
-        $this->call(AudienciaSeeder::class);
-        $this->call(HistorialEstadoAudienciasSeeder::class);
+        // $this->call(ExpedienteSeeder::class);
+        // $this->call(AudienciaSeeder::class);
+        // $this->call(HistorialEstadoAudienciasSeeder::class);
     
     }
 }
