@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Catalogos\CatTipoDocumento;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Requerimiento;
+use DateTimeInterface;
 
 class Documento extends Model
 {
@@ -59,5 +60,8 @@ class Documento extends Model
     {
         return $this->belongsTo(CatTipoDocumento::class, 'idCatTipoDocumento');
     }
-    
+     protected function serializeDate(DateTimeInterface $date)
+    {
+        return $date->format('Y-m-d H:i');
+    }
 }
