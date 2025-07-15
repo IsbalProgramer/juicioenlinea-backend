@@ -61,7 +61,11 @@ class TramiteController extends Controller
             }
 
             // Base query
-            $query = Tramite::with(['historial', 'catTramite'])->where('idGeneral', $idGeneral);
+            $query = Tramite::with([
+                'historial',
+                'catTramite',
+                'expediente.juzgado', // <--- Agrega esta línea
+            ])->where('idGeneral', $idGeneral);
 
             if ($folioOficio) {
                 $query->where('folioOficio', 'like', "%$folioOficio%");
@@ -79,7 +83,6 @@ class TramiteController extends Controller
 
             // Ahora traemos TODO el dataset filtrado en BD
             $all = $query->get()
-                // Elimina el filtro por estado, solo deja el sort
                 ->sortByDesc(function ($tramite) {
                     return optional($tramite->historial->last())->created_at;
                 })
@@ -374,7 +377,8 @@ class TramiteController extends Controller
                 'documento',
                 'catTramite',
                 'partesTramite.catTipoParte',
-                'remitente'
+                'remitente',
+                'expediente.juzgado',
             ])->findOrFail($idTramite);
             return response()->json([
                 'status' => 200,
