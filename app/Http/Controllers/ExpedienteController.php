@@ -100,7 +100,8 @@ class ExpedienteController extends Controller
             'preRegistro.catMateriaVia.catMateria',
             'preRegistro.catMateriaVia.catVia',
             'tramites',
-            'ultimoHistorial.estado' // <--- Agrega esta línea
+            'ultimoHistorial.estado',
+            'juzgado' // <--- Agrega esta línea
         ])
             ->when($esAbogado, function ($query) use ($idGeneral) {
                 $query->where(function ($q) use ($idGeneral) {
@@ -150,6 +151,11 @@ class ExpedienteController extends Controller
                 'ultimoHistorial'    => $expediente->ultimoHistorial ? [
                     'idHistorialExpediente' => $expediente->ultimoHistorial->idHistorialExpediente,
                     'estado'                => $expediente->ultimoHistorial->estado->descripcion ?? null,
+                ] : null,
+                'juzgado' => $expediente->juzgado ? [
+                    'idCatJuzgado' => $expediente->juzgado->idCatJuzgado,
+                    'nombre' => $expediente->juzgado->nombre,
+                    'lugar' => $expediente->juzgado->lugar,
                 ] : null,
             ];
         });
