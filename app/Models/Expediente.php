@@ -49,4 +49,13 @@ class Expediente extends Model
     {
         return $this->belongsToMany(Abogado::class, 'expediente_abogado', 'idExpediente', 'idAbogado');
     }
+
+    public function historial()
+    {
+        return $this->hasMany(HistorialExpediente::class, 'idExpediente');
+    }
+    public function ultimoHistorial()
+    {
+        return $this->hasOne(HistorialExpediente::class, 'idExpediente')->latest('idHistorialExpediente');
+    }
 }

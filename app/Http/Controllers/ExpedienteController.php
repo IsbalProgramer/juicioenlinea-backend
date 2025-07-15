@@ -96,7 +96,12 @@ class ExpedienteController extends Controller
         }
 
         // Base Query
-        $query = Expediente::with(['preRegistro.catMateriaVia.catMateria', 'preRegistro.catMateriaVia.catVia', 'tramites'])
+        $query = Expediente::with([
+            'preRegistro.catMateriaVia.catMateria',
+            'preRegistro.catMateriaVia.catVia',
+            'tramites',
+            'ultimoHistorial.estado' // <--- Agrega esta línea
+        ])
             ->when($esAbogado, function ($query) use ($idGeneral) {
                 $query->where(function ($q) use ($idGeneral) {
                     $q->whereHas('preRegistro', function ($subquery) use ($idGeneral) {
@@ -141,6 +146,11 @@ class ExpedienteController extends Controller
                 'created_at_pre'     => $preRegistro?->created_at,
                 'materiaDescripcion' => optional($preRegistro?->catMateriaVia?->catMateria)->descripcion,
                 'viaDescripcion'     => optional($preRegistro?->catMateriaVia?->catVia)->descripcion,
+                // Agrega el último historial y el nombre del estado
+                'ultimoHistorial'    => $expediente->ultimoHistorial ? [
+                    'idHistorialExpediente' => $expediente->ultimoHistorial->idHistorialExpediente,
+                    'estado'                => $expediente->ultimoHistorial->estado->descripcion ?? null,
+                ] : null,
             ];
         });
 
@@ -222,6 +232,13 @@ class ExpedienteController extends Controller
                     ]);
                 }
             }
+
+            // Crear historial inicial del expediente
+            \App\Models\HistorialExpediente::create([
+                'idExpediente' => $expediente->idExpediente,
+                'idEstadoExpediente' => 1, // Estado inicial por defecto
+                'descripcion' => 'Expediente creado',
+            ]);
 
             return response()->json([
                 'success' => true,

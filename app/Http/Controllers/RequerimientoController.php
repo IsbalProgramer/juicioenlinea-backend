@@ -386,9 +386,9 @@ class RequerimientoController extends Controller
                 [
                     'order_number' => $requerimiento->folioRequerimiento,
                     "tracking_number" => $requerimiento->folioRequerimiento,
-                    "date" => $requerimiento->created_at ? $requerimiento->created_at->format('Y-m-d') : null,
+                    "date" => $requerimiento->created_at ? $requerimiento->created_at->format('Y-m-d H:i:s') : null,
                     "delivery" => $requerimiento->descripcion,
-                    "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d') : null,
+                    "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d H:i:s') : null,
                     "address" => $numExpediente,
                     "support_email" => "20161303@itoaxaca.edu.mx",
                     "mensaje" => "Usted ha creado el requerimiento correctamente."
@@ -403,10 +403,10 @@ class RequerimientoController extends Controller
                 [
                     'order_number' => $requerimiento->folioRequerimiento,
                     "tracking_number" => $requerimiento->folioRequerimiento,
-                    "date" => $requerimiento->created_at ? $requerimiento->created_at->format('Y-m-d') : null,
+                    "date" => $requerimiento->created_at ? $requerimiento->created_at->format('Y-m-d H:i:s') : null,
                     "delivery" => $requerimiento->descripcion,
-                    "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d') : null,
-                    "address" => 'Verifique en plataforma a que expediente pertenece',
+                    "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d H:i:s') : null,
+                    "address" => 'Verifique su listado de requerimientos asignados para mas información.',
                     "support_email" => "20161303@itoaxaca.edu.mx",
                     "mensaje" => "Se le ha asignado un nuevo requerimiento."
                 ],
@@ -905,15 +905,15 @@ class RequerimientoController extends Controller
             // Enviar correo al creador del requerimiento
             $resultadoCreador = $mailerSend->enviarCorreo(
                 "20161303@itoaxaca.edu.mx",
-                "Sea completado el requerimiento #{$requerimiento->folio}",
+                "Sea completado el requerimiento #{ $requerimiento->folioRequerimiento}",
                 [
-                    'order_number' => $requerimiento->folio,
-                    "tracking_number" => $requerimiento->folio,
+                    'order_number' =>  $requerimiento->folioRequerimiento,
+                    "tracking_number" => $requerimiento->folioRequerimiento,
                     "date" => $requerimiento->historial && $requerimiento->historial->last() && $requerimiento->historial->last()->created_at
-                        ? $requerimiento->historial->last()->created_at->format('Y-m-d')
+                        ? $requerimiento->historial->last()->created_at->format('Y-m-d H:i:s')
                         : null,
                     "delivery" => $requerimiento->descripcion,
-                    "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d') : null,
+                    "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d H:i:s') : null,
                     "address" =>  $numExpediente,
                     "support_email" => "20161303@itoaxaca.edu.mx",
                     "mensaje" => "El abogado a completado exitosamente el requerimiento solicitado."
@@ -930,10 +930,10 @@ class RequerimientoController extends Controller
                     "tracking_number" => $requerimiento->folio,
                     // Tomar la fecha del último historial (el más reciente)
                     "date" => $requerimiento->historial && $requerimiento->historial->last() && $requerimiento->historial->last()->created_at
-                        ? $requerimiento->historial->last()->created_at->format('Y-m-d')
+                        ? $requerimiento->historial->last()->created_at->format('Y-m-d H:i:s')
                         : null,
                     "delivery" => $requerimiento->descripcion,
-                    "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d') : null,
+                    "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d H:i:s') : null,
                     "address" => $numExpediente,
                     "support_email" => "20161303@itoaxaca.edu.mx",
                     "mensaje" => "Usted ha completado el requerimiento solicitado."
@@ -1058,12 +1058,11 @@ class RequerimientoController extends Controller
                 [
                     'order_number' => $requerimiento->folio,
                     "tracking_number" => $requerimiento->folio,
-                    // Tomar la fecha del último historial (el más reciente)
                     "date" => $requerimiento->historial && $requerimiento->historial->last() && $requerimiento->historial->last()->created_at
-                        ? $requerimiento->historial->last()->created_at->format('Y-m-d')
+                        ? $requerimiento->historial->last()->created_at->format('Y-m-d H:i:s')
                         : null,
                     "delivery" => $requerimiento->descripcion,
-                    "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d') : null,
+                    "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d H:i:s') : null,
                     "address" => $numExpediente,
                     "support_email" => "20161303@itoaxaca.edu.mx",
                     "mensaje" => "Ha aceptado correctamente el requerimiento."
@@ -1078,12 +1077,11 @@ class RequerimientoController extends Controller
                 [
                     'order_number' => $requerimiento->folio,
                     "tracking_number" => $requerimiento->folio,
-                    // Tomar la fecha del último historial (el más reciente)
                     "date" => $requerimiento->historial && $requerimiento->historial->last() && $requerimiento->historial->last()->created_at
-                        ? $requerimiento->historial->last()->created_at->format('Y-m-d')
+                        ? $requerimiento->historial->last()->created_at->format('Y-m-d H:i:s')
                         : null,
                     "delivery" => $requerimiento->descripcion,
-                    "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d') : null,
+                    "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d H:i:s') : null,
                     "address" =>  $numExpediente,
                     "support_email" => "20161303@itoaxaca.edu.mx",
                     "mensaje" => "Estado actualizado para el requerimiento verifique en plataforma"
@@ -1216,16 +1214,16 @@ class RequerimientoController extends Controller
             // Enviar correo al creador del requerimiento
             $resultadoCreador = $mailerSend->enviarCorreo(
                 "20161303@itoaxaca.edu.mx", // destinatario (creador), puedes hacerlo dinámico
-                "Confirmación de rechazado de requerimiento  #{$requerimiento->folio} correctamente",
+                "Confirmación de rechazado de requerimiento  #{ $requerimiento->folioRequerimiento} correctamente",
                 [
-                    'order_number' => $requerimiento->folio,
-                    "tracking_number" => $requerimiento->folio,
+                    'order_number' =>  $requerimiento->folioRequerimiento,
+                    "tracking_number" =>  $requerimiento->folioRequerimiento,
                     // Tomar la fecha del último historial (el más reciente)
                     "date" => $requerimiento->historial && $requerimiento->historial->last() && $requerimiento->historial->last()->created_at
-                        ? $requerimiento->historial->last()->created_at->format('Y-m-d')
+                        ? $requerimiento->historial->last()->created_at->format('Y-m-d H:i:s')
                         : null,
                     "delivery" => $requerimiento->descripcion,
-                    "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d') : null,
+                    "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d H:i:s') : null,
                     "address" => $numExpediente,
                     "support_email" => "20161303@itoaxaca.edu.mx",
                     "mensaje" => "Ha rechazado correctamente el requerimiento."
@@ -1236,16 +1234,16 @@ class RequerimientoController extends Controller
             // Enviar correo al asignado (abogado)
             $resultadoAbogado = $mailerSend->enviarCorreo(
                 "20161303@itoaxaca.edu.mx", // destinatario (asignado), puedes hacerlo dinámico
-                "Hay una actualizacion del requerimiento #{$requerimiento->folio}",
+                "Hay una actualizacion del requerimiento #{ $requerimiento->folioRequerimiento}",
                 [
-                    'order_number' => $requerimiento->folio,
-                    "tracking_number" => $requerimiento->folio,
+                    'order_number' =>  $requerimiento->folioRequerimiento,
+                    "tracking_number" =>  $requerimiento->folioRequerimiento,
                     // Tomar la fecha del último historial (el más reciente)
                     "date" => $requerimiento->historial && $requerimiento->historial->last() && $requerimiento->historial->last()->created_at
-                        ? $requerimiento->historial->last()->created_at->format('Y-m-d')
+                        ? $requerimiento->historial->last()->created_at->format('Y-m-d H:i:s')
                         : null,
                     "delivery" => $requerimiento->descripcion,
-                    "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d') : null,
+                    "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d H:i:s') : null,
                     "address" => $numExpediente,
                     "support_email" => "20161303@itoaxaca.edu.mx",
                     "mensaje" => "Estado actualizado para el requerimiento verifique en plataforma"
@@ -1379,10 +1377,10 @@ class RequerimientoController extends Controller
                         "tracking_number" => $requerimiento->folio,
                         // Tomar la fecha del último historial (el más reciente)
                         "date" => $requerimiento->historial && $requerimiento->historial->last() && $requerimiento->historial->last()->created_at
-                            ? $requerimiento->historial->last()->created_at->format('Y-m-d')
+                            ? $requerimiento->historial->last()->created_at->format('Y-m-d H:i:s')
                             : null,
                         "delivery" => $requerimiento->descripcion,
-                        "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d') : null,
+                        "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d H:i:s') : null,
                         "address" =>  $numExpediente,
                         "support_email" => "20161303@itoaxaca.edu.mx",
                         "mensaje" => "El abogado a completado exitosamente el requerimiento solicitado."
@@ -1399,10 +1397,10 @@ class RequerimientoController extends Controller
                         "tracking_number" =>  $requerimiento->documentoAcuerdo ? $requerimiento->documentoAcuerdo->folio : null,
                         // Tomar la fecha del último historial (el más reciente)
                         "date" => $requerimiento->historial && $requerimiento->historial->last() && $requerimiento->historial->last()->created_at
-                            ? $requerimiento->historial->last()->created_at->format('Y-m-d')
+                            ? $requerimiento->historial->last()->created_at->format('Y-m-d H:i:s')
                             : null,
                         "delivery" => $requerimiento->descripcion,
-                        "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d') : null,
+                        "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d H:i:s') : null,
                         "address" =>  $numExpediente,
                         "support_email" => "20161303@itoaxaca.edu.mx",
                         "mensaje" => "Usted ha completado el requerimiento solicitado."
@@ -1542,7 +1540,8 @@ class RequerimientoController extends Controller
             $filtrados = $todos->filter(function ($req) use ($estado) {
                 $ultimoEstado = $req->historial->last()->idCatEstadoRequerimientos ?? null;
                 if (is_null($estado)) {
-                    return $ultimoEstado == 1;
+                    // Por defecto: mostrar los requerimientos con estado 1, 4 o 5
+                    return in_array($ultimoEstado, [1, 4, 5]);
                 }
                 if ($estado === '0' || $estado === 0) {
                     return true;

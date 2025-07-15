@@ -18,6 +18,7 @@ return new class extends Migration
             $table->dateTime('fechaResponse');
             $table->unsignedBigInteger('idPreregistro');
             $table->unsignedBigInteger('idSecretario');
+            
             $table->foreign('idPreregistro')->references('idPreregistro')->on('pre_registros')->onUpdate('cascade')->onDelete('cascade');
 
         });
