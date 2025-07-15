@@ -9,6 +9,7 @@ use App\Models\Catalogos\CatEstadoInicios;
 use App\Models\Catalogos\CatEstadoSolicitud;
 use App\Models\Catalogos\CatSexos;
 use App\Models\Catalogos\CatTipoDocumento;
+use App\Models\CatEstadoExpediente;
 use App\Models\HistorialEstadoAudiencia;
 use Illuminate\Database\Seeder;
 
@@ -53,6 +54,12 @@ class DatabaseSeeder extends Seeder
         CatEstadoSolicitud::create(['descripcion' => 'Aceptada']);
         CatEstadoSolicitud::create(['descripcion' => 'Rechazada']);
 
+        CatEstadoExpediente::create([
+            ['idEstadoExpediente' => 1, 'clave' => 'activo', 'descripcion' => 'Activo'],
+            ['idEstadoExpediente' => 2, 'clave' => 'inactivo', 'descripcion' => 'Inactivo'],
+        ]);
+
+
         $this->call(TipoViaSeeder::class);
         $this->call(TipoMateriaViaSeeder::class);
         $this->call(TipoParteSeeder::class);
@@ -67,6 +74,6 @@ class DatabaseSeeder extends Seeder
         // $this->call(ExpedienteSeeder::class);
         // $this->call(AudienciaSeeder::class);
         // $this->call(HistorialEstadoAudienciasSeeder::class);
-    
+
     }
 }

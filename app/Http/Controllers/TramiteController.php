@@ -294,7 +294,8 @@ class TramiteController extends Controller
             $tramite = Tramite::create([
                 'idCatTramite' => $request->idCatTramite,
                 'idGeneral' => $idGeneral,
-                'usr' => $usr,
+                // 'usr' => $usr,
+                'idUsr' => $usr,
                 'folioOficio' => $folioTramite,
                 'sintesis' => $request->sintesis,
                 'observaciones' => $request->observaciones,

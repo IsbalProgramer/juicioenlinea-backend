@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('cat_secretario_juzgado', function (Blueprint $table) {
             $table->id('idCatSecretarioJuzgado');
-            $table->unsignedBigInteger('idUsr');
-            $table->unsignedBigInteger('idGeneral');
+            $table->string('idUsrSecretario'); // usuario
+            $table->unsignedBigInteger('idGeneralSecretario'); //id general
             $table->unsignedBigInteger('idCatJuzgado');
             $table->timestamps();
 
