@@ -101,7 +101,7 @@ class ExpedienteController extends Controller
             'preRegistro.catMateriaVia.catVia',
             'tramites',
             'ultimoHistorial.estado',
-            'juzgado' // <--- Agrega esta línea
+            'juzgado' 
         ])
             ->when($esAbogado, function ($query) use ($idGeneral) {
                 $query->where(function ($q) use ($idGeneral) {
@@ -147,7 +147,6 @@ class ExpedienteController extends Controller
                 'created_at_pre'     => $preRegistro?->created_at,
                 'materiaDescripcion' => optional($preRegistro?->catMateriaVia?->catMateria)->descripcion,
                 'viaDescripcion'     => optional($preRegistro?->catMateriaVia?->catVia)->descripcion,
-                // Agrega el último historial y el nombre del estado
                 'ultimoHistorial'    => $expediente->ultimoHistorial ? [
                     'idHistorialExpediente' => $expediente->ultimoHistorial->idHistorialExpediente,
                     'estado'                => $expediente->ultimoHistorial->estado->descripcion ?? null,
