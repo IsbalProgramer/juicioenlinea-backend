@@ -64,7 +64,7 @@ class Requerimiento extends Model
 
     public function abogado()
     {
-        return $this->belongsTo(abogado::class, 'idAbogado');
+        return $this->belongsTo(Abogado::class, 'idAbogado');
     }
    
 }
