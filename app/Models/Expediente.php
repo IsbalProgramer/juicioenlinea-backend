@@ -39,7 +39,7 @@ class Expediente extends Model
 
     public function audiencias()
     {
-        return $this->hasMany(audiencia::class, 'idExpediente');
+        return $this->hasMany(Audiencia::class, 'idExpediente');
     }
     public function juzgado()
     {
