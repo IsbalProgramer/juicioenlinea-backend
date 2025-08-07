@@ -382,7 +382,7 @@ class RequerimientoController extends Controller
             // Enviar correo al creador del requerimiento
             $resultadoCreador = $mailerSend->enviarCorreo(
                 "20161303@itoaxaca.edu.mx", // destinatario (creador), puedes hacerlo dinámico
-                "Confirmación de creación de requerimiento #{$requerimiento->idRequerimiento}",
+                "Confirmación de creación de requerimiento #{$requerimiento->folioRequerimiento}",
                 [
                     'order_number' => $requerimiento->folioRequerimiento,
                     "tracking_number" => $requerimiento->folioRequerimiento,
@@ -393,7 +393,7 @@ class RequerimientoController extends Controller
                     "support_email" => "20161303@itoaxaca.edu.mx",
                     "mensaje" => "Usted ha creado el requerimiento correctamente."
                 ],
-                "z86org8yymnlew13" // tu template_id
+                "3vz9dlej87q4kj50" // tu template_id
             );
 
             // Enviar correo al asignado (abogado)
@@ -410,7 +410,7 @@ class RequerimientoController extends Controller
                     "support_email" => "20161303@itoaxaca.edu.mx",
                     "mensaje" => "Se le ha asignado un nuevo requerimiento."
                 ],
-                "z86org8yymnlew13" // tu template_id
+                "3vz9dlej87q4kj50" // tu template_id
             );
 
             // Puedes verificar si se enviaron correctamente revisando el valor de retorno
@@ -918,16 +918,16 @@ class RequerimientoController extends Controller
                     "support_email" => "20161303@itoaxaca.edu.mx",
                     "mensaje" => "El abogado a completado exitosamente el requerimiento solicitado."
                 ],
-                "z86org8yymnlew13" // tu template_id
+                "3vz9dlej87q4kj50" // tu template_id
             );
 
             // Enviar correo al asignado (abogado)
             $resultadoAbogado = $mailerSend->enviarCorreo(
                 "20161303@itoaxaca.edu.mx", // destinatario (asignado), puedes hacerlo dinámico
-                "Confirmación de envio de requerimiento   #{$requerimiento->folio}",
+                "Confirmación de envio de requerimiento   #{$requerimiento->folioRequerimiento}",
                 [
-                    'order_number' => $requerimiento->folio,
-                    "tracking_number" => $requerimiento->folio,
+                    'order_number' => $requerimiento->folioRequerimiento,
+                    "tracking_number" => $requerimiento->folioRequerimiento,
                     // Tomar la fecha del último historial (el más reciente)
                     "date" => $requerimiento->historial && $requerimiento->historial->last() && $requerimiento->historial->last()->created_at
                         ? $requerimiento->historial->last()->created_at->format('Y-m-d H:i:s')
@@ -938,7 +938,7 @@ class RequerimientoController extends Controller
                     "support_email" => "20161303@itoaxaca.edu.mx",
                     "mensaje" => "Usted ha completado el requerimiento solicitado."
                 ],
-                "z86org8yymnlew13" // tu template_id
+                "3vz9dlej87q4kj50" // tu template_id
             );
 
             // Puedes verificar si se enviaron correctamente revisando el valor de retorno
@@ -1054,10 +1054,10 @@ class RequerimientoController extends Controller
             // Enviar correo al creador del requerimiento
             $resultadoCreador = $mailerSend->enviarCorreo(
                 "20161303@itoaxaca.edu.mx", // destinatario (creador), puedes hacerlo dinámico
-                "Confirmación de aceptado de requerimiento  #{$requerimiento->folio} correctamente",
+                "Confirmación de aceptado de requerimiento  #{$requerimiento->folioRequerimiento} correctamente",
                 [
-                    'order_number' => $requerimiento->folio,
-                    "tracking_number" => $requerimiento->folio,
+                    'order_number' => $requerimiento->folioRequerimiento,
+                    "tracking_number" => $requerimiento->folioRequerimiento,
                     "date" => $requerimiento->historial && $requerimiento->historial->last() && $requerimiento->historial->last()->created_at
                         ? $requerimiento->historial->last()->created_at->format('Y-m-d H:i:s')
                         : null,
@@ -1067,16 +1067,16 @@ class RequerimientoController extends Controller
                     "support_email" => "20161303@itoaxaca.edu.mx",
                     "mensaje" => "Ha aceptado correctamente el requerimiento."
                 ],
-                "z86org8yymnlew13" // tu template_id
+                "3vz9dlej87q4kj50" // tu template_id
             );
 
             // Enviar correo al asignado (abogado)
             $resultadoAbogado = $mailerSend->enviarCorreo(
                 "20161303@itoaxaca.edu.mx", // destinatario (asignado), puedes hacerlo dinámico
-                "Hay una actualizacion del requerimiento  #{$requerimiento->documentoAcuerdo->folio}",
+                "Hay una actualizacion del requerimiento  #{$requerimiento->folioRequerimiento}",
                 [
-                    'order_number' => $requerimiento->folio,
-                    "tracking_number" => $requerimiento->folio,
+                    'order_number' => $requerimiento->folioRequerimiento,
+                    "tracking_number" => $requerimiento->folioRequerimiento,
                     "date" => $requerimiento->historial && $requerimiento->historial->last() && $requerimiento->historial->last()->created_at
                         ? $requerimiento->historial->last()->created_at->format('Y-m-d H:i:s')
                         : null,
@@ -1086,7 +1086,7 @@ class RequerimientoController extends Controller
                     "support_email" => "20161303@itoaxaca.edu.mx",
                     "mensaje" => "Estado actualizado para el requerimiento verifique en plataforma"
                 ],
-                "z86org8yymnlew13" // tu template_id
+                "3vz9dlej87q4kj50" // tu template_id
             );
 
             return response()->json([
@@ -1228,7 +1228,7 @@ class RequerimientoController extends Controller
                     "support_email" => "20161303@itoaxaca.edu.mx",
                     "mensaje" => "Ha rechazado correctamente el requerimiento."
                 ],
-                "z86org8yymnlew13" // tu template_id
+                "3vz9dlej87q4kj50" // tu template_id
             );
 
             // Enviar correo al asignado (abogado)
@@ -1248,7 +1248,7 @@ class RequerimientoController extends Controller
                     "support_email" => "20161303@itoaxaca.edu.mx",
                     "mensaje" => "Estado actualizado para el requerimiento verifique en plataforma"
                 ],
-                "z86org8yymnlew13" // tu template_id
+                "3vz9dlej87q4kj50" // tu template_id
             );
 
             return response()->json([
@@ -1371,10 +1371,10 @@ class RequerimientoController extends Controller
                 // Enviar correo al creador del requerimiento
                 $resultadoCreador = $mailerSend->enviarCorreo(
                     "20161303@itoaxaca.edu.mx", // destinatario (creador), puedes hacerlo dinámico
-                    "Sea completado un requerimiento #{$requerimiento->folio}",
+                    "El requerimiento con folio #{$requerimiento->folioRequerimiento} ha expirado",
                     [
-                        'order_number' => $requerimiento->folio,
-                        "tracking_number" => $requerimiento->folio,
+                        'order_number' => $requerimiento->folioRequerimiento,
+                        "tracking_number" => $requerimiento->folioRequerimiento,
                         // Tomar la fecha del último historial (el más reciente)
                         "date" => $requerimiento->historial && $requerimiento->historial->last() && $requerimiento->historial->last()->created_at
                             ? $requerimiento->historial->last()->created_at->format('Y-m-d H:i:s')
@@ -1383,18 +1383,18 @@ class RequerimientoController extends Controller
                         "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d H:i:s') : null,
                         "address" =>  $numExpediente,
                         "support_email" => "20161303@itoaxaca.edu.mx",
-                        "mensaje" => "El abogado a completado exitosamente el requerimiento solicitado."
+                        "mensaje" => "El abogado no completo el requerimiento asigando."
                     ],
-                    "z86org8yymnlew13" // tu template_id
+                    "3vz9dlej87q4kj50" // tu template_id
                 );
 
                 // Enviar correo al asignado (abogado)
                 $resultadoAbogado = $mailerSend->enviarCorreo(
                     "20161303@itoaxaca.edu.mx", // destinatario (asignado), puedes hacerlo dinámico
-                    "A completado exitosamente el requerimiento  #{$requerimiento->documentoAcuerdo->folio}",
+                    "El requerimiento con folio #{$requerimiento->folioRequerimiento} ha expirado",
                     [
-                        'order_number' => $requerimiento->documentoAcuerdo ? $requerimiento->documentoAcuerdo->folio : null,
-                        "tracking_number" =>  $requerimiento->documentoAcuerdo ? $requerimiento->documentoAcuerdo->folio : null,
+                        'order_number' => $requerimiento->folioRequerimiento,
+                        "tracking_number" => $requerimiento->folioRequerimiento,
                         // Tomar la fecha del último historial (el más reciente)
                         "date" => $requerimiento->historial && $requerimiento->historial->last() && $requerimiento->historial->last()->created_at
                             ? $requerimiento->historial->last()->created_at->format('Y-m-d H:i:s')
@@ -1403,9 +1403,9 @@ class RequerimientoController extends Controller
                         "delivery_date" => $requerimiento->fechaLimite ? \Carbon\Carbon::parse($requerimiento->fechaLimite)->format('Y-m-d H:i:s') : null,
                         "address" =>  $numExpediente,
                         "support_email" => "20161303@itoaxaca.edu.mx",
-                        "mensaje" => "Usted ha completado el requerimiento solicitado."
+                        "mensaje" => "El tiempo asignado para subir el requerimiento ha expirado ."
                     ],
-                    "z86org8yymnlew13" // tu template_id
+                    "3vz9dlej87q4kj50" // tu template_id
                 );
 
                 return response()->json([
@@ -1432,11 +1432,7 @@ class RequerimientoController extends Controller
         ], 200);
     }
 
-
-
-
-
-
+    
     public function listarRequerimientosAbogado(Request $request, PermisosApiService $permisosApiService)
     {
         try {

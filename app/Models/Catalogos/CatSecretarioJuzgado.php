@@ -10,8 +10,8 @@ class CatSecretarioJuzgado extends Model
     protected $table = 'cat_secretario_juzgado';
     protected $primaryKey = 'idCatSecretarioJuzgado';
     protected $fillable = [
-        'idUsr',
-        'idGeneral',
+        'idUsrSecretario',
+        'idGeneralSecretario',
         'idCatJuzgado'
     ];
 
