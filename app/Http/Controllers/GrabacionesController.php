@@ -40,13 +40,13 @@ class GrabacionesController extends Controller
             ], 400);
         }
 
-        // Solo continuar si ya pasó al menos 1 hora desde que finalizó
-        if (Carbon::parse($finalizada->fechaHora)->addHour()->isFuture()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Debe esperar al menos 1 hora después de finalizar la audiencia.',
-            ], 400);
-        }
+        // // Solo continuar si ya pasó al menos 1 hora desde que finalizó
+        // if (Carbon::parse($finalizada->fechaHora)->addHour()->isFuture()) {
+        //     return response()->json([
+        //         'success' => false,
+        //         'message' => 'Debe esperar al menos 1 hora después de finalizar la audiencia.',
+        //     ], 400);
+        // }
 
         // Rango de fechas: TODO el día de hoy
         $fechaAudiencia = Carbon::parse($audiencia->start);
