@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Catalogos;
 
 use App\Http\Controllers\Controller;
-use App\Models\Catalogos\catMaterias;
+use App\Models\Catalogos\CatMaterias;
 use Illuminate\Http\Request;
 
 class CatMateriasController extends Controller
@@ -14,7 +14,7 @@ class CatMateriasController extends Controller
     public function index()
     {
         try {
-            $catMaterias = catMaterias::where('activo', 1)->get();
+            $catMaterias = CatMaterias::where('activo', 1)->get();
             return response()->json([
                 'status' => 200,
                 'message' => "Catálogos de materias",
