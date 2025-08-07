@@ -322,7 +322,17 @@ class PreRegistroController extends Controller
                 $nombreArchivo = "{$timestamp}_{$idCatTipoDocumento}_{$nombreDocumento}.{$file->getClientOriginalExtension()}";
 
                 // Subir archivo al NAS
-                $nasApiService->subirArchivo($file, $ruta, $request->bearerToken(), $nombreArchivo);
+                $nasResponse = $nasApiService->subirArchivo($file, $ruta, $request->bearerToken(), $nombreArchivo);
+
+                if (!$nasResponse) {
+                    DB::rollBack();
+                    return response()->json([
+                        'success' => false,
+                        'status' => 422,
+                        'message' => 'Error al subir anexos al NAS',
+                        'nas_response' => $nasResponse,
+                    ], 422);
+                }
 
                 // Guardar en la base: nombre solo si idCatTipoDocumento == -1, si no, null
                 $documentos[] = [
