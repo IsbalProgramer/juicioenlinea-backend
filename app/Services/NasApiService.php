@@ -31,10 +31,6 @@ class NasApiService
             'body' => $response->body(),
         ]);
 
-        if ($response->failed()) {
-            throw new \Exception('Error al subir el archivo al NAS: ' . $response->body());
-        }
-
         return $response->json();
     }
 }
