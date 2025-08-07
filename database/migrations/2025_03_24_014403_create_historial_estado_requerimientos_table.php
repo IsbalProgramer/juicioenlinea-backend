@@ -19,9 +19,18 @@ return new class extends Migration
             $table->timestamps();
 
             // Claves foráneas
-            $table->foreign('idRequerimiento')->references('idRequerimiento')->on('requerimientos');
-            $table->foreign('idCatEstadoRequerimientos')->references('idCatEstadoRequerimientos')->on('cat_estado_requerimientos');
-            // $table->foreign('idUsuario')->references('id')->on('users');
+                        
+            // ...existing code...
+            $table->foreign('idRequerimiento')
+                ->references('idRequerimiento')
+                ->on('requerimientos')
+                ->name('fk_historial_req');
+            
+            $table->foreign('idCatEstadoRequerimientos')
+                ->references('idCatEstadoRequerimientos')
+                ->on('cat_estado_requerimientos')
+                ->name('fk_historial_estado_req');
+                   // $table->foreign('idUsuario')->references('id')->on('users');
         });
     }
 
