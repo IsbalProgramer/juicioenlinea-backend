@@ -130,7 +130,7 @@ class TramiteController extends Controller
             'observaciones'    => 'required|string',
             'documentoTramite' => 'required|file|mimes:pdf,doc,docx',
             'partes' => 'nullable|array|min:1',
-            'partes.*.idUsr' => 'nullable|integer',
+            'partes.*.idUsr' => 'nullable|string',
             'partes.*.nombre' => 'required|string|max:255',
             'partes.*.apellidoPaterno' => 'string|max:255',
             'partes.*.apellidoMaterno' => 'string|max:255',
