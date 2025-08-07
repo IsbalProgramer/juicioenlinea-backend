@@ -38,8 +38,8 @@ class RemitenteController extends Controller
             }
 
             // Obtener el juzgado asignado al secretario
-            $secretario = CatSecretarioJuzgado::where('idGeneral', $idGeneral)
-                ->where('idUsr', $idUsr)
+            $secretario = CatSecretarioJuzgado::where('idGeneralSecretario', $idGeneral)
+                ->where('idUsrSecretario', $idUsr)
                 ->first();
 
             if (!$secretario) {
