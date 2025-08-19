@@ -664,11 +664,11 @@ class AudienciaController extends Controller
 
         // Formatear fechas para observaciones
         $fechaCarbon = Carbon::parse($fechaInicial);
+        $fechaCarbon->locale('es'); // Configurar locale en español
         $fechaFormateada = $fechaCarbon->translatedFormat('j \d\e F \d\e Y');
         $horaInicial = Carbon::parse($fechaInicial)->format('H:i');
         $horaFinal = Carbon::parse($fechaFinal)->format('H:i');
         $observacion = "Audiencia inicialmente programada para el {$fechaFormateada}, de {$horaInicial} - {$horaFinal} h.";
-
 
         $audiencia->update([
             'title' => $validated['title'],
@@ -769,6 +769,7 @@ class AudienciaController extends Controller
             ]);
 
             $fechaCancelacion = now();
+            $fechaCancelacion->locale('es'); // Configurar locale en español
             $fechaFormateada = $fechaCancelacion->translatedFormat('j \d\e F \d\e Y');
             $horaFormateada = $fechaCancelacion->format('H:i');
 
