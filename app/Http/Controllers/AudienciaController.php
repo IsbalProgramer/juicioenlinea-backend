@@ -946,6 +946,11 @@ class AudienciaController extends Controller
         $horaInicio = $request->query('start'); // formato: HH:mm
         $idAudiencia = $request->query('idAudiencia'); // opcional
 
+        // Obtener el idGeneral del token
+        $jwtPayload = $request->attributes->get('jwt_payload');
+        $datosUsuario = $permisosApiService->obtenerDatosUsuarioByToken($jwtPayload);
+        $idGeneral = $datosUsuario['idGeneral'] ?? null;
+
         if (!$fecha || !$horaInicio) {
             return response()->json([
                 'success' => false,
@@ -953,12 +958,23 @@ class AudienciaController extends Controller
                 'message' => 'Debes enviar los parámetros fecha (YYYY-MM-DD) y start (HH:mm)'
             ], 400);
         }
+        if (!$idGeneral) {
+            return response()->json([
+                'success' => false,
+                'status' => 400,
+                'message' => 'No se pudo obtener el idGeneral del token'
+            ], 400);
+        }
 
         // Rango de 07:00 a 22:00
         $inicioDia = Carbon::parse($fecha . ' 07:00:00');
         $finDia = Carbon::parse($fecha . ' 22:00:00');
 
+        // Solo audiencias de expedientes donde expediente.idSecretario = idGeneral
         $audiencias = Audiencia::whereDate('start', $fecha)
+            ->whereHas('expediente', function ($q) use ($idGeneral) {
+                $q->where('idSecretario', $idGeneral);
+            })
             ->orderBy('start')
             ->get(['start', 'end', 'idAudiencia']);
 
