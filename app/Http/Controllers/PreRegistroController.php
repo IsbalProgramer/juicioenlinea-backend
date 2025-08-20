@@ -348,7 +348,7 @@ class PreRegistroController extends Controller
             DB::commit(); // Confirmar transacción
             $mailerSend = new MailerSendService();
             $mailerSend->enviarCorreo(
-                "dvirdr2@gmail.com", // destinatario, puedes hacerlo dinámico
+                "20161303@itoaxaca.edu.mx", // destinatario, puedes hacerlo dinámico
                 "Confirmación de preregistro #{$preRegistro->folioPreregistro}",
                 [
                     'mensaje' => "preregistro creado exitosamente",
@@ -364,9 +364,9 @@ class PreRegistroController extends Controller
                     "Nvia" => "Vía",
                     "Nsitesis" => "Sistesis",
                     "Nobservaciones" => "Observaciones",
-                    "correo" => "dvirdr2@gmail.com"
+                    "correo" => "20161303@itoaxaca.edu.mx"
                 ],
-                "neqvygm997wl0p7w" // tu template_id
+                "0r83ql3owzplzw1j" // tu template_id
             );
             return response()->json([
                 'success' => true,
