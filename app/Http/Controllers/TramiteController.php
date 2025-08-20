@@ -234,8 +234,6 @@ class TramiteController extends Controller
                                 DB::table('expediente_abogado')->insert([
                                     'idExpediente' => $request->idExpediente,
                                     'idAbogado' => $abogado->idAbogado,
-                                    'created_at' => now(),
-                                    'updated_at' => now(),
                                 ]);
                             }
 
