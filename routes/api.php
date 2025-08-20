@@ -80,8 +80,8 @@ Route::prefix('Audiencia')->group(function () {
     Route::get('Listar', [AudienciaController::class, 'index'])->middleware(VerifyJwtToken::class);
     Route::get('Detalle/{idAudiencia}', [AudienciaController::class, 'show'])->middleware(VerifyJwtToken::class);
     Route::post('Crear', [AudienciaController::class, 'store']);
-    Route::get('Disponibilidad', [AudienciaController::class, 'disponibilidad']);
-    Route::get('rango-maximo', [AudienciaController::class, 'rangoMaximoDisponible']);
+    Route::get('Disponibilidad', [AudienciaController::class, 'disponibilidad'])->middleware(VerifyJwtToken::class);
+    Route::get('rango-maximo', [AudienciaController::class, 'rangoMaximoDisponible'])->middleware(VerifyJwtToken::class);
     Route::put('Editar/{idAudiencia}', [AudienciaController::class, 'update']);
     Route::post('Cancelar/{idAudiencia}', [AudienciaController::class, 'cancelarAudiencia'])->middleware(VerifyJwtToken::class);
 
