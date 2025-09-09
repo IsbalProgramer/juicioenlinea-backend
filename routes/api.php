@@ -11,6 +11,7 @@ use App\Http\Controllers\Catalogos\CatViasController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DocumentoController;
 use App\Http\Controllers\ExpedienteController;
+use App\Http\Controllers\FirmaController;
 use App\Http\Controllers\GrabacionesController;
 use App\Http\Controllers\ParteController;
 use App\Http\Controllers\PermisosApiController;
@@ -45,8 +46,6 @@ Route::prefix('Catalogo')->group(function () {
     Route::get('TipoDocumentos', [CatTipoDocumentoController::class, 'index']);
 });
 
-
-
 Route::prefix('Requerimiento')->group(function () {
     Route::post('CrearRequerimiento', [RequerimientoController::class, 'store'])->middleware(VerifyJwtToken::class);
     Route::get('ListadoRequerimientos', [RequerimientoController::class, 'index'])->middleware(VerifyJwtToken::class);
@@ -67,7 +66,7 @@ Route::prefix('Documento')->group(
 
 Route::prefix('Expediente')->group(function () {
     Route::get('Listar', [ExpedienteController::class, 'index'])->middleware(VerifyJwtToken::class);
-    Route::post('Asignar', [ExpedienteController::class, 'store'])->middleware(VerifyJwtToken::class);
+    Route::post('Asignar', [ExpedienteController::class, 'store']);
     Route::get('Detalle/{id}', [ExpedienteController::class, 'show'])->middleware(VerifyJwtToken::class);
     Route::get('ExpedientesAbogados/{id}', [ExpedienteController::class, 'listarAbogadosExpediente'])->middleware(VerifyJwtToken::class);
     Route::get('PartesAudiencia/{idExpediente}', [ParteController::class, 'show'])->middleware(VerifyJwtToken::class);
@@ -111,3 +110,5 @@ Route::prefix('Solicitud')->group(function () {
     Route::post('Actualizar/{idSolicitud}', [SolicitudesController::class, 'update'])->middleware(VerifyJwtToken::class);
 
 });
+
+Route::post('VerificaFirma', [FirmaController::class, 'store']);

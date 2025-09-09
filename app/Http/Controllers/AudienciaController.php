@@ -940,7 +940,7 @@ class AudienciaController extends Controller
         ], 200);
     }
 
-    public function rangoMaximoDisponible(Request $request)
+    public function rangoMaximoDisponible(Request $request, PermisosApiService $permisosApiService)
     {
         $fecha = $request->query('fecha'); // formato: YYYY-MM-DD
         $horaInicio = $request->query('start'); // formato: HH:mm
