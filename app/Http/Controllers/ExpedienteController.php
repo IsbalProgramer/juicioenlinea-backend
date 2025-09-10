@@ -152,9 +152,10 @@ class ExpedienteController extends Controller
                     'estado'                => $expediente->ultimoHistorial->estado->descripcion ?? null,
                 ] : null,
                 'juzgado' => $expediente->juzgado ? [
-                    'idCatJuzgado' => $expediente->juzgado->idCatJuzgado,
-                    'nombre' => $expediente->juzgado->nombre,
-                    'lugar' => $expediente->juzgado->lugar,
+                    'idCatJuzgado' => $expediente->juzgado->IdCatJuzgado,
+                    'nombre' => $expediente->juzgado->Descripcion,
+                    //'lugar' => $expediente->juzgado->lugar,
+                    'lugar' => null, // Siempre null
                 ] : null,
             ];
         });
@@ -193,13 +194,14 @@ class ExpedienteController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'idPreregistro' => 'required|integer|exists:pre_registros,idPreregistro',
-            'NumExpediente' => 'required|string|max:255',
-            'idCatJuzgado' => 'required|integer',
-            'fechaResponse' => 'required|date',
-            'idSecretario' => 'required|integer'
+            'cveMunicipio' => 'required|integer',
+            'idCatMateria' => 'required|integer',
+            'idPreRegistro' => 'required|integer|exists:pre_registros,idPreregistro',
+            'turnadoAutomatico' => 'required|boolean',
+            'observaciones' => 'nullable|string|max:300',
+            'activo' => 'required|boolean',
         ]);
-
+    
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
@@ -207,48 +209,45 @@ class ExpedienteController extends Controller
                 'errors' => $validator->messages(),
             ], 422);
         }
-
+    
         // Verifica si el idPreregistro ya fue asignado a un expediente
-        if (Expediente::where('idPreregistro', $request->idPreregistro)->exists()) {
+        if (Expediente::where('idPreregistro', $request->idPreRegistro)->exists()) {
             return response()->json([
                 'success' => false,
                 'status' => 409,
                 'message' => 'El idPreregistro ya ha sido asignado a un expediente.',
             ], 409);
         }
-
+    
         try {
-            $expediente = Expediente::create([
-                'idPreregistro' => $request->idPreregistro,
-                'NumExpediente' => $request->NumExpediente,
-                'idCatJuzgado' => $request->idCatJuzgado,
-                'fechaResponse' => $request->fechaResponse,
-                'idSecretario' => $request->idSecretario // asignacion del secretario
+            // Ejecutar el procedimiento almacenado
+            $result = DB::statement('
+                DECLARE @idCatJuzgadoAsignado INT, @FechaAsignacion DATETIME;
+                EXEC PA_INS_OPV_AsignarJuzgado
+                    @cveMunicipio = :cveMunicipio,
+                    @idCatMateria = :idCatMateria,
+                    @idCatJuzgadoAsignado = @idCatJuzgadoAsignado OUTPUT,
+                    @FechaAsignacion = @FechaAsignacion OUTPUT,
+                    @idPreRegistro = :idPreRegistro,
+                    @TurnadoAutomatico = :turnadoAutomatico,
+                    @Observaciones = :observaciones,
+                    @Activo = :activo;
+            ', [
+                'cveMunicipio' => $request->cveMunicipio,
+                'idCatMateria' => $request->idCatMateria,
+                'idPreRegistro' => $request->idPreRegistro,
+                'turnadoAutomatico' => $request->turnadoAutomatico ? 1 : 0,
+                'observaciones' => $request->observaciones ?? 'Turnado Automático',
+                'activo' => $request->activo ? 1 : 0,
             ]);
-
-            // Relacionar al abogado con el expediente
-            $preregistro = PreRegistro::find($request->idPreregistro);
-            if ($preregistro && $preregistro->idGeneral) {
-                $abogado = Abogado::where('idGeneral', $preregistro->idGeneral)->first();
-                if ($abogado) {
-                    ExpedienteAbogado::firstOrCreate([
-                        'idExpediente' => $expediente->idExpediente,
-                        'idAbogado' => $abogado->idAbogado,
-                    ]);
-                }
-            }
-
-            // Crear historial inicial del expediente
-            \App\Models\HistorialExpediente::create([
-                'idExpediente' => $expediente->idExpediente,
-                'idEstadoExpediente' => 1, // Estado inicial por defecto
-                'descripcion' => 'Expediente creado',
-            ]);
-
+    
+            // Puedes consultar el expediente creado si lo necesitas
+            $expediente = Expediente::where('idPreregistro', $request->idPreRegistro)->first();
+    
             return response()->json([
                 'success' => true,
                 'status' => 201,
-                'message' => 'Expediente creado correctamente',
+                'message' => 'Expediente creado correctamente mediante procedimiento almacenado',
                 'data' => $expediente
             ], 201);
         } catch (\Exception $e) {

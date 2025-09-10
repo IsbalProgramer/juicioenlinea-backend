@@ -136,10 +136,10 @@ class AudienciaController extends Controller
                 });
             }
 
-             // Paginación manual
+            // Paginación manual
             $perPage = (int)$request->query('per_page', 10);
             $page = (int)$request->query('page', 1);
-            
+
             $paginator = $audienciasQuery
                 ->orderByDesc('created_at')
                 ->paginate($perPage, ['*'], 'page', $page);
@@ -195,7 +195,6 @@ class AudienciaController extends Controller
                     'last_page' => $paginator->lastPage(),
                 ]
             ], 200);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -511,7 +510,7 @@ class AudienciaController extends Controller
                 $arr['ultimo_estado'] = null;
             }
             unset($arr['ultimoEstado']);
-            
+
             // Eliminar el password de la audiencia para abogados
             if ($esAbogado && isset($arr['password'])) {
                 $arr['password'] = null;
@@ -814,10 +813,15 @@ class AudienciaController extends Controller
         //
     }
 
-    public function disponibilidad(Request $request)
+    public function disponibilidad(Request $request, PermisosApiService $permisosApiService)
     {
         $fecha = $request->query('fecha'); // formato: YYYY-MM-DD
         $idAudiencia = $request->query('idAudiencia'); // opcional
+
+        // Obtener el idGeneral del token
+        $jwtPayload = $request->attributes->get('jwt_payload');
+        $datosUsuario = $permisosApiService->obtenerDatosUsuarioByToken($jwtPayload);
+        $idGeneral = $datosUsuario['idGeneral'] ?? null;
 
         if (!$fecha) {
             return response()->json([
@@ -825,15 +829,24 @@ class AudienciaController extends Controller
                 'message' => 'Debes enviar el parámetro fecha en formato YYYY-MM-DD'
             ], 400);
         }
+        if (!$idGeneral) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudo obtener el idGeneral del token'
+            ], 400);
+        }
 
         // Rango de 07:00 a 22:00
         $inicioDia = Carbon::parse($fecha . ' 07:00:00');
         $finDia = Carbon::parse($fecha . ' 22:00:00');
 
+        // Solo audiencias de expedientes donde expediente.idSecretario = idGeneral
         $audiencias = Audiencia::whereDate('start', $fecha)
+            ->whereHas('expediente', function ($q) use ($idGeneral) {
+                $q->where('idSecretario', $idGeneral);
+            })
             ->orderBy('start')
             ->get(['start', 'end', 'idAudiencia']);
-
         $ocupados = $audiencias->map(function ($a) {
             return [
                 'start' => Carbon::parse($a->start)->format('H:i'),
@@ -928,11 +941,16 @@ class AudienciaController extends Controller
         ], 200);
     }
 
-    public function rangoMaximoDisponible(Request $request)
+    public function rangoMaximoDisponible(Request $request, PermisosApiService $permisosApiService)
     {
         $fecha = $request->query('fecha'); // formato: YYYY-MM-DD
         $horaInicio = $request->query('start'); // formato: HH:mm
         $idAudiencia = $request->query('idAudiencia'); // opcional
+
+        // Obtener el idGeneral del token
+        $jwtPayload = $request->attributes->get('jwt_payload');
+        $datosUsuario = $permisosApiService->obtenerDatosUsuarioByToken($jwtPayload);
+        $idGeneral = $datosUsuario['idGeneral'] ?? null;
 
         if (!$fecha || !$horaInicio) {
             return response()->json([
@@ -941,12 +959,23 @@ class AudienciaController extends Controller
                 'message' => 'Debes enviar los parámetros fecha (YYYY-MM-DD) y start (HH:mm)'
             ], 400);
         }
+        if (!$idGeneral) {
+            return response()->json([
+                'success' => false,
+                'status' => 400,
+                'message' => 'No se pudo obtener el idGeneral del token'
+            ], 400);
+        }
 
         // Rango de 07:00 a 22:00
         $inicioDia = Carbon::parse($fecha . ' 07:00:00');
         $finDia = Carbon::parse($fecha . ' 22:00:00');
 
+        // Solo audiencias de expedientes donde expediente.idSecretario = idGeneral
         $audiencias = Audiencia::whereDate('start', $fecha)
+            ->whereHas('expediente', function ($q) use ($idGeneral) {
+                $q->where('idSecretario', $idGeneral);
+            })
             ->orderBy('start')
             ->get(['start', 'end', 'idAudiencia']);
 
