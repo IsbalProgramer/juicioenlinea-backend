@@ -56,7 +56,7 @@ class RemitenteController extends Controller
 
             $remitentes = CatRemitente::with(['juzgados']) // Solo si necesitas cargar los juzgados relacionados
                 ->whereHas('juzgados', function ($q) use ($idJuzgado) {
-                    $q->where('cat_juzgados.idCatJuzgado', $idJuzgado);
+                    $q->where('OPV_CatJuzgados.IdCatJuzgado', $idJuzgado);
                 })
                 ->when($busqueda, function ($query) use ($busqueda) {
                     $query->where(function ($subquery) use ($busqueda) {

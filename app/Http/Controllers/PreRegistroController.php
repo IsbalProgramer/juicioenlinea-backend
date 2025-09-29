@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Abogado;
 use App\Models\Catalogos\CatMateriaVia;
 use App\Models\PreRegistro;
+use App\Services\FirmaElectronica;
 use App\Services\MailerSendService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
@@ -57,7 +58,7 @@ class PreRegistroController extends Controller
                 $fechaInicio = Carbon::parse($fechaFinalParam, $timezone)->startOfDay();
                 $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
             } elseif (!$folio) {
-                $fechaInicio = Carbon::now($timezone)->subDays(6)->startOfDay();
+                $fechaInicio = Carbon::now($timezone)->subMonth(2)->startOfDay();
                 $fechaFinal = Carbon::now($timezone)->endOfDay();
             }
 
@@ -133,7 +134,7 @@ class PreRegistroController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request, NasApiService $nasApiService, PermisosApiService $permisosApiService)
+    public function store(Request $request, NasApiService $nasApiService, PermisosApiService $permisosApiService, FirmaElectronica $firmaElectronica)
     {
         $validator = Validator::make($request->all(), [
             'idCatMateria' => 'required|integer',
@@ -153,6 +154,9 @@ class PreRegistroController extends Controller
             'documentos.*.idCatTipoDocumento' => 'required|integer',
             'documentos.*.nombre' => 'nullable|string',
             'documentos.*.documento' => 'required|file',
+            'documentos.*.firmaDigital' => 'nullable|boolean',
+            'archivoPfx_Efirma' => 'required|file',
+            'password_Efirma' => 'required|string',
         ]);
 
         if ($validator->fails()) {
@@ -319,27 +323,53 @@ class PreRegistroController extends Controller
 
                 // año_mes_dia_segundos_idTipoDocumento_nombreDocumento.ext
                 $timestamp = now()->format('Y_m_d_His');
-                $nombreArchivo = "{$timestamp}_{$idCatTipoDocumento}_{$nombreDocumento}.{$file->getClientOriginalExtension()}";
 
-                // Subir archivo al NAS
-                $nasResponse = $nasApiService->subirArchivo($file, $ruta, $request->bearerToken(), $nombreArchivo);
+                // Determinar si se firma
+                $requiereFirma = (isset($documento['firmaDigital']) && ($documento['firmaDigital'] === true || (int)$documento['firmaDigital'] === 1));
 
-                if (!$nasResponse) {
+                try {
+                    $archivoParaSubir = $file;
+                    $nombreArchivo = "{$timestamp}_{$idCatTipoDocumento}_{$nombreDocumento}.{$file->getClientOriginalExtension()}";
+
+                    if ($requiereFirma) {
+                        // Firmar y usar el archivo firmado para subir (conservar el mismo nombre)
+                        $archivoPfx = $request->file('archivoPfx_Efirma');
+                        $password = $request->input('password_Efirma');
+                        $token = $request->bearerToken();
+
+                        $archivoFirmado = $firmaElectronica->firmarDocumento($archivoPfx, $password, $file, $token);
+
+                        // Usar el archivo firmado, pero NO cambiar el nombre
+                        $archivoParaSubir = $archivoFirmado;
+                    }
+
+                    // Subir archivo (firmado o original) al NAS con el mismo nombre
+                    $nasResponse = $nasApiService->subirArchivo($archivoParaSubir, $ruta, $request->bearerToken(), $nombreArchivo);
+
+                    if (!$nasResponse) {
+                        DB::rollBack();
+                        return response()->json([
+                            'success' => false,
+                            'status' => 422,
+                            'message' => 'Error al subir anexos al NAS',
+                            'nas_response' => $nasResponse,
+                        ], 422);
+                    }
+
+                    // Guardar en base: nombre solo si idCatTipoDocumento == -1, si no, null
+                    $documentos[] = [
+                        'idCatTipoDocumento' => $idCatTipoDocumento,
+                        'nombre' => $idCatTipoDocumento == -1 ? $nombreDocumento : null,
+                        'documento' => $ruta . '/' . $nombreArchivo,
+                    ];
+                } catch (\RuntimeException $ex) {
                     DB::rollBack();
                     return response()->json([
                         'success' => false,
                         'status' => 422,
-                        'message' => 'Error al subir anexos al NAS',
-                        'nas_response' => $nasResponse,
+                        'message' => $ex->getMessage(),
                     ], 422);
                 }
-
-                // Guardar en la base: nombre solo si idCatTipoDocumento == -1, si no, null
-                $documentos[] = [
-                    'idCatTipoDocumento' => $idCatTipoDocumento,
-                    'nombre' => $idCatTipoDocumento == -1 ? $nombreDocumento : null,
-                    'documento' => $ruta . '/' . $nombreArchivo,
-                ];
             }
 
             // Insertar los documentos asociados a este preregistro

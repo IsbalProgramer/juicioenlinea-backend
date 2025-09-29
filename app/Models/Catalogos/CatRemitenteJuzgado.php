@@ -15,7 +15,7 @@ class CatRemitenteJuzgado extends Model
 
     public function juzgado()
     {
-        return $this->belongsTo(CatJuzgados::class, 'idCatJuzgado');
+        return $this->belongsTo(CatJuzgados::class, 'idCatJuzgado', 'IdCatJuzgado');
     }
 
     public function remitente()

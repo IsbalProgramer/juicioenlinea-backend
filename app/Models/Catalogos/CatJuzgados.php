@@ -8,12 +8,12 @@ class CatJuzgados extends Model
 {
     //
 
-    protected $table = 'cat_juzgados';
-    protected $primaryKey = 'idCatJuzgado';
+    protected $table = 'OPV_CatJuzgados'; // Nombre de la tabla
+    protected $primaryKey = 'IdCatJuzgado';
     protected $fillable = [
-        'nombre',
-        'lugar',
-        'activo',
+        'Descripcion',
+        //'lugar',
+        //'activo',
     ];
 
     public function remitentes()
