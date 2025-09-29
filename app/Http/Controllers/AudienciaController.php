@@ -84,18 +84,18 @@ class AudienciaController extends Controller
             // Por defecto, solo mostrar audiencias del día de hoy
             $timezone = config('app.timezone', 'America/Mexico_City');
             if ($fechaInicioParam && $fechaFinalParam) {
-                $fechaInicio = \Carbon\Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
-                $fechaFinal = \Carbon\Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
+                $fechaInicio = Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
+                $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
             } elseif ($fechaInicioParam) {
-                $fechaInicio = \Carbon\Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
-                $fechaFinal = \Carbon\Carbon::parse($fechaInicioParam, $timezone)->endOfDay();
+                $fechaInicio = Carbon::parse($fechaInicioParam, $timezone)->startOfDay();
+                $fechaFinal = Carbon::parse($fechaInicioParam, $timezone)->endOfDay();
             } elseif ($fechaFinalParam) {
-                $fechaInicio = \Carbon\Carbon::parse($fechaFinalParam, $timezone)->startOfDay();
-                $fechaFinal = \Carbon\Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
+                $fechaInicio = Carbon::parse($fechaFinalParam, $timezone)->startOfDay();
+                $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
             } else {
                 // Si no hay filtro, solo hoy
-                $fechaInicio = \Carbon\Carbon::now($timezone)->startOfDay();
-                $fechaFinal = \Carbon\Carbon::now($timezone)->endOfDay();
+                $fechaInicio = Carbon::now($timezone)->subMonth(2)->startOfDay();
+                $fechaFinal = Carbon::now($timezone)->endOfDay();
             }
 
             // --- Filtro por perfil ---

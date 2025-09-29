@@ -58,7 +58,7 @@ class PreRegistroController extends Controller
                 $fechaInicio = Carbon::parse($fechaFinalParam, $timezone)->startOfDay();
                 $fechaFinal = Carbon::parse($fechaFinalParam, $timezone)->endOfDay();
             } elseif (!$folio) {
-                $fechaInicio = Carbon::now($timezone)->subDays(6)->startOfDay();
+                $fechaInicio = Carbon::now($timezone)->subMonth(2)->startOfDay();
                 $fechaFinal = Carbon::now($timezone)->endOfDay();
             }
 
