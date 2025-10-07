@@ -11,10 +11,10 @@ class CatJuzgadosController extends Controller
 {
       public function index()
 {
-    $juzgados = CatalogosCatJuzgados::select('idCatJuzgado', 'nombre', 'lugar')->get()->map(function ($juzgado) {
+    $juzgados = CatalogosCatJuzgados::select('IdCatJuzgado', 'Descripcion')->get()->map(function ($juzgado) {
         return [
-            'idCatJuzgado' => $juzgado->idCatJuzgado,
-            'nombre' => mb_strtoupper("{$juzgado->nombre} - {$juzgado->lugar}", 'UTF-8'),
+            'IdCatJuzgado' => $juzgado->IdCatJuzgado,
+            'Descripcion' => $juzgado->Descripcion,
         ];
     });
 

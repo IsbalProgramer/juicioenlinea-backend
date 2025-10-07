@@ -14,7 +14,7 @@ class CatMateriasController extends Controller
     public function index()
     {
         try {
-            $catMaterias = CatMaterias::where('activo', 1)->get();
+            $catMaterias = CatMaterias::select('idCatMateria', 'descripcion', 'claveMateria')->where('activo', 1)->get();
             return response()->json([
                 'status' => 200,
                 'message' => "Catálogos de materias",
